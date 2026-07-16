@@ -1584,7 +1584,13 @@ body.login-mode .login-card{margin:0 auto!important}
   document.getElementById("lever").addEventListener("click", spin);
 
   document.getElementById("demoDay").addEventListener("click", function(){ state.dayOffset += 1; saveState(); render(true); });
-  document.getElementById("demoPts").addEventListener("click", function(){ const prev=state.points; state.points += 2000; saveState(); renderCatalog(); countUp(balance, prev, state.points, 700); });
+  document.getElementById("demoPts").addEventListener("click", function(){
+    var prev=state.points;
+    var applyPts=function(np){ state.points=np; saveState(); renderCatalog(); countUp(balance, prev, state.points, 700); };
+    if(SB_SECURE && _CRED.u){
+      sbRpc("app_demo_credit",{ p_amount:2000 }).then(function(r){ applyPts((r && r.ok && typeof r.points==="number") ? r.points : (prev+2000)); }).catch(function(){ applyPts(prev+2000); });
+    } else { applyPts(prev+2000); }
+  });
   document.getElementById("demoStreak").addEventListener("click", function(){ demoAddStreak(); });
   function demoAddStreak(){
     var prevStreak = state.streak || 0;
