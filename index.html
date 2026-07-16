@@ -1204,6 +1204,10 @@ body.login-mode .login-card{margin:0 auto!important}
   /* ===== Ruleta de apuestas (multiplicadores) · logica en servidor (app_bet) con fallback ===== */
   var BET_DEFAULT = { enabled:true, min:10, max:100, perDay:3, segments:[{mult:0.5,w:70},{mult:1,w:110},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}] };
   var BET_COLORS = ["#7a1f3d","#2b6cb0","#2f855a","#b7791f","#c05621","#9b2c2c","#553c9a","#0f766e"];
+  var BET_MULT_COLORS = { "0.5":"#9b2c2c", "1":"#2b6cb0", "1.5":"#2f855a", "2":"#b7791f", "3":"#c05621", "5":"#553c9a" };
+  function betColor(m,i){ return BET_MULT_COLORS[String(m)] || BET_COLORS[i%BET_COLORS.length]; }
+  /* Reparto VISUAL de la rueda: mismas probabilidades, pero x1 y x0.5 repartidas y nunca juntas (un premio entre medias) */
+  function wheelLayout(segs){ var mults=(segs||[]).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,0.5,2,1,5,0.5,3]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
   var _betBusy = false, _betRot = 0, _serverBets = null;
   function activeBetCfg(){
     var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null);
@@ -1223,12 +1227,12 @@ body.login-mode .login-card{margin:0 auto!important}
     var bc=activeBetCfg();
     if(!bc.enabled){ host.style.display="none"; host.innerHTML=""; return; }
     host.style.display="";
-    var segs=bc.segments, n=segs.length, step=360/n, grad=[], labels="";
+    var layout=wheelLayout(bc.segments), n=layout.length, step=360/n, grad=[], labels="";
     for(var i=0;i<n;i++){
-      var c=BET_COLORS[i%BET_COLORS.length];
+      var c=betColor(layout[i],i);
       grad.push(c+" "+(i*step)+"deg "+((i+1)*step)+"deg");
       var ang=i*step+step/2;
-      labels+='<div class="bet-seg-label" style="transform:rotate('+ang+'deg)"><span style="transform:translate(-50%,-84px) rotate('+(-ang)+'deg)">x'+segs[i].mult+'</span></div>';
+      labels+='<div class="bet-seg-label" style="transform:rotate('+ang+'deg)"><span style="transform:translate(-50%,-84px) rotate('+(-ang)+'deg)">x'+layout[i]+'</span></div>';
     }
     var used=betsUsedToday(), left=Math.max(bc.perDay-used,0);
     var pts=state?state.points:0;
@@ -1267,9 +1271,10 @@ body.login-mode .login-card{margin:0 auto!important}
     if(betsUsedToday()>=bc.perDay){ if(resEl) resEl.textContent="Ya no te quedan tiradas hoy \u23F3"; return; }
     _betBusy=true; goEl.disabled=true; resEl.textContent="Girando\u2026 \uD83C\uDF40";
     var wheel=document.getElementById("betWheel");
-    var segs=bc.segments, n=segs.length, step=360/n;
+    var segs=bc.segments, layout=wheelLayout(bc.segments), n=layout.length, step=360/n;
     var finish=function(mult, newPts, left){
-      var idx=0; for(var i=0;i<n;i++){ if(segs[i].mult===mult){ idx=i; break; } }
+      var _mm=[]; for(var i=0;i<n;i++){ if(layout[i]===mult){ _mm.push(i); } }
+      var idx=_mm.length?_mm[Math.floor(Math.random()*_mm.length)]:0;
       var target=360*6 + (360 - (idx*step + step/2));
       _betRot += (target - (_betRot % 360));
       wheel.style.transition="transform 3.4s cubic-bezier(.15,.85,.2,1)";
