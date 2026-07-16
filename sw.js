@@ -1,5 +1,5 @@
 /* Tiki Taka PWA service worker */
-var CACHE = "tikitaka-v12";
+var CACHE = "tikitaka-v13";
 var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png"];
 self.addEventListener("install", function(e){
   self.skipWaiting();
