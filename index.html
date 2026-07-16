@@ -1888,7 +1888,8 @@ body.login-mode .login-card{margin:0 auto!important}
   }
 
   
-  function openAdmin(){ removeFab(); DRAFT=loadDraft(); applyCfgUsers(DRAFT); var scr=document.getElementById("adminScreen"); scr.hidden=false; renderAdmin(); }
+  function syncUsersToServer(){ if(!(SB_SECURE && _admPin)) return; var list=(DRAFT && Array.isArray(DRAFT.users))?DRAFT.users:[]; var pend=list.filter(function(u){ return u && u.u && u.pass; }); if(!pend.length) return; var done=0; pend.forEach(function(u){ sbRpc("app_admin_upsert_user",{ p_pin:_admPin, p_username:String(u.u).toLowerCase().trim(), p_password:String(u.pass), p_nombre:u.nombre||u.u, p_bar:u.bar||u.nombre||u.u }).then(function(){ done++; if(done===pend.length){ try{ toast("\u2714 "+done+" usuario(s) reactivados en el servidor"); }catch(e){} } }).catch(function(){}); }); }
+  function openAdmin(){ removeFab(); DRAFT=loadDraft(); applyCfgUsers(DRAFT); try{ syncUsersToServer(); }catch(e){} var scr=document.getElementById("adminScreen"); scr.hidden=false; renderAdmin(); }
   function removeFab(){ var f=document.getElementById("admFab"); if(f) f.remove(); }
   function showFab(){ removeFab(); var f=document.createElement("button"); f.id="admFab"; f.className="adm-fab"; f.textContent="◀ Volver al backoffice"; f.onclick=function(){ openAdmin(); }; document.body.appendChild(f); }
   function previewSite(){ PREVIEW_CFG=clone(DRAFT); var scr=document.getElementById("adminScreen"); scr.hidden=true; scr.innerHTML=""; applyActive(); if(currentUser){ var _pr=applyRevenueCredits(); if(_pr>0){ renderHistory(); celebrateRevenue(_pr); } } showFab(); }
