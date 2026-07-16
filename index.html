@@ -696,7 +696,7 @@ body.login-mode .login-card{margin:0 auto!important}
       <div class="win-banner" id="winBanner"></div>
       <div class="streak-info">
         <div class="si-title">🔥 Racha diaria · ciclo de 7 días</div>
-        <div class="si-sub">Entra cada día. En el día 3 y 6 ganas +15 pts. En el día 7 eliges 1 de 3 cajas sorpresa (30, 40 o 50 pts) y la racha se reinicia.</div>
+        <div class="si-sub">Entra cada día. En el día 3 y 6 ganas +150 pts. En el día 7 eliges 1 de 3 cajas sorpresa (300, 400 o 500 pts) y la racha se reinicia.</div>
         <div class="si-milestones" id="siMilestones"></div>
       </div>
     </div>
@@ -711,14 +711,16 @@ body.login-mode .login-card{margin:0 auto!important}
     <div class="section-title">Actividad reciente</div>
     <div class="history" id="history"></div>
 
+    <div style="text-align:center;margin:14px 0 4px"><button type="button" id="pwdBtn" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#cbb8e6;border-radius:999px;padding:8px 16px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">🔑 Cambiar mi contraseña</button></div>
+
     <div class="demo-bar" id="demoBar" style="display:none">
       <div class="demo-title">🧪 Modo demo (solo para pruebas)</div>
       <div class="demo-btns">
         <button class="demo-btn" id="demoDay">⏩ Simular día siguiente</button>
         <button class="demo-btn" id="demoPts">➕ +20000 puntos</button>
         <button class="demo-btn" id="demoStreak">🔥 +1 día de racha</button>
-        <button class="demo-btn" id="demoJackpot">🍒 Ver JACKPOT (50)</button>
-        <button class="demo-btn" id="demoSpecial">💎 Ver premio (30)</button>
+        <button class="demo-btn" id="demoJackpot">🍒 Ver JACKPOT (500)</button>
+        <button class="demo-btn" id="demoSpecial">💎 Ver premio (300)</button>
         <button class="demo-btn" id="demoReset">♻️ Reiniciar cuenta</button>
       </div>
     </div>
@@ -1676,6 +1678,7 @@ body.login-mode .login-card{margin:0 auto!important}
   passInput.addEventListener("keydown", function(e){ if(e.key==="Enter") tryLogin(); });
   userInput.addEventListener("keydown", function(e){ if(e.key==="Enter") passInput.focus(); });
   document.getElementById("logoutBtn").addEventListener("click", logout);
+  (function(){ var _pb=document.getElementById("pwdBtn"); if(_pb) _pb.addEventListener("click", function(){ openPwdModal(); }); })();
   spinBtn.addEventListener("click", spin);
   document.getElementById("lever").addEventListener("click", spin);
 
@@ -1736,6 +1739,70 @@ body.login-mode .login-card{margin:0 auto!important}
   function slug(s){ s=(s||"fondo").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+/,"").replace(/-+$/,""); return s||"fondo"; }
   function uid(base){ var m=themeMap(DRAFT); var id=slug(base), i=2; while(m[id]){ id=slug(base)+"-"+i; i++; } return id; }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+  var _PWD_INP='width:100%;box-sizing:border-box;margin-bottom:9px;padding:11px 12px;border-radius:10px;border:1px solid #7540af;background:#120522;color:#fff;font-family:inherit;font-size:14px';
+  var _PWD_BTN='flex:1;padding:11px;border-radius:10px;border:none;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer';
+  function _pwdOverlay(){ var ov=document.createElement("div"); ov.id="pwdOverlay"; ov.setAttribute("style","position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:16px"); document.body.appendChild(ov); ov.addEventListener("click",function(e){ if(e.target===ov){ if(ov.parentNode) ov.parentNode.removeChild(ov); } }); return ov; }
+  function openPwdModal(){
+    if(!currentUser) return;
+    if(document.getElementById("pwdOverlay")) return;
+    if(!SB_ON){ toast("El cambio de contrase\u00f1a necesita conexi\u00f3n con el servidor."); return; }
+    var ov=_pwdOverlay();
+    ov.innerHTML='<div style="background:#1a0a2e;border:1px solid #7540af;border-radius:16px;max-width:340px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.6)">'+
+      '<div style="font-weight:900;font-size:17px;color:#ffe277;margin-bottom:4px">\uD83D\uDD11 Cambiar contrase\u00f1a</div>'+
+      '<div style="font-size:12.5px;color:#cbb8e6;margin-bottom:14px">Introduce tu contrase\u00f1a actual y la nueva (m\u00ednimo 4 caracteres).</div>'+
+      '<input id="pwdOld" type="password" placeholder="Contrase\u00f1a actual" autocomplete="current-password" style="'+_PWD_INP+'">'+
+      '<input id="pwdNew" type="password" placeholder="Nueva contrase\u00f1a" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<input id="pwdNew2" type="password" placeholder="Repite la nueva" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<div id="pwdErr" style="color:#ff8a9c;font-size:12px;min-height:16px;margin:0 0 10px"></div>'+
+      '<div style="display:flex;gap:8px"><button id="pwdCancel" style="'+_PWD_BTN+';background:rgba(255,255,255,.08);color:#cbb8e6">Cancelar</button>'+
+      '<button id="pwdSave" style="'+_PWD_BTN+';background:linear-gradient(135deg,#b7791f,#c05621);color:#fff">Guardar</button></div></div>';
+    var close=function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
+    document.getElementById("pwdCancel").onclick=close;
+    document.getElementById("pwdSave").onclick=function(){
+      var er=document.getElementById("pwdErr");
+      var o=document.getElementById("pwdOld").value, n=document.getElementById("pwdNew").value, n2=document.getElementById("pwdNew2").value;
+      if(!o){ er.textContent="Escribe tu contrase\u00f1a actual."; return; }
+      if((n||"").length<4){ er.textContent="La nueva debe tener al menos 4 caracteres."; return; }
+      if(n!==n2){ er.textContent="Las contrase\u00f1as nuevas no coinciden."; return; }
+      er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
+      sbRpc("app_change_password",{ p_username:currentUser, p_old_password:o, p_new_password:n }).then(function(r){
+        if(r && r.ok){ close(); toast("\u2705 Contrase\u00f1a actualizada correctamente."); }
+        else if(r && r.error==="auth"){ er.style.color="#ff8a9c"; er.textContent="La contrase\u00f1a actual no es correcta."; }
+        else if(r && r.error==="short"){ er.style.color="#ff8a9c"; er.textContent="La nueva es demasiado corta."; }
+        else { er.style.color="#ff8a9c"; er.textContent="No se pudo cambiar. Int\u00e9ntalo de nuevo."; }
+      }).catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor."; });
+    };
+  }
+  function openAdminResetModal(username){
+    if(!username) return;
+    if(document.getElementById("pwdOverlay")) return;
+    if(!(SB_ON && _admPin)){ toast("El reseteo necesita conexi\u00f3n y sesi\u00f3n de administrador (PIN)."); return; }
+    var ov=_pwdOverlay();
+    ov.innerHTML='<div style="background:#1a0a2e;border:1px solid #7540af;border-radius:16px;max-width:340px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.6)">'+
+      '<div style="font-weight:900;font-size:17px;color:#ffe277;margin-bottom:4px">\uD83D\uDD11 Restablecer contrase\u00f1a</div>'+
+      '<div style="font-size:12.5px;color:#cbb8e6;margin-bottom:14px">Cliente: <b style="color:#8ff7ff">'+esc(username)+'</b>. Escribe la nueva contrase\u00f1a (m\u00ednimo 4).</div>'+
+      '<input id="pwdNew" type="password" placeholder="Nueva contrase\u00f1a" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<input id="pwdNew2" type="password" placeholder="Repite la nueva" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<div id="pwdErr" style="color:#ff8a9c;font-size:12px;min-height:16px;margin:0 0 10px"></div>'+
+      '<div style="display:flex;gap:8px"><button id="pwdCancel" style="'+_PWD_BTN+';background:rgba(255,255,255,.08);color:#cbb8e6">Cancelar</button>'+
+      '<button id="pwdSave" style="'+_PWD_BTN+';background:linear-gradient(135deg,#b7791f,#c05621);color:#fff">Restablecer</button></div></div>';
+    var close=function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
+    document.getElementById("pwdCancel").onclick=close;
+    document.getElementById("pwdSave").onclick=function(){
+      var er=document.getElementById("pwdErr");
+      var n=document.getElementById("pwdNew").value, n2=document.getElementById("pwdNew2").value;
+      if((n||"").length<4){ er.textContent="Debe tener al menos 4 caracteres."; return; }
+      if(n!==n2){ er.textContent="Las contrase\u00f1as no coinciden."; return; }
+      er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
+      sbRpc("app_admin_reset_password",{ p_pin:_admPin, p_username:username, p_new_password:n }).then(function(r){
+        if(r && r.ok){ try{ (DRAFT.users||[]).forEach(function(x){ if(x.u===username) x.pass=n; }); saveDraft(); renderAdmin(); }catch(e){} close(); toast("\u2705 Contrase\u00f1a de "+username+" restablecida."); }
+        else if(r && r.error==="nouser"){ er.style.color="#ff8a9c"; er.textContent="Ese cliente no existe en el servidor."; }
+        else if(r && r.error==="pin"){ er.style.color="#ff8a9c"; er.textContent="PIN de administrador no v\u00e1lido."; }
+        else { er.style.color="#ff8a9c"; er.textContent="No se pudo restablecer. Int\u00e9ntalo de nuevo."; }
+      }).catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor."; });
+    };
+  }
+
   function monthOpts(sel){ var h=""; for(var m=1;m<=12;m++){ h+='<option value="'+m+'"'+(sel===m?" selected":"")+'>'+MESES[m]+'</option>'; } return h; }
   function themeOptions(sel, includeAuto){ var h=""; if(includeAuto){ h+='<option value=""'+(sel?"":" selected")+'>Autom\u00e1tico (calendario)</option>'; } (DRAFT.themes||[]).forEach(function(t){ h+='<option value="'+esc(t.id)+'"'+(sel===t.id?" selected":"")+'>'+esc(t.name)+'</option>'; }); return h; }
   function readImg(input, cb){ var f=input.files && input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(r.result); }; r.readAsDataURL(f); }
@@ -1895,7 +1962,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var _bk=Object.keys(BUILTIN_USERS);
     h+='<div class="adm-crlist">';
     _bk.forEach(function(k){ h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(BUILTIN_USERS[k].bar||BUILTIN_USERS[k].nombre||k)+'</b> · '+esc(k)+'<span class="adm-ubuiltin">de prueba</span><span class="adm-crmeta">contraseña: '+'•••••'+'</span></div></div>'; });
-    if(_cu.length){ _cu.slice().reverse().forEach(function(u){ h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(u.bar||u.nombre||u.u)+'</b> · '+esc(u.u)+'<span class="adm-crmeta">contraseña: '+esc(u.pass)+(u.nombre&&u.nombre!==u.u?(' · '+esc(u.nombre)):'')+'</span></div><button class="adm-crdel adm-udel" data-u="'+esc(u.u)+'">Eliminar</button></div>'; }); }
+    if(_cu.length){ _cu.slice().reverse().forEach(function(u){ h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(u.bar||u.nombre||u.u)+'</b> · '+esc(u.u)+'<span class="adm-crmeta">contraseña: '+esc(u.pass)+(u.nombre&&u.nombre!==u.u?(' · '+esc(u.nombre)):'')+'</span></div><button class="adm-crdel adm-upwd" data-u="'+esc(u.u)+'" style="background:#2a1440;border-color:#7540af;color:#d9c6ff">🔑 Contraseña</button><button class="adm-crdel adm-udel" data-u="'+esc(u.u)+'">Eliminar</button></div>'; }); }
     else { h+='<div class="adm-hint" style="margin-top:10px">Aún no has añadido ningún cliente propio.</div>'; }
     h+='</div></div>';
     h+='<div class="adm-card" id="sec-recaudacion"><div class="adm-sec">Recaudación de máquinas → puntos</div>';
@@ -1968,6 +2035,7 @@ body.login-mode .login-card{margin:0 auto!important}
     (function(){ var _sr=g("admStatsRefresh"); if(_sr) _sr.onclick=function(){ loadAdminStats(); }; })();
     var _ac=g("admAddCredit"); if(_ac) _ac.onclick=function(){ collect(); var u=g("admCrBar").value; var eur=parseFloat(g("admCrEur").value)||0; var concept=(g("admCrConcept").value||"").trim(); if(!u){ toast("Elige un bar"); return; } if(eur<=0){ toast("Introduce una recaudación válida"); return; } var per100=parseFloat(g("admRate")&&g("admRate").value)||30; var pts=Math.round(eur/100*per100); DRAFT.credits=DRAFT.credits||[]; DRAFT.credits.push({ id:"rev-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), u:u, eur:eur, pts:pts, concept:concept, date:todayStr() }); saveDraft(); renderAdmin(); toast("Recaudación registrada: +"+pts+" pts para "+((USERS[u]&&USERS[u].bar)||u)); };
     var _au=g("admAddUser"); if(_au) _au.onclick=function(){ collect(); var u=(g("admUUser").value||"").toLowerCase().trim().replace(/[^a-z0-9_.\-]/g,""); var pass=(g("admUPass").value||"").trim(); var nombre=(g("admUNombre").value||"").trim(); var bar=(g("admUBar").value||"").trim(); if(!u){ toast("Escribe un nombre de usuario"); return; } if(!pass){ toast("Escribe una contraseña"); return; } DRAFT.users=DRAFT.users||[]; if(DRAFT.users.some(function(x){return x.u===u;})||(u in BUILTIN_USERS)){ toast("Ese usuario ya existe"); return; } DRAFT.users.push({ u:u, pass:pass, nombre:nombre||u, bar:bar||nombre||u }); saveDraft(); applyCfgUsers(DRAFT); g("admUUser").value=""; g("admUPass").value=""; g("admUNombre").value=""; g("admUBar").value=""; renderAdmin(); var _lbl=(bar||nombre||u); if(SB_SECURE && _admPin){ toast("Guardando "+_lbl+" en el servidor…"); sbRpc("app_admin_upsert_user",{ p_pin:_admPin, p_username:u, p_password:pass, p_nombre:nombre||u, p_bar:bar||nombre||u }).then(function(res){ if(res && res.ok){ toast("✔ Cliente añadido y activado: "+_lbl); } else { toast("⚠ Añadido en local, pero el servidor lo rechazó ("+((res&&res.error)||"error")+"). Revisa el PIN o vuelve a ejecutar el secure-setup.sql."); } }).catch(function(){ toast("⚠ Añadido en local, pero no se pudo contactar con el servidor. Ejecuta el secure-setup.sql más reciente."); }); } else { toast("Cliente añadido (solo local): "+_lbl); } };
+    each(".adm-upwd", function(b){ b.onclick=function(){ openAdminResetModal(b.getAttribute("data-u")); }; });
     each(".adm-udel", function(b){ b.onclick=function(){ collect(); var u=b.getAttribute("data-u"); if(!confirm("¿Eliminar al cliente \""+u+"\"? Sus recaudaciones registradas seguirán apareciendo pero ese usuario ya no podrá iniciar sesión.")) return; DRAFT.users=(DRAFT.users||[]).filter(function(x){ return x.u!==u; }); saveDraft(); applyCfgUsers(DRAFT); renderAdmin(); toast("Cliente eliminado: "+u); }; });
     each(".adm-crdel:not(.adm-udel)", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.credits=(DRAFT.credits||[]).filter(function(c){ return c.id!==id; }); saveDraft(); renderAdmin(); }; });
     each(".adm-rw-add",function(b){ b.onclick=function(){ collect(); DRAFT.rewards.push({name:"Nuevo premio",emoji:"🎁",cost:1000,tier:"Regalos"}); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Nuevo premio añadido"); }; });
