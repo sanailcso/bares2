@@ -1733,7 +1733,6 @@ body.login-mode .login-card{margin:0 auto!important}
   function applyLogo(cfg){ var img=document.getElementById("brandLogo"); if(!img) return; var src=(cfg&&cfg.logo)||DEFAULT_LOGO; var bm=img.parentNode; if(src){ img.src=src; img.style.display="block"; if(bm&&bm.classList) bm.classList.add("has-logo"); } else { img.removeAttribute("src"); img.style.display="none"; if(bm&&bm.classList) bm.classList.remove("has-logo"); } }
   try{ applyLogo(ACTIVE_CFG); }catch(e){}
   applyActive();
-  try { fetch("tikitaka-config.json",{cache:"no-store"}).then(function(res){ return (res&&res.ok)?res.json():null; }).then(function(cfg){ if(cfg && cfg.themes && cfg.themes.length){ ACTIVE_CFG=cfg; applyActive(); if(currentUser){ var _r=applyRevenueCredits(); if(_r>0){ renderHistory(); celebrateRevenue(_r); } } } }).catch(function(){}); } catch(e){}
   try { sbLoadConfig().then(function(cfg){ if(cfg){ checkForceRefresh(cfg); } if(cfg && cfg.themes && cfg.themes.length){ ACTIVE_CFG=cfg; applyActive(); if(currentUser){ var _r=applyRevenueCredits(); if(_r>0){ renderHistory(); celebrateRevenue(_r); } } } }).catch(function(){}); } catch(e){}
 
   /* ===== BACKOFFICE (solo administrador) ===== */
@@ -1942,7 +1941,6 @@ body.login-mode .login-card{margin:0 auto!important}
   function readImgs(input, cb){ var fs=Array.prototype.slice.call(input.files||[]), out=[]; if(!fs.length) return; var left=fs.length; fs.forEach(function(f,i){ var r=new FileReader(); r.onload=function(){ out[i]=r.result; left--; if(!left) cb(out); }; r.readAsDataURL(f); }); }
   function clampD(d){ if(isNaN(d)||d<1) return 1; if(d>31) return 31; return d; }
   function toast(msg){ var t=document.getElementById("admToast"); if(!t){ t=document.createElement("div"); t.id="admToast"; t.className="adm-toast"; document.body.appendChild(t); } t.textContent=msg; t.classList.add("show"); setTimeout(function(){ t.classList.remove("show"); },2200); }
-  function exportCfg(){ var blob=new Blob([JSON.stringify(DRAFT)],{type:"application/json"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="tikitaka-config.json"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },500); }
 
   function collect(){
     Array.prototype.forEach.call(document.querySelectorAll(".adm-name[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id) t.name=inp.value; }); });
@@ -2106,7 +2104,7 @@ body.login-mode .login-card{margin:0 auto!important}
     else { h+='<div class="adm-hint" style="margin-top:10px">Aún no has añadido ningún cliente propio.</div>'; }
     h+='</div></div>';
     h+='<div class="adm-card" id="sec-recaudacion"><div class="adm-sec">Recaudación de máquinas → puntos</div>';
-    h+='<div class="adm-hint">Registra la recaudación de cada bar. Los puntos se calculan con la tasa de abajo y se abonan solos en la app del bar al abrirla (después de publicar el config.json).</div>';
+    h+='<div class="adm-hint">Registra la recaudación de cada bar. Los puntos se calculan con la tasa de abajo y se abonan solos en la app del bar al abrirla.</div>';
     var _p100=parseFloat(DRAFT.pointsPer100)||30;
     h+='<div class="adm-frow"><label>Puntos por cada 100 € recaudados</label><input type="number" min="0" step="1" id="admRate" class="adm-num" value="'+esc(String(_p100))+'"></div>';
     h+='<div class="adm-hint" style="margin-top:-4px">Equivale a '+esc(String((_p100/100)))+' pts por € · ej. 100 € → +'+fmt(_p100)+' pts, 250 € → +'+fmt(Math.round(250/100*_p100))+' pts.</div>';
@@ -2123,12 +2121,9 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<div class="adm-actions">';
     h+='<button class="adm-btn ghost" id="admPreview">Previsualizar</button>';
     h+='<button class="adm-btn ghost" id="admSave">Guardar borrador</button>';
-    h+='<label class="adm-btn ghost adm-file">Importar<input type="file" accept="application/json,.json" id="admImport"></label>';
     h+='<button class="adm-btn ghost" id="admDiscard">Descartar cambios</button>';
     h+='<button class="adm-btn primary" id="admView">Ver web principal</button>';
-    h+='<button class="adm-btn primary" id="admExport">Exportar config.json</button>';
     h+='</div>';
-    h+='<div class="adm-help"><b>C\u00f3mo publicar:</b> pulsa <b>Exportar config.json</b> y sube ese archivo a tu repositorio de GitHub junto a tu index (mismo sitio). Todos los bares ver\u00e1n tus fondos y tu calendario autom\u00e1ticamente. Sin subir nada, los cambios solo se ven en este dispositivo.</div>';
     h+='</div>';
     scr.innerHTML=h;
     wireAdmin();
@@ -2145,14 +2140,12 @@ body.login-mode .login-card{margin:0 auto!important}
     g("admDiscard").onclick=function(){ localStorage.removeItem("tikitaka_admin_cfg"); DRAFT=clone(ACTIVE_CFG); renderAdmin(); toast("Cambios descartados"); };
     var _lg=g("admLogo"); if(_lg) _lg.onchange=function(){ readImg(_lg,function(d){ collect(); DRAFT.logo=d; saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Logo actualizado"); }); };
     var _lr=g("admLogoReset"); if(_lr) _lr.onclick=function(){ collect(); DRAFT.logo=null; saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Logo restablecido"); };
-    g("admExport").onclick=function(){ collect(); exportCfg(); };
     g("admView").onclick=function(){ collect(); saveDraft(); previewSite(); };
     var _fu=g("admForceUpdate"); if(_fu) _fu.onclick=function(){ collect(); DRAFT.rev=Date.now(); saveDraft(); try{ localStorage.setItem("tikitaka_cfg_rev", String(DRAFT.rev)); }catch(e){} var nn=g("admForceNote"); if(nn){ nn.textContent="✓ Publicado. Los clientes verán la actualización al abrir la app."; } toast("Actualización publicada y forzada ✓"); };
     g("admAddRule").onclick=function(){ collect(); var t=(DRAFT.themes[0]||{}).id; DRAFT.schedule.push({themeId:t,from:{m:1,d:1},to:{m:1,d:31}}); renderAdmin(); };
     g("admFallback").onchange=function(){ collect(); };
     g("admOverride").onchange=function(){ collect(); paintTheme(DRAFT, resolveTheme(DRAFT)); };
     g("admAdd").onchange=function(e){ var fn=(e.target.files[0]&&e.target.files[0].name)||""; readImg(e.target, function(d){ collect(); var id=uid("fondo"); var nm=fnameToName(fn); var sg=suggestEmojis(nm+" "+fn); DRAFT.themes.push({id:id,name:nm||"Nuevo fondo",img:d,_fname:fn,sym:clone(sg[0].sym)}); renderAdmin(); toast("Fondo añadido · emojis sugeridos: "+sg[0].label+". Cámbialos con ✨ Sugerir emojis."); }); };
-    g("admImport").onchange=function(e){ var f=e.target.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ try{ var c=JSON.parse(r.result); if(c&&c.themes){ DRAFT=c; saveDraft(); renderAdmin(); toast("Configuraci\u00f3n importada"); } else { toast("Archivo no v\u00e1lido"); } }catch(err){ toast("Archivo no v\u00e1lido"); } }; r.readAsText(f); };
     var each=function(sel,fn){ Array.prototype.forEach.call(document.querySelectorAll(sel), fn); };
     function renderSugg(id){ var cont=document.querySelector('.adm-sugg[data-id="'+id+'"]'); if(!cont) return; var t=null; (DRAFT.themes||[]).forEach(function(x){ if(x.id===id) t=x; }); var nameInp=document.querySelector('.adm-name[data-id="'+id+'"]'); var nm=nameInp?nameInp.value:(t?t.name:""); var list=suggestEmojis(nm+" "+((t&&t._fname)||"")); var hh=""; list.forEach(function(s,i){ hh+='<button type="button" class="adm-sugg-chip" data-id="'+esc(id)+'" data-i="'+i+'"><span class="adm-sugg-emos">'+esc(s.sym.jackpot+s.sym.prize+s.sym.fillers.join(""))+'</span><span class="adm-sugg-lab">'+esc(s.label)+'</span></button>'; }); cont.innerHTML=hh; Array.prototype.forEach.call(cont.querySelectorAll(".adm-sugg-chip"), function(chip){ chip.onclick=function(){ collect(); var i=+chip.getAttribute("data-i"); var sym=list[i].sym; (DRAFT.themes||[]).forEach(function(x){ if(x.id===id){ x.sym={ mode:"emoji", jackpot:sym.jackpot, prize:sym.prize, fillers:sym.fillers.slice(), imageJackpot:(x.sym&&x.sym.imageJackpot), imagePrize:(x.sym&&x.sym.imagePrize), imageFillers:(x.sym&&x.sym.imageFillers)||[] }; } }); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); if(currentUser) renderSpinState(); renderAdmin(); toast("Emojis aplicados: "+list[i].label); }; }); }
     each(".adm-smode", function(inp){ inp.onchange=function(){ collect(); saveDraft(); applyActive(); if(currentUser) renderSpinState(); renderAdmin(); toast(inp.value==="images"?"Modo imágenes activado":"Modo emojis activado"); }; });
@@ -2169,7 +2162,7 @@ body.login-mode .login-card{margin:0 auto!important}
     each(".adm-up", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(i>0){ var s=DRAFT.schedule, t=s[i-1]; s[i-1]=s[i]; s[i]=t; } renderAdmin(); }; });
     each(".adm-dn", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); var s=DRAFT.schedule; if(i<s.length-1){ var t=s[i+1]; s[i+1]=s[i]; s[i]=t; } renderAdmin(); }; });
     each(".adm-rx", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); DRAFT.schedule.splice(i,1); renderAdmin(); }; });
-    each(".adm-thumb", function(th){ th.onclick=function(){ collect(); var id=th.getAttribute("data-id"); DRAFT.override=(DRAFT.override===id?null:id); var ok=saveDraft(); renderAdmin(); if(!ok) toast("Fondo aplicado. Aviso: hay demasiadas imágenes para guardar el borrador en este dispositivo; usa Exportar config.json para publicarlo."); }; });
+    each(".adm-thumb", function(th){ th.onclick=function(){ collect(); var id=th.getAttribute("data-id"); DRAFT.override=(DRAFT.override===id?null:id); var ok=saveDraft(); renderAdmin(); if(!ok) toast("Fondo aplicado. Aviso: hay demasiadas imágenes para guardar el borrador en este dispositivo."); }; });
     var _rt=g("admRate"); if(_rt) _rt.onchange=function(){ collect(); };
     var _bon=g("admBetOn"); if(_bon) _bon.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } };
     ["admBetMin","admBetMax","admBetDay"].forEach(function(id){ var el=g(id); if(el) el.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } }; });
