@@ -1092,7 +1092,7 @@ body.login-mode .login-card{margin:0 auto!important}
     let html = "";
     CYCLE_MILESTONES.forEach(function(m){
       const done = s >= m.day;
-      const val = m.box ? "🎁 30-50" : ("+" + m.bonus + " pts");
+      const val = m.box ? "🎁 300-500" : ("+" + m.bonus + " pts");
       html += `<div class="si-chip ${done ? "done" : ""}"><span class="si-days">${done ? "✓ " : ""}Día ${m.day}</span><span class="si-bonus">${val}</span></div>`;
     });
     wrap.innerHTML = html;
@@ -1104,14 +1104,14 @@ body.login-mode .login-card{margin:0 auto!important}
   function renderStreakHero(){
     var el=document.getElementById("streakHero"); if(!el||typeof state==="undefined"||!state) return;
     var s=state.streak||0; var goal=nextStreakGoal(s); var head="", sub="";
-    if(state.pendingBox){ head="🎁 ¡Tienes una caja sorpresa esperando!"; sub="Elígela abajo y gana hasta <b>50 puntos</b>."; }
-    else if(s<=0){ head="🔥 ¡Empieza tu racha y gana premios!"; sub="Entra a jugar cada día: al <b>3er</b> y <b>6º</b> día ganas <b>+15 pts</b>, y al <b>7º</b> eliges una <b>caja sorpresa</b> de hasta 50 pts. 🎁"; }
-    else if(s>=7){ head="🎁 ¡Hoy eliges tu caja sorpresa!"; sub="Elige 1 de 3 cajas y llévate <b>30, 40 o 50 puntos</b>. Después empieza una racha nueva."; }
-    else if(goal && goal.box){ head=(goal.left===1)?"🎁 ¡Mañana eliges tu caja sorpresa!":("🎁 Te faltan "+goal.left+" días para tu caja sorpresa"); sub="Vuelve "+(goal.left===1?"mañana":("y juega "+goal.left+" días seguidos"))+", elige 1 de 3 cajas y gana <b>30, 40 o 50 puntos</b>."; }
-    else if(goal){ head=(goal.left===1)?"🔥 ¡Solo te falta 1 día para tu premio!":("🔥 Te faltan "+goal.left+" días para tu premio"); sub="Entra cada día y al llegar al <b>día "+goal.day+"</b> ganas <b>+"+goal.bonus+" pts</b>. ¡Y al 7º día, caja sorpresa de hasta 50 pts! 🎁"; }
+    if(state.pendingBox){ head="🎁 ¡Tienes una caja sorpresa esperando!"; sub="Elígela abajo y gana hasta <b>500 puntos</b>."; }
+    else if(s<=0){ head="🔥 ¡Empieza tu racha y gana premios!"; sub="Entra a jugar cada día: al <b>3er</b> y <b>6º</b> día ganas <b>+150 pts</b>, y al <b>7º</b> eliges una <b>caja sorpresa</b> de hasta 500 pts. 🎁"; }
+    else if(s>=7){ head="🎁 ¡Hoy eliges tu caja sorpresa!"; sub="Elige 1 de 3 cajas y llévate <b>300, 400 o 500 puntos</b>. Después empieza una racha nueva."; }
+    else if(goal && goal.box){ head=(goal.left===1)?"🎁 ¡Mañana eliges tu caja sorpresa!":("🎁 Te faltan "+goal.left+" días para tu caja sorpresa"); sub="Vuelve "+(goal.left===1?"mañana":("y juega "+goal.left+" días seguidos"))+", elige 1 de 3 cajas y gana <b>300, 400 o 500 puntos</b>."; }
+    else if(goal){ head=(goal.left===1)?"🔥 ¡Solo te falta 1 día para tu premio!":("🔥 Te faltan "+goal.left+" días para tu premio"); sub="Entra cada día y al llegar al <b>día "+goal.day+"</b> ganas <b>+"+goal.bonus+" pts</b>. ¡Y al 7º día, caja sorpresa de hasta 500 pts! 🎁"; }
     else { head="🔥 ¡Sigue jugando cada día!"; sub="Mantén tu racha para seguir ganando premios."; }
     var track="";
-    for(var d=1; d<=7; d++){ var cls="sh-day"; if(d<=s) cls+=" done"; else if(d===s+1) cls+=" next"; var badge="·"; if(d===3||d===6){ cls+=" mile"; badge="+15"; } else if(d===7){ cls+=" box"; badge="🎁"; } track+='<div class="'+cls+'"><span class="sh-badge">'+badge+'</span><span class="sh-dot"></span><span class="sh-num">'+d+'</span></div>'; }
+    for(var d=1; d<=7; d++){ var cls="sh-day"; if(d<=s) cls+=" done"; else if(goal && d===goal.day) cls+=" next"; var badge="·"; if(d===3||d===6){ cls+=" mile"; badge="+150"; } else if(d===7){ cls+=" box"; badge="🎁"; } track+='<div class="'+cls+'"><span class="sh-badge">'+badge+'</span><span class="sh-dot"></span><span class="sh-num">'+d+'</span></div>'; }
     el.innerHTML='<div class="sh-headline">'+head+'</div><div class="sh-sub">'+sub+'</div><div class="sh-track">'+track+'</div>';
   }
   function isImageSymbol(v){ return typeof v==="string" && (/^(data:image\/|blob:|https?:\/\/)/i).test(v); }
