@@ -870,7 +870,7 @@ body.login-mode .login-card{margin:0 auto!important}
     });
   }
   function secureSpin(){
-    if(!SB_SECURE || !_CRED.u) return Promise.resolve(null);
+    if(!SB_SECURE || !_CRED.u || currentUser==="demo") return Promise.resolve(null);
     return sbRpc("app_spin",{ p_username:_CRED.u, p_password:_CRED.p }).then(function(res){ return res; }).catch(function(){ return null; });
   }
   function secureRedeem(item){
@@ -1275,11 +1275,11 @@ body.login-mode .login-card{margin:0 auto!important}
       segments:segs.map(function(x){ return { mult:parseFloat(x.mult)||0, w:Math.max(0,parseFloat(x.w)||0) }; }), colors:(b.colors && typeof b.colors==="object")?b.colors:{} };
   }
   function betHouseEdge(segs){ var t=0,e=0; segs.forEach(function(x){ t+=x.w; e+=x.w*x.mult; }); return t>0?(e/t):0; }
-  function betsUsedToday(){ var t=todayStr(); if(SB_SECURE && _serverBets && _serverBets.date===t){ return _serverBets.count||0; } if(!state) return 0; if(!state.bets||state.bets.date!==t){ return 0; } return state.bets.count||0; }
+  function betsUsedToday(){ var t=todayStr(); if(SB_SECURE && _serverBets && _serverBets.date===t && currentUser!=="demo"){ return _serverBets.count||0; } if(!state) return 0; if(!state.bets||state.bets.date!==t){ return 0; } return state.bets.count||0; }
   function betsBumpLocal(){ var t=todayStr(); if(!state.bets||state.bets.date!==t){ state.bets={date:t,count:0}; } state.bets.count=(state.bets.count||0)+1; }
-  function betSpinsLeft(){ if(SB_SECURE && _serverSpins!=null) return _serverSpins; return (state&&typeof state.betSpins==="number")?state.betSpins:0; }
+  function betSpinsLeft(){ if(SB_SECURE && _serverSpins!=null && currentUser!=="demo") return _serverSpins; return (state&&typeof state.betSpins==="number")?state.betSpins:0; }
   function localBetPick(segs){ var total=0; segs.forEach(function(x){ total+=x.w; }); if(total<=0) return segs[0]?segs[0].mult:0; var r=Math.random()*total, acc=0, m=0; for(var i=0;i<segs.length;i++){ acc+=segs[i].w; if(r<acc){ m=segs[i].mult; break; } } return m; }
-  function secureBet(stake){ if(SB_SECURE && _CRED.u){ return sbRpc("app_bet",{ p_username:_CRED.u, p_password:_CRED.p, p_stake:stake }).catch(function(){ return null; }); } return Promise.resolve(null); }
+  function secureBet(stake){ if(SB_SECURE && _CRED.u && currentUser!=="demo"){ return sbRpc("app_bet",{ p_username:_CRED.u, p_password:_CRED.p, p_stake:stake }).catch(function(){ return null; }); } return Promise.resolve(null); }
   function renderBet(){
     var host=document.getElementById("betPanel"); if(!host) return;
     var bc=activeBetCfg();
@@ -1368,7 +1368,7 @@ body.login-mode .login-card{margin:0 auto!important}
     }).catch(function(){ finish(localBetPick(segs)); });
   }
   function refreshPlayer(){
-    if(!SB_SECURE || !_CRED.u || !state || _betBusy) return;
+    if(!SB_SECURE || !_CRED.u || !state || _betBusy || currentUser==="demo") return;
     sbRpc("app_state",{ p_username:_CRED.u, p_password:_CRED.p }).then(function(r){
       if(!r || r.ok!==true) return;
       var prev=state.points, changed=false;
