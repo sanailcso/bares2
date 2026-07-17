@@ -1258,6 +1258,7 @@ body.login-mode .login-card{margin:0 auto!important}
   var BET_COLORS = ["#7a1f3d","#2b6cb0","#2f855a","#b7791f","#c05621","#9b2c2c","#553c9a","#0f766e"];
   var BET_MULT_COLORS = { "0.5":"#9b2c2c", "1":"#2b6cb0", "1.5":"#2f855a", "2":"#b7791f", "3":"#c05621", "5":"#553c9a" };
   function betColor(m,i){ return BET_MULT_COLORS[String(m)] || BET_COLORS[i%BET_COLORS.length]; }
+  function assignBetColors(layout){ var used={}, map={}, pi=0; (layout||[]).forEach(function(m){ var k=String(m); if(!(k in map)){ var fc=BET_MULT_COLORS[k]; if(fc){ map[k]=fc; used[fc.toLowerCase()]=1; } } }); (layout||[]).forEach(function(m){ var k=String(m); if(k in map) return; var c=null; for(var t=0;t<BET_COLORS.length;t++){ var cand=BET_COLORS[(pi+t)%BET_COLORS.length]; if(!used[cand.toLowerCase()]){ c=cand; pi=(pi+t+1)%BET_COLORS.length; break; } } if(!c){ c=BET_COLORS[pi%BET_COLORS.length]; pi++; } map[k]=c; used[c.toLowerCase()]=1; }); return (layout||[]).map(function(m){ return map[String(m)]; }); }
   /* Reparto VISUAL de la rueda: mismas probabilidades, pero x1 y x0.5 repartidas y nunca juntas (un premio entre medias) */
   function wheelLayout(segs){ var mults=(segs||[]).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,1,2,1,3,1,5]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
   var _betBusy = false, _betRot = 0, _serverBets = null, _serverSpins = null;
@@ -1280,9 +1281,9 @@ body.login-mode .login-card{margin:0 auto!important}
     var bc=activeBetCfg();
     if(!bc.enabled){ host.style.display="none"; host.innerHTML=""; return; }
     host.style.display="";
-    var layout=wheelLayout(bc.segments), n=layout.length, step=360/n, grad=[], labels="";
+    var layout=wheelLayout(bc.segments), n=layout.length, step=360/n, grad=[], labels="", _bcolors=assignBetColors(layout);
     for(var i=0;i<n;i++){
-      var c=betColor(layout[i],i);
+      var c=_bcolors[i];
       grad.push(c+" "+(i*step)+"deg "+((i+1)*step)+"deg");
       var ang=i*step+step/2;
       labels+='<div class="bet-seg-label" style="transform:rotate('+ang+'deg)"><span style="transform:translate(-50%,-84px) rotate('+(-ang)+'deg)">x'+layout[i]+'</span></div>';
