@@ -1864,7 +1864,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var box=document.getElementById("admStats"); if(!box) return;
     if(!(SB_ON && _admPin)){ box.innerHTML='<div class="adm-canje-empty">Las anal\u00edticas necesitan conexi\u00f3n con el servidor y sesi\u00f3n de administrador (PIN).</div>'; return; }
     box.innerHTML='<div class="adm-canje-empty">Cargando anal\u00edticas\u2026</div>';
-    sbRpc("app_admin_stats",{ p_pin:_admPin }).then(function(st){ box.innerHTML=renderStatsHtml(st); }).catch(function(){ box.innerHTML='<div class="adm-canje-empty">No se pudieron cargar las anal\u00edticas.</div>'; });
+    sbRpc("app_admin_stats",{ p_pin:_admPin }).then(function(st){ box.innerHTML=renderStatsHtml(st); }).catch(function(err){ var _m=String((err&&err.message)||err||""); var _h=(/404|not find|does not exist|schema cache/i.test(_m))?"La funci\u00f3n de anal\u00edticas no est\u00e1 instalada en el servidor. Vuelve a ejecutar en Supabase el secure-setup.sql m\u00e1s reciente (o el archivo analiticas.sql).":("No se pudieron cargar las anal\u00edticas ("+_m+")."); box.innerHTML='<div class="adm-canje-empty">'+esc(_h)+'</div>'; });
   }
   function recalcSegPct(){
     var rows=document.querySelectorAll(".adm-seg-row"); if(!rows.length) return;
