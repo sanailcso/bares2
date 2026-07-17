@@ -1823,7 +1823,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var ov=document.getElementById("admOverride"); if(ov) DRAFT.override=ov.value||null;
     Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; });
     var rt=document.getElementById("admRate"); if(rt) DRAFT.pointsPer100=parseFloat(rt.value)||30;
-    var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); DRAFT.bet.segments=[{mult:1,w:180},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}]; }
+    var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); var _sr=document.querySelectorAll(".adm-seg-row"); if(_sr.length){ var _sg=[]; Array.prototype.forEach.call(_sr,function(row){ var _mm=parseFloat((row.querySelector(".adm-seg-mult")||{}).value); var _ww=parseFloat((row.querySelector(".adm-seg-w")||{}).value); if(!isFinite(_mm)||_mm<0)_mm=0; if(!isFinite(_ww)||_ww<0)_ww=0; _sg.push({mult:_mm,w:_ww}); }); if(_sg.length) DRAFT.bet.segments=_sg; } else if(!Array.isArray(DRAFT.bet.segments)||!DRAFT.bet.segments.length){ DRAFT.bet.segments=[{mult:1,w:180},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}]; } }
   }
 
   function rewardEditorHtml(){
@@ -1865,6 +1865,15 @@ body.login-mode .login-card{margin:0 auto!important}
     if(!(SB_ON && _admPin)){ box.innerHTML='<div class="adm-canje-empty">Las anal\u00edticas necesitan conexi\u00f3n con el servidor y sesi\u00f3n de administrador (PIN).</div>'; return; }
     box.innerHTML='<div class="adm-canje-empty">Cargando anal\u00edticas\u2026</div>';
     sbRpc("app_admin_stats",{ p_pin:_admPin }).then(function(st){ box.innerHTML=renderStatsHtml(st); }).catch(function(){ box.innerHTML='<div class="adm-canje-empty">No se pudieron cargar las anal\u00edticas.</div>'; });
+  }
+  function recalcSegPct(){
+    var rows=document.querySelectorAll(".adm-seg-row"); if(!rows.length) return;
+    var tw=0, er=0, data=[];
+    Array.prototype.forEach.call(rows,function(r){ var m=parseFloat((r.querySelector(".adm-seg-mult")||{}).value)||0; var w=parseFloat((r.querySelector(".adm-seg-w")||{}).value)||0; if(w<0)w=0; data.push({r:r,m:m,w:w}); tw+=w; });
+    if(tw<=0) tw=1;
+    data.forEach(function(d){ var pe=d.r.querySelector(".adm-seg-pct"); if(pe) pe.textContent=(d.w/tw*100).toFixed(1)+"%"; er+=d.m*d.w; });
+    er=er/tw;
+    var rt=document.getElementById("admSegRet"); if(rt){ rt.textContent=(er*100).toFixed(0)+"%"; rt.style.color=(er>1?"#ff8a9c":"#7CFF9B"); }
   }
   function renderAdmin(){
     var scr=document.getElementById("adminScreen"); if(!scr) return;
@@ -1951,7 +1960,24 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<div class="adm-frow"><label>Apuesta m\u00ednima (pts)</label><input type="number" min="1" id="admBetMin" class="adm-num" value="'+_bMin+'"></div>';
     h+='<div class="adm-frow"><label>Apuesta m\u00e1xima (pts)</label><input type="number" min="1" id="admBetMax" class="adm-num" value="'+_bMax+'"></div>';
     h+='<div class="adm-hint" style="margin-top:6px">\uD83C\uDFB0 Las tiradas de ruleta ya no son diarias: cada cliente gana <b>1, 2 o 3 tiradas al azar</b> cada vez que juega a los rodillos.</div>';
-    h+='<div class="adm-hint" style="margin-top:6px">Probabilidades por tirada: el cliente conserva sus puntos (x1) el 90% de las veces y gana un multiplicador (de x1.5 a x5) el 10% restante. Nunca pierde puntos.</div>';
+    var _segs=(_bet&&Array.isArray(_bet.segments)&&_bet.segments.length)?_bet.segments:BET_DEFAULT.segments;
+    var _tw=0; _segs.forEach(function(x){ _tw+=(parseFloat(x.w)||0); }); if(_tw<=0)_tw=1;
+    var _er=0; _segs.forEach(function(x){ _er+=(parseFloat(x.mult)||0)*(parseFloat(x.w)||0); }); _er=_er/_tw;
+    h+='<div style="font-weight:800;margin-top:12px;margin-bottom:2px;color:#ffe277">🎯 Multiplicadores y probabilidades</div>';
+    h+='<div class="adm-hint">Cada fila es un resultado posible de la ruleta. El <b>multiplicador</b> es lo que se lleva el cliente sobre lo apostado (x1 = recupera lo apostado, nunca pierde). El <b>peso</b> define cada cu\u00e1nto sale: a mayor peso, m\u00e1s probable. El <b>%</b> se calcula solo a partir de los pesos.</div>';
+    h+='<div id="admSegList">';
+    _segs.forEach(function(x,i){ var _m=parseFloat(x.mult)||0, _w=parseFloat(x.w)||0; var _pct=(_w/_tw*100);
+      h+='<div class="adm-seg-row" style="display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap">'+
+         '<span style="color:#cbb8e6;font-size:13px">Multipl. x</span>'+
+         '<input type="number" step="0.1" min="0" class="adm-num adm-seg-mult" value="'+_m+'" style="width:80px">'+
+         '<span style="color:#cbb8e6;font-size:13px">Peso</span>'+
+         '<input type="number" step="1" min="0" class="adm-num adm-seg-w" value="'+_w+'" style="width:80px">'+
+         '<span class="adm-seg-pct" style="min-width:60px;font-weight:800;color:#8ff7ff">'+_pct.toFixed(1)+'%</span>'+
+         '<button type="button" class="adm-crdel adm-seg-del" data-i="'+i+'">Quitar</button>'+
+         '</div>'; });
+    h+='</div>';
+    h+='<button type="button" class="adm-menu-i adm-seg-add" style="margin-top:6px;width:auto;padding:8px 14px">＋ A\u00f1adir multiplicador</button>';
+    h+='<div class="adm-hint" style="margin-top:8px">Retorno medio al cliente: <b id="admSegRet" style="color:'+(_er>1?'#ff8a9c':'#7CFF9B')+'">'+(_er*100).toFixed(0)+'%</b> de lo apostado. Por debajo del 100% el margen queda a favor del negocio; por encima, el negocio pierde puntos a la larga.</div>';
     h+='</div>';
     var barOpts=Object.keys(USERS).map(function(k){ return '<option value="'+esc(k)+'">'+esc(USERS[k].bar||USERS[k].nombre||k)+'</option>'; }).join("");
     h+='<div class="adm-card" id="sec-clientes"><div class="adm-sec">Clientes / Usuarios</div>';
@@ -2031,6 +2057,10 @@ body.login-mode .login-card{margin:0 auto!important}
     var _rt=g("admRate"); if(_rt) _rt.onchange=function(){ collect(); };
     var _bon=g("admBetOn"); if(_bon) _bon.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } };
     ["admBetMin","admBetMax","admBetDay"].forEach(function(id){ var el=g(id); if(el) el.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } }; });
+    each(".adm-seg-mult", function(el){ el.oninput=function(){ recalcSegPct(); }; el.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } }; });
+    each(".adm-seg-w", function(el){ el.oninput=function(){ recalcSegPct(); }; el.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } }; });
+    each(".adm-seg-del", function(b){ b.onclick=function(){ collect(); var i=parseInt(b.getAttribute("data-i"),10); DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.segments=(DRAFT.bet.segments||[]).slice(); DRAFT.bet.segments.splice(i,1); if(!DRAFT.bet.segments.length){ DRAFT.bet.segments=[{mult:1,w:1}]; } saveDraft(); renderAdmin(); var sc=g("sec-apuesta"); if(sc) sc.scrollIntoView(); }; });
+    (function(){ var _sa=document.querySelector(".adm-seg-add"); if(_sa) _sa.onclick=function(){ collect(); DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.segments=(DRAFT.bet.segments||[]).slice(); DRAFT.bet.segments.push({mult:2,w:1}); saveDraft(); renderAdmin(); var sc=g("sec-apuesta"); if(sc) sc.scrollIntoView(); }; })();
     (function(){ var _nb=g("admNotifBtn"); if(_nb) _nb.onclick=function(){ requestNotif(); }; try{ ensureNotifBtn(); }catch(e){} })();
     (function(){ var _sr=g("admStatsRefresh"); if(_sr) _sr.onclick=function(){ loadAdminStats(); }; })();
     var _ac=g("admAddCredit"); if(_ac) _ac.onclick=function(){ collect(); var u=g("admCrBar").value; var eur=parseFloat(g("admCrEur").value)||0; var concept=(g("admCrConcept").value||"").trim(); if(!u){ toast("Elige un bar"); return; } if(eur<=0){ toast("Introduce una recaudación válida"); return; } var per100=parseFloat(g("admRate")&&g("admRate").value)||30; var pts=Math.round(eur/100*per100); DRAFT.credits=DRAFT.credits||[]; DRAFT.credits.push({ id:"rev-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), u:u, eur:eur, pts:pts, concept:concept, date:todayStr() }); saveDraft(); renderAdmin(); toast("Recaudación registrada: +"+pts+" pts para "+((USERS[u]&&USERS[u].bar)||u)); };
