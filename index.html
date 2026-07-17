@@ -1778,6 +1778,113 @@ body.login-mode .login-card{margin:0 auto!important}
       }).catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor."; });
     };
   }
+  function loadAdminPoints(){
+    if(!(SB_ON && _admPin)) return;
+    var els=document.querySelectorAll(".adm-upts"); if(!els.length) return;
+    fetch(SB_URL+"/rest/v1/rpc/app_admin_players",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin }) })
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(list){
+        var map={}; if(list && list.forEach){ list.forEach(function(x){ map[String(x.username).toLowerCase().trim()]=x; }); }
+        Array.prototype.forEach.call(els,function(el){ var u=String(el.getAttribute("data-u")||"").toLowerCase().trim(); var rec=map[u]; el.textContent="puntos: "+fmt(rec?rec.points:0); });
+      }).catch(function(){});
+  }
+
+  function openAdminPwdModal2(username){
+    if(!username) return;
+    if(document.getElementById("pwdOverlay")) return;
+    if(!(SB_ON && _admPin)){ toast("El reseteo necesita conexi\u00f3n y sesi\u00f3n de administrador (PIN)."); return; }
+    var _uu=String(username).toLowerCase().trim();
+    var cur=null; try{ (DRAFT.users||[]).forEach(function(x){ if(x.u===username||x.u===_uu) cur=x; }); }catch(e){}
+    var _nom=(cur&&cur.nombre)||username, _bar=(cur&&cur.bar)||_nom;
+    var ov=_pwdOverlay();
+    ov.innerHTML='<div style="background:#1a0a2e;border:1px solid #7540af;border-radius:16px;max-width:340px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.6)">'+
+      '<div style="font-weight:900;font-size:17px;color:#ffe277;margin-bottom:4px">\uD83D\uDD11 Restablecer contrase\u00f1a</div>'+
+      '<div style="font-size:12.5px;color:#cbb8e6;margin-bottom:14px">Cliente: <b style="color:#8ff7ff">'+esc(username)+'</b>. Escribe la nueva contrase\u00f1a (m\u00ednimo 4).</div>'+
+      '<input id="pwdNew" type="text" placeholder="Nueva contrase\u00f1a" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<input id="pwdNew2" type="text" placeholder="Repite la nueva" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<div id="pwdErr" style="color:#ff8a9c;font-size:12px;min-height:16px;margin:0 0 10px"></div>'+
+      '<div style="display:flex;gap:8px"><button id="pwdCancel" style="'+_PWD_BTN+';background:rgba(255,255,255,.08);color:#cbb8e6">Cancelar</button>'+
+      '<button id="pwdSave" style="'+_PWD_BTN+';background:linear-gradient(135deg,#b7791f,#c05621);color:#fff">Restablecer</button></div></div>';
+    var close=function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
+    document.getElementById("pwdCancel").onclick=close;
+    document.getElementById("pwdSave").onclick=function(){
+      var er=document.getElementById("pwdErr");
+      var n=document.getElementById("pwdNew").value, n2=document.getElementById("pwdNew2").value;
+      if((n||"").length<4){ er.style.color="#ff8a9c"; er.textContent="Debe tener al menos 4 caracteres."; return; }
+      if(n!==n2){ er.style.color="#ff8a9c"; er.textContent="Las contrase\u00f1as no coinciden."; return; }
+      er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
+      fetch(SB_URL+"/rest/v1/rpc/app_admin_upsert_user",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin, p_username:_uu, p_password:n, p_nombre:_nom, p_bar:_bar }) })
+        .then(function(res){ return res.text().then(function(t){ return { ok:res.ok, status:res.status, text:t }; }); })
+        .then(function(res){
+          var body=null; try{ body=JSON.parse(res.text); }catch(e){}
+          if(res.ok && body && body.ok){ try{ (DRAFT.users||[]).forEach(function(x){ if(x.u===username||x.u===_uu) x.pass=n; }); saveDraft(); renderAdmin(); }catch(e){} close(); toast("\u2705 Contrase\u00f1a de "+username+" restablecida."); return; }
+          er.style.color="#ff8a9c";
+          if(body && body.error==="pin"){ er.textContent="PIN de administrador no v\u00e1lido."; }
+          else if(!res.ok){ var m=""; try{ var j=JSON.parse(res.text); m=j.message||j.hint||j.details||""; }catch(e){} var miss=(res.status===404||/PGRST202|does not exist|no existe|schema cache|Could not find/i.test(res.text)); er.textContent=(miss?"Falta crear la funci\u00f3n en el servidor: ejecuta secure-setup.sql una vez.":"No se pudo restablecer.")+" (HTTP "+res.status+(m?" \u00b7 "+m:"")+")"; }
+          else { er.textContent="No se pudo restablecer. Int\u00e9ntalo de nuevo."; }
+        }).catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor."; });
+    };
+  }
+
+  function openAdminEditModal(username){
+    if(!username) return;
+    if(document.getElementById("pwdOverlay")) return;
+    if(!(SB_ON && _admPin)){ toast("Editar clientes necesita conexi\u00f3n y sesi\u00f3n de administrador (PIN)."); return; }
+    var _uu=String(username).toLowerCase().trim();
+    var cur=null; try{ (DRAFT.users||[]).forEach(function(x){ if(x.u===username||x.u===_uu) cur=x; }); }catch(e){}
+    if(!cur){ toast("No encuentro ese cliente en el borrador."); return; }
+    var _curPts=0;
+    var ov=_pwdOverlay();
+    ov.innerHTML='<div style="background:#1a0a2e;border:1px solid #7540af;border-radius:16px;max-width:360px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.6)">'+
+      '<div style="font-weight:900;font-size:17px;color:#ffe277;margin-bottom:4px">\u270F\uFE0F Editar cliente</div>'+
+      '<div style="font-size:12.5px;color:#cbb8e6;margin-bottom:14px">Usuario: <b style="color:#8ff7ff">'+esc(username)+'</b> <span style="color:#9a86bd">(no se puede cambiar)</span></div>'+
+      '<label style="font-size:12px;color:#cbb8e6;display:block;margin:0 0 3px">Nombre de contacto</label>'+
+      '<input id="edNombre" type="text" placeholder="Nombre" value="'+esc(cur.nombre||"")+'" style="'+_PWD_INP+'">'+
+      '<label style="font-size:12px;color:#cbb8e6;display:block;margin:0 0 3px">Bar / Local</label>'+
+      '<input id="edBar" type="text" placeholder="Bar o local" value="'+esc(cur.bar||"")+'" style="'+_PWD_INP+'">'+
+      '<label style="font-size:12px;color:#cbb8e6;display:block;margin:0 0 3px">Puntos <span id="edPtsCur" style="color:#9a86bd">(cargando\u2026)</span></label>'+
+      '<input id="edPoints" type="number" min="0" step="1" placeholder="Puntos" style="'+_PWD_INP+'">'+
+      '<div style="display:flex;gap:6px;margin:-4px 0 10px"><button id="edPm100" type="button" style="'+_PWD_BTN+';padding:7px;background:rgba(255,255,255,.06);color:#cbb8e6">\u2212100</button><button id="edPp100" type="button" style="'+_PWD_BTN+';padding:7px;background:rgba(255,255,255,.06);color:#cbb8e6">+100</button><button id="edPp500" type="button" style="'+_PWD_BTN+';padding:7px;background:rgba(255,255,255,.06);color:#cbb8e6">+500</button></div>'+
+      '<label style="font-size:12px;color:#cbb8e6;display:block;margin:0 0 3px">Nueva contrase\u00f1a <span style="color:#9a86bd">(opcional)</span></label>'+
+      '<input id="edPass" type="text" placeholder="Dejar vac\u00edo para no cambiarla" autocomplete="new-password" style="'+_PWD_INP+'">'+
+      '<div id="pwdErr" style="color:#ff8a9c;font-size:12px;min-height:16px;margin:0 0 10px"></div>'+
+      '<div style="display:flex;gap:8px"><button id="pwdCancel" style="'+_PWD_BTN+';background:rgba(255,255,255,.08);color:#cbb8e6">Cancelar</button>'+
+      '<button id="pwdSave" style="'+_PWD_BTN+';background:linear-gradient(135deg,#1f8a6d,#0f766e);color:#fff">Guardar cambios</button></div></div>';
+    var close=function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
+    document.getElementById("pwdCancel").onclick=close;
+    function adj(d){ var pe=document.getElementById("edPoints"); var v=parseInt(pe.value,10); if(isNaN(v)) v=_curPts; v=Math.max(0,Math.min(1000000,v+d)); pe.value=v; }
+    document.getElementById("edPm100").onclick=function(){ adj(-100); };
+    document.getElementById("edPp100").onclick=function(){ adj(100); };
+    document.getElementById("edPp500").onclick=function(){ adj(500); };
+    fetch(SB_URL+"/rest/v1/rpc/app_admin_players",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin }) })
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(list){ var rec=null; if(list && list.forEach){ list.forEach(function(x){ if(String(x.username).toLowerCase().trim()===_uu) rec=x; }); } _curPts=rec?(rec.points||0):0; var pe=document.getElementById("edPoints"); if(pe && !pe.value) pe.value=_curPts; var lb=document.getElementById("edPtsCur"); if(lb) lb.textContent="(actual: "+fmt(_curPts)+")"; })
+      .catch(function(){ var lb=document.getElementById("edPtsCur"); if(lb) lb.textContent=""; });
+    document.getElementById("pwdSave").onclick=function(){
+      var er=document.getElementById("pwdErr");
+      var nom=(document.getElementById("edNombre").value||"").trim();
+      var bar=(document.getElementById("edBar").value||"").trim();
+      var np=(document.getElementById("edPass").value||"");
+      if(np && np.length<4){ er.style.color="#ff8a9c"; er.textContent="La nueva contrase\u00f1a debe tener al menos 4 caracteres."; return; }
+      if(!nom){ nom=username; } if(!bar){ bar=nom; }
+      var newp=parseInt(document.getElementById("edPoints").value,10); if(isNaN(newp)) newp=_curPts; newp=Math.max(0,Math.min(1000000,newp));
+      er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
+      function fail(res,verb){ er.style.color="#ff8a9c"; var m=""; try{ var j=JSON.parse(res.text); m=j.message||j.hint||j.details||""; }catch(e){} var miss=(res.status===404||/PGRST202|does not exist|no existe|schema cache|Could not find/i.test(res.text||"")); er.textContent=(miss?"Falta crear la funci\u00f3n en el servidor: ejecuta puntos.sql / secure-setup.sql una vez.":("No se pudo "+verb+"."))+" (HTTP "+res.status+(m?" \u00b7 "+m:"")+")"; }
+      function done(){ try{ (DRAFT.users||[]).forEach(function(x){ if(x.u===username||x.u===_uu){ x.nombre=nom; x.bar=bar; if(np) x.pass=np; } }); saveDraft(); applyCfgUsers(DRAFT); renderAdmin(); }catch(e){} close(); toast("\u2705 Cliente "+username+" actualizado."); }
+      fetch(SB_URL+"/rest/v1/rpc/app_admin_upsert_user",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin, p_username:_uu, p_password:(np||""), p_nombre:nom, p_bar:bar }) })
+        .then(function(res){ return res.text().then(function(t){ return { ok:res.ok, status:res.status, text:t }; }); })
+        .then(function(res){
+          var body=null; try{ body=JSON.parse(res.text); }catch(e){}
+          if(!(res.ok && body && body.ok)){ if(body && body.error==="pin"){ er.style.color="#ff8a9c"; er.textContent="PIN de administrador no v\u00e1lido."; } else { fail(res,"guardar"); } return; }
+          if(newp===_curPts){ done(); return; }
+          fetch(SB_URL+"/rest/v1/rpc/app_admin_set_points",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin, p_username:_uu, p_points:newp }) })
+            .then(function(res2){ return res2.text().then(function(t){ return { ok:res2.ok, status:res2.status, text:t }; }); })
+            .then(function(res2){ var b2=null; try{ b2=JSON.parse(res2.text); }catch(e){} if(res2.ok && b2 && b2.ok){ done(); } else if(b2 && b2.error==="pin"){ er.style.color="#ff8a9c"; er.textContent="PIN de administrador no v\u00e1lido."; } else { fail(res2,"ajustar los puntos"); } })
+            .catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor (puntos)."; });
+        }).catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor."; });
+    };
+  }
+
   function openAdminResetModal(username){
     if(!username) return;
     if(document.getElementById("pwdOverlay")) return;
@@ -1974,7 +2081,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var _bk=Object.keys(BUILTIN_USERS);
     h+='<div class="adm-crlist">';
     _bk.forEach(function(k){ h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(BUILTIN_USERS[k].bar||BUILTIN_USERS[k].nombre||k)+'</b> · '+esc(k)+'<span class="adm-ubuiltin">de prueba</span><span class="adm-crmeta">contraseña: '+'•••••'+'</span></div></div>'; });
-    if(_cu.length){ _cu.slice().reverse().forEach(function(u){ h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(u.bar||u.nombre||u.u)+'</b> · '+esc(u.u)+'<span class="adm-crmeta">contraseña: '+esc(u.pass)+(u.nombre&&u.nombre!==u.u?(' · '+esc(u.nombre)):'')+'</span></div><button class="adm-crdel adm-upwd" data-u="'+esc(u.u)+'" style="background:#2a1440;border-color:#7540af;color:#d9c6ff">🔑 Contraseña</button><button class="adm-crdel adm-udel" data-u="'+esc(u.u)+'">Eliminar</button></div>'; }); }
+    if(_cu.length){ _cu.slice().reverse().forEach(function(u){ h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(u.bar||u.nombre||u.u)+'</b> · '+esc(u.u)+'<span class="adm-crmeta">contraseña: '+esc(u.pass)+(u.nombre&&u.nombre!==u.u?(' · '+esc(u.nombre)):'')+' · <span class="adm-upts" data-u="'+esc(u.u)+'" style="color:#ffe277;font-weight:800">puntos: …</span></span></div><button class="adm-crdel adm-uedit" data-u="'+esc(u.u)+'" style="background:#12312a;border-color:#1f8a6d;color:#9ef7dd">✏️ Editar</button><button class="adm-crdel adm-upwd" data-u="'+esc(u.u)+'" style="background:#2a1440;border-color:#7540af;color:#d9c6ff">🔑 Contraseña</button><button class="adm-crdel adm-udel" data-u="'+esc(u.u)+'">Eliminar</button></div>'; }); }
     else { h+='<div class="adm-hint" style="margin-top:10px">Aún no has añadido ningún cliente propio.</div>'; }
     h+='</div></div>';
     h+='<div class="adm-card" id="sec-recaudacion"><div class="adm-sec">Recaudación de máquinas → puntos</div>';
@@ -2049,7 +2156,9 @@ body.login-mode .login-card{margin:0 auto!important}
     (function(){ var _sr=g("admStatsRefresh"); if(_sr) _sr.onclick=function(){ loadAdminStats(); }; })();
     var _ac=g("admAddCredit"); if(_ac) _ac.onclick=function(){ collect(); var u=g("admCrBar").value; var eur=parseFloat(g("admCrEur").value)||0; var concept=(g("admCrConcept").value||"").trim(); if(!u){ toast("Elige un bar"); return; } if(eur<=0){ toast("Introduce una recaudación válida"); return; } var per100=parseFloat(g("admRate")&&g("admRate").value)||30; var pts=Math.round(eur/100*per100); DRAFT.credits=DRAFT.credits||[]; DRAFT.credits.push({ id:"rev-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), u:u, eur:eur, pts:pts, concept:concept, date:todayStr() }); saveDraft(); renderAdmin(); toast("Recaudación registrada: +"+pts+" pts para "+((USERS[u]&&USERS[u].bar)||u)); };
     var _au=g("admAddUser"); if(_au) _au.onclick=function(){ collect(); var u=(g("admUUser").value||"").toLowerCase().trim().replace(/[^a-z0-9_.\-]/g,""); var pass=(g("admUPass").value||"").trim(); var nombre=(g("admUNombre").value||"").trim(); var bar=(g("admUBar").value||"").trim(); if(!u){ toast("Escribe un nombre de usuario"); return; } if(!pass){ toast("Escribe una contraseña"); return; } DRAFT.users=DRAFT.users||[]; if(DRAFT.users.some(function(x){return x.u===u;})||(u in BUILTIN_USERS)){ toast("Ese usuario ya existe"); return; } DRAFT.users.push({ u:u, pass:pass, nombre:nombre||u, bar:bar||nombre||u }); saveDraft(); applyCfgUsers(DRAFT); g("admUUser").value=""; g("admUPass").value=""; g("admUNombre").value=""; g("admUBar").value=""; renderAdmin(); var _lbl=(bar||nombre||u); if(SB_SECURE && _admPin){ toast("Guardando "+_lbl+" en el servidor…"); sbRpc("app_admin_upsert_user",{ p_pin:_admPin, p_username:u, p_password:pass, p_nombre:nombre||u, p_bar:bar||nombre||u }).then(function(res){ if(res && res.ok){ toast("✔ Cliente añadido y activado: "+_lbl); } else { toast("⚠ Añadido en local, pero el servidor lo rechazó ("+((res&&res.error)||"error")+"). Revisa el PIN o vuelve a ejecutar el secure-setup.sql."); } }).catch(function(){ toast("⚠ Añadido en local, pero no se pudo contactar con el servidor. Ejecuta el secure-setup.sql más reciente."); }); } else { toast("Cliente añadido (solo local): "+_lbl); } };
-    each(".adm-upwd", function(b){ b.onclick=function(){ openAdminResetModal(b.getAttribute("data-u")); }; });
+    each(".adm-upwd", function(b){ b.onclick=function(){ openAdminPwdModal2(b.getAttribute("data-u")); }; });
+    each(".adm-uedit", function(b){ b.onclick=function(){ openAdminEditModal(b.getAttribute("data-u")); }; });
+    try{ loadAdminPoints(); }catch(e){}
     each(".adm-udel", function(b){ b.onclick=function(){ collect(); var u=b.getAttribute("data-u"); if(!confirm("¿Eliminar al cliente \""+u+"\"? Sus recaudaciones registradas seguirán apareciendo pero ese usuario ya no podrá iniciar sesión.")) return; DRAFT.users=(DRAFT.users||[]).filter(function(x){ return x.u!==u; }); saveDraft(); applyCfgUsers(DRAFT); renderAdmin(); toast("Cliente eliminado: "+u); }; });
     each(".adm-crdel:not(.adm-udel)", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.credits=(DRAFT.credits||[]).filter(function(c){ return c.id!==id; }); saveDraft(); renderAdmin(); }; });
     each(".adm-rw-add",function(b){ b.onclick=function(){ collect(); DRAFT.rewards.push({name:"Nuevo premio",emoji:"🎁",cost:1000,tier:"Regalos"}); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Nuevo premio añadido"); }; });
