@@ -1423,6 +1423,7 @@ body.login-mode .login-card{margin:0 auto!important}
     const wrap = document.getElementById("catalog");
     const catalog=catalogItems();
     const pts = state.points || 0;
+    function progColor(p){ if(p < 40) return "linear-gradient(90deg,#FF3651,#C8102E)"; if(p < 75) return "linear-gradient(90deg,#FFD24B,#FF9D2E)"; return "linear-gradient(90deg,#9df0b8,#2f9d5a)"; }
     var TIER_CLASS = { "Regalos":"t1", "Electrónica":"t2", "Viajes":"t3" };
     var heroHtml = "";
     var locked = catalog.filter(function(x){ return x.cost > pts; });
@@ -1432,7 +1433,7 @@ body.login-mode .login-card{margin:0 auto!important}
       heroHtml = '<div class="next-prize"><div class="np-badge">🎯 Tu próximo premio</div><div class="np-body">' +
                    '<div class="np-emoji">' + nx.emoji + '</div>' +
                    '<div class="np-info"><div class="np-name">' + nx.name + '</div>' +
-                     '<div class="np-bar"><div class="np-fill" style="width:' + pctN + '%"></div></div>' +
+                     '<div class="np-bar"><div class="np-fill" style="width:' + pctN + '%;background:' + progColor(pctN) + '"></div></div>' +
                      '<div class="np-meta"><span>' + fmt(pts) + ' / ' + fmt(nx.cost) + ' pts</span><b>Te faltan ' + fmt(nx.cost - pts) + '</b></div>' +
                    '</div></div></div>';
     } else if (catalog.length){
@@ -1461,7 +1462,7 @@ body.login-mode .login-card{margin:0 auto!important}
                   '<div class="r-name">' + item.name + '</div>' +
                   '<div class="r-cost">' + fmt(item.cost) + ' pts</div>' +
                   (can ? '<button class="r-btn ok" data-idx="' + gidx + '">Canjear</button>'
-                       : '<div class="r-prog"><div class="r-prog-fill" style="width:' + pct + '%"></div></div><div class="r-need">' + pct + '% · faltan ' + fmt(item.cost - pts) + '</div>') +
+                       : '<div class="r-prog"><div class="r-prog-fill" style="width:' + pct + '%;background:' + progColor(pct) + '"></div></div><div class="r-need">' + pct + '% · faltan ' + fmt(item.cost - pts) + '</div>') +
                 '</div>';
       });
       html += '</div></div>';
