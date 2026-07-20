@@ -708,6 +708,9 @@ body.login-mode .login-card{margin:0 auto!important}
     <div class="section-title">Catálogo de premios</div>
     <div id="catalog"></div>
 
+    <div class="section-title" id="myCanjesTitle" style="display:none">🎁 Mis premios reclamados</div>
+    <div id="myCanjes"></div>
+
     <div class="section-title">Actividad reciente</div>
     <div class="history" id="history"></div>
 
@@ -877,6 +880,10 @@ body.login-mode .login-card{margin:0 auto!important}
     if(!SB_SECURE || !_CRED.u) return Promise.resolve(null);
     return sbRpc("app_redeem",{ p_username:_CRED.u, p_password:_CRED.p, p_prize:item.name }).then(function(res){ return res; }).catch(function(){ return null; });
   }
+  function secureCancelRedeem(row){
+    if(!SB_SECURE || !_CRED.u) return Promise.resolve(null);
+    return sbRpc("app_cancel_redeem",{ p_username:_CRED.u, p_password:_CRED.p, p_prize:row.premio, p_id:row.id }).then(function(res){ return res; }).catch(function(){ return null; });
+  }
   function sha256Hex(str){
     try{ var enc=new TextEncoder().encode(str);
       return crypto.subtle.digest("SHA-256",enc).then(function(buf){
@@ -944,17 +951,18 @@ body.login-mode .login-card{margin:0 auto!important}
   function localRedemptions(){ try{ return JSON.parse(localStorage.getItem(LS_REDEEM)||"[]"); }catch(e){ return []; } }
   function saveLocalRedemptions(a){ try{ localStorage.setItem(LS_REDEEM, JSON.stringify((a||[]).slice(0,400))); }catch(e){} }
   function upsertLocalRedemption(row){ var a=localRedemptions(); var f=false; for(var i=0;i<a.length;i++){ if(a[i].id===row.id){ a[i]=Object.assign({},a[i],row); f=true; break; } } if(!f) a.unshift(row); saveLocalRedemptions(a); }
-  function recordRedemption(item, today){ try{ var info=(typeof USERS!=="undefined" && USERS[currentUser])?USERS[currentUser]:{}; var rid=currentUser+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); var row={ id:rid, username:currentUser, bar:(info.bar||info.nombre||currentUser), premio:item.name, puntos:item.cost, created_at:new Date().toISOString(), delivered:false, delivered_at:null }; upsertLocalRedemption(row); try{ sbUpsert("redemptions", row, "id"); }catch(e){} }catch(e){} }
+  function recordRedemption(item, today, serverOk){ try{ var info=(typeof USERS!=="undefined" && USERS[currentUser])?USERS[currentUser]:{}; var rid=currentUser+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); var row={ id:rid, username:currentUser, bar:(info.bar||info.nombre||currentUser), premio:item.name, puntos:item.cost, created_at:new Date().toISOString(), delivered:false, delivered_at:null, cancelled:false, cancelled_at:null }; upsertLocalRedemption(row); if(!serverOk){ try{ sbUpsert("redemptions", row, "id"); }catch(e){} } return rid; }catch(e){ return null; } }
   function sbLoadRedemptions(){ if(SB_SECURE && _admPin){ return sbRpc("app_admin_redemptions",{ p_pin:_admPin }).catch(function(){ return null; }); } return sbSelect("redemptions?select=*&order=created_at.desc&limit=300"); }
   function sbSetDelivered(id, delivered){ if(!SB_ON) return Promise.resolve(false); if(SB_SECURE && _admPin){ return sbRpc("app_admin_set_delivered",{ p_pin:_admPin, p_id:id, p_delivered:delivered }).then(function(){ return true; }).catch(function(){ return false; }); } return fetch(SB_URL+"/rest/v1/redemptions?id=eq."+encodeURIComponent(id),{ method:"PATCH", headers:sbHeaders({ "Prefer":"return=minimal" }), body:JSON.stringify({ delivered:delivered, delivered_at:(delivered?new Date().toISOString():null) }) }).then(function(r){ return r.ok; }).catch(function(){ return false; }); }
+  function sbDeleteRedemption(id){ if(!SB_ON||!id) return Promise.resolve(false); return fetch(SB_URL+"/rest/v1/redemptions?id=eq."+encodeURIComponent(id),{ method:"DELETE", headers:sbHeaders({ "Prefer":"return=minimal" }) }).then(function(r){ return r.ok; }).catch(function(){ return false; }); }
   function mergeRedemptions(remote){ var map={}; (remote||[]).forEach(function(r){ map[r.id]=r; }); localRedemptions().forEach(function(l){ if(!map[l.id]) map[l.id]=l; }); var arr=Object.keys(map).map(function(k){ return map[k]; }); arr.sort(function(a,b){ return String(b.created_at||"").localeCompare(String(a.created_at||"")); }); return arr; }
-  function pendingCount(){ return (_redemptions||[]).filter(function(r){ return !r.delivered; }).length; }
-  function renderCanjeList(){ var wrap=document.getElementById("canjeList"); if(!wrap) return; var list=_redemptions||[]; var filt=list.filter(function(r){ if(_canjeFilter==="pending") return !r.delivered; if(_canjeFilter==="delivered") return !!r.delivered; return true; }); var pend=pendingCount(); var badge=document.getElementById("canjeBadge"); if(badge){ badge.textContent=pend?String(pend):""; badge.style.display=pend?"inline-flex":"none"; } if(!filt.length){ wrap.innerHTML='<div class="adm-canje-empty">'+(_canjeFilter==="pending"?"🎉 No hay canjes pendientes":"No hay canjes que mostrar todav\u00eda.")+'</div>'; return; } var h=""; filt.forEach(function(r){ var when=""; if(r.created_at){ try{ when=new Date(r.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(e){} } h+='<div class="adm-canje-item'+(r.delivered?" done":"")+'">'; h+='<div class="adm-canje-info"><div class="adm-canje-prize">🎁 '+esc(r.premio||"Premio")+'</div>'; h+='<div class="adm-canje-meta"><b>'+esc(r.bar||r.username||"")+'</b> \u00b7 '+esc(when)+' \u00b7 '+fmt(r.puntos||0)+' pts</div></div>'; h+='<button type="button" class="adm-canje-toggle'+(r.delivered?" done":"")+'" data-id="'+esc(r.id)+'">'+(r.delivered?"\u2713 Entregado":"Marcar entregado")+'</button>'; h+='</div>'; }); wrap.innerHTML=h; Array.prototype.forEach.call(wrap.querySelectorAll(".adm-canje-toggle"), function(b){ b.onclick=function(){ toggleDelivered(b.getAttribute("data-id")); }; }); }
+  function pendingCount(){ return (_redemptions||[]).filter(function(r){ return !r.delivered && !r.cancelled; }).length; }
+  function renderCanjeList(){ var wrap=document.getElementById("canjeList"); if(!wrap) return; var list=_redemptions||[]; var filt=list.filter(function(r){ if(r.cancelled) return _canjeFilter==="all"; if(_canjeFilter==="pending") return !r.delivered; if(_canjeFilter==="delivered") return !!r.delivered; return true; }); var pend=pendingCount(); var badge=document.getElementById("canjeBadge"); if(badge){ badge.textContent=pend?String(pend):""; badge.style.display=pend?"inline-flex":"none"; } if(!filt.length){ wrap.innerHTML='<div class="adm-canje-empty">'+(_canjeFilter==="pending"?"🎉 No hay canjes pendientes":"No hay canjes que mostrar todav\u00eda.")+'</div>'; return; } var h=""; filt.forEach(function(r){ var when=""; if(r.created_at){ try{ when=new Date(r.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(e){} } h+='<div class="adm-canje-item'+(r.delivered?" done":"")+'">'; h+='<div class="adm-canje-info"><div class="adm-canje-prize">🎁 '+esc(r.premio||"Premio")+'</div>'; h+='<div class="adm-canje-meta"><b>'+esc(r.bar||r.username||"")+'</b> \u00b7 '+esc(when)+' \u00b7 '+fmt(r.puntos||0)+' pts</div></div>'; h+='<button type="button" class="adm-canje-toggle'+(r.delivered?" done":"")+'" data-id="'+esc(r.id)+'">'+(r.delivered?"\u2713 Entregado":"Marcar entregado")+'</button>'; h+='</div>'; }); wrap.innerHTML=h; Array.prototype.forEach.call(wrap.querySelectorAll(".adm-canje-toggle"), function(b){ b.onclick=function(){ toggleDelivered(b.getAttribute("data-id")); }; }); }
   function toggleDelivered(id){ var r=null; for(var i=0;i<_redemptions.length;i++){ if(_redemptions[i].id===id){ r=_redemptions[i]; break; } } if(!r) return; var nv=!r.delivered; r.delivered=nv; r.delivered_at=(nv?new Date().toISOString():null); upsertLocalRedemption(r); try{ sbSetDelivered(id, nv); }catch(e){} renderCanjeList(); toast(nv?"Marcado como entregado \u2713":"Marcado como pendiente"); }
   function notifyNewCanjes(newOnes){ if(!newOnes||!newOnes.length) return; try{ ensureAudio(); chime(); }catch(e){} var n=newOnes.length; var f=newOnes[0]; var msg=(n===1)?((f.bar||f.username||"Un cliente")+" ha canjeado: "+f.premio):(n+" nuevos canjes de premios"); try{ toast("🎁 "+msg); }catch(e){} try{ showNotif("Tiki Taka \u00b7 Nuevo canje", msg, "canje"); }catch(e){} }
   function historialCardHtml(){ return '<div class="adm-card" id="sec-historial"><div class="adm-sec">📜 Historial por cliente</div><div class="adm-hint">Registro de todos los premios que ha canjeado cada cliente.</div><button type="button" class="adm-canje-refresh" id="admHistRefresh" style="margin-bottom:10px">↻ Actualizar historial</button><div id="admHistList"><div class="adm-canje-empty">Pulsa «Actualizar historial» para cargar los datos.</div></div></div>'; }
-  function renderHistList(){ var wrap=document.getElementById("admHistList"); if(!wrap) return; var list=(_redemptions||[]).slice(); if(!list.length){ wrap.innerHTML='<div class="adm-canje-empty">Todavía no hay premios canjeados.</div>'; return; } var groups={}; list.forEach(function(r){ var key=r.username||r.bar||"?"; if(!groups[key]){ groups[key]={ name:(r.bar||r.username||key), items:[], total:0, count:0, last:0 }; } var gg=groups[key]; gg.items.push(r); gg.count++; gg.total+=(+r.puntos||0); var tt=r.created_at?(Date.parse(r.created_at)||0):0; if(tt>gg.last) gg.last=tt; }); var keys=Object.keys(groups).sort(function(a,b){ return groups[b].last-groups[a].last; }); var h=''; keys.forEach(function(k){ var gg=groups[k]; gg.items.sort(function(a,b){ return (Date.parse(b.created_at||0)||0)-(Date.parse(a.created_at||0)||0); }); var rows=''; gg.items.forEach(function(r){ var when=''; if(r.created_at){ try{ when=new Date(r.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(e){} } var st=r.delivered?'rgba(47,133,90,.25);color:#7fe0a8':'rgba(183,121,31,.25);color:#f0c674'; rows+='<div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span style="flex:1;min-width:150px">🎁 '+esc(r.premio||"Premio")+'</span><span style="opacity:.7;font-size:13px">'+esc(when)+'</span><span style="font-weight:700">'+fmt(r.puntos||0)+' pts</span><span style="font-size:12px;padding:2px 9px;border-radius:999px;background:'+st+'">'+(r.delivered?"✓ Entregado":"⏳ Pendiente")+'</span></div>'; }); h+='<details style="margin-bottom:8px;background:rgba(255,255,255,.04);border-radius:10px;padding:8px 12px"><summary style="cursor:pointer;font-size:14px;font-weight:600">'+esc(gg.name)+' · '+gg.count+' canje'+(gg.count===1?"":"s")+' · '+fmt(gg.total)+' pts</summary><div style="margin-top:6px">'+rows+'</div></details>'; }); wrap.innerHTML=h; }
-  function loadCanjes(isPoll){ if(!isPoll){ _redemptions=mergeRedemptions([]); renderCanjeList(); try{ renderHistList(); }catch(e){} } if(!SB_ON){ if(_canjeSeen===null){ _canjeSeen={}; (_redemptions||[]).forEach(function(r){ _canjeSeen[r.id]=true; }); } return; } sbLoadRedemptions().then(function(rows){ if(rows==null) return; _redemptions=mergeRedemptions(rows); saveLocalRedemptions(_redemptions); if(_canjeSeen===null){ _canjeSeen={}; _redemptions.forEach(function(r){ _canjeSeen[r.id]=true; }); } else { var news=_redemptions.filter(function(r){ return !r.delivered && !_canjeSeen[r.id]; }); _redemptions.forEach(function(r){ _canjeSeen[r.id]=true; }); if(news.length) notifyNewCanjes(news); } renderCanjeList(); try{ renderHistList(); }catch(e){} }).catch(function(){}); }
+  function renderHistList(){ var wrap=document.getElementById("admHistList"); if(!wrap) return; var list=(_redemptions||[]).slice(); if(!list.length){ wrap.innerHTML='<div class="adm-canje-empty">Todavía no hay premios canjeados.</div>'; return; } var groups={}; list.forEach(function(r){ var key=r.username||r.bar||"?"; if(!groups[key]){ groups[key]={ name:(r.bar||r.username||key), items:[], total:0, count:0, last:0 }; } var gg=groups[key]; gg.items.push(r); gg.count++; gg.total+=(+r.puntos||0); var tt=r.created_at?(Date.parse(r.created_at)||0):0; if(tt>gg.last) gg.last=tt; }); var keys=Object.keys(groups).sort(function(a,b){ return groups[b].last-groups[a].last; }); var h=''; keys.forEach(function(k){ var gg=groups[k]; gg.items.sort(function(a,b){ return (Date.parse(b.created_at||0)||0)-(Date.parse(a.created_at||0)||0); }); var rows=''; gg.items.forEach(function(r){ var when=''; if(r.created_at){ try{ when=new Date(r.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(e){} } var st=r.cancelled?'rgba(120,120,120,.25);color:#c9c9c9':(r.delivered?'rgba(47,133,90,.25);color:#7fe0a8':'rgba(183,121,31,.25);color:#f0c674'); rows+='<div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span style="flex:1;min-width:150px">🎁 '+esc(r.premio||"Premio")+'</span><span style="opacity:.7;font-size:13px">'+esc(when)+'</span><span style="font-weight:700">'+fmt(r.puntos||0)+' pts</span><span style="font-size:12px;padding:2px 9px;border-radius:999px;background:'+st+'">'+(r.cancelled?"↩️ Cancelado":(r.delivered?"✓ Entregado":"⏳ Pendiente"))+'</span></div>'; }); h+='<details style="margin-bottom:8px;background:rgba(255,255,255,.04);border-radius:10px;padding:8px 12px"><summary style="cursor:pointer;font-size:14px;font-weight:600">'+esc(gg.name)+' · '+gg.count+' canje'+(gg.count===1?"":"s")+' · '+fmt(gg.total)+' pts</summary><div style="margin-top:6px">'+rows+'</div></details>'; }); wrap.innerHTML=h; }
+  function loadCanjes(isPoll){ if(!isPoll){ _redemptions=mergeRedemptions([]); renderCanjeList(); try{ renderHistList(); }catch(e){} } if(!SB_ON){ if(_canjeSeen===null){ _canjeSeen={}; (_redemptions||[]).forEach(function(r){ _canjeSeen[r.id]=true; }); } return; } sbLoadRedemptions().then(function(rows){ if(rows==null) return; _redemptions=mergeRedemptions(rows); saveLocalRedemptions(_redemptions); if(_canjeSeen===null){ _canjeSeen={}; _redemptions.forEach(function(r){ _canjeSeen[r.id]=true; }); } else { var news=_redemptions.filter(function(r){ return !r.delivered && !r.cancelled && !_canjeSeen[r.id]; }); _redemptions.forEach(function(r){ _canjeSeen[r.id]=true; }); if(news.length) notifyNewCanjes(news); } renderCanjeList(); try{ renderHistList(); }catch(e){} }).catch(function(){}); }
   function startCanjePoll(){ stopCanjePoll(); _canjePoll=setInterval(function(){ var scr=document.getElementById("adminScreen"); if(scr && !scr.hidden){ loadCanjes(true); } else { stopCanjePoll(); } }, 40000); }
   function stopCanjePoll(){ if(_canjePoll){ clearInterval(_canjePoll); _canjePoll=null; } }
 
@@ -1038,7 +1046,7 @@ body.login-mode .login-card{margin:0 auto!important}
       var info=null, serverState=null;
       if(res && res!=="offline"){ info={nombre:res.nombre,bar:res.bar}; serverState=res.state; }
       else if(SB_ON){
-        if(res==="offline"){ loginError("⚠️ Sin conexión. Necesitas internet para iniciar sesión."); return; }
+        if(res==="offline"){ loginError("⚠�� Sin conexión. Necesitas internet para iniciar sesión."); return; }
         loginError("❌ Usuario o contraseña incorrectos."); return;
       }
       else { var li=USERS[u]; if(li && li.pass===p){ info={nombre:li.nombre,bar:li.bar}; } }
@@ -1076,6 +1084,7 @@ body.login-mode .login-card{margin:0 auto!important}
     renderCatalog();
     renderBet();
     renderHistory();
+    renderMyCanjes();
     if (state && state.pendingBox){ setTimeout(function(){ openBoxPicker(); }, 600); }
   }
 
@@ -1420,12 +1429,12 @@ body.login-mode .login-card{margin:0 auto!important}
     var _finish=function(newPoints, serverOk){
       const prev = state.points;
       state.points = (typeof newPoints==="number") ? newPoints : (prev - item.cost);
-      state.history.unshift({ type:"redeem", date:today, label:"Canje: " + item.name, delta:-item.cost });
+      var _cid = recordRedemption(item, today, serverOk);
+      state.history.unshift({ type:"redeem", date:today, label:"Canje: " + item.name, delta:-item.cost, canjeId:_cid });
       saveState();
-      renderCatalog(); renderHistory();
+      renderCatalog(); renderHistory(); renderMyCanjes();
       countUp(balance, prev, state.points, 800);
       postCanje(item, today);
-      if(!serverOk){ recordRedemption(item, today); }
       launchConfetti(140); chime();
       showPop(item.emoji, "¡Canjeado!", item.name);
     };
@@ -1439,6 +1448,54 @@ body.login-mode .login-card{margin:0 auto!important}
     } else { _finish(undefined, false); }
   }
 
+  function renderMyCanjes(){
+    var title=document.getElementById("myCanjesTitle");
+    var wrap=document.getElementById("myCanjes");
+    if(!wrap) return;
+    var mine=localRedemptions().filter(function(r){ return r && r.username===currentUser && !r.delivered && !r.cancelled; });
+    if(!mine.length){ if(title) title.style.display="none"; wrap.innerHTML=""; return; }
+    if(title) title.style.display="";
+    mine.sort(function(a,b){ return String(b.created_at||"").localeCompare(String(a.created_at||"")); });
+    var h="";
+    mine.forEach(function(r){
+      var when=""; if(r.created_at){ try{ when=new Date(r.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(e){} }
+      h+='<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:11px 13px;margin-bottom:8px">';
+      h+='<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14.5px">🎁 '+esc(r.premio||"Premio")+'</div><div style="font-size:12.5px;opacity:.75;margin-top:2px">'+esc(when)+' · '+fmt(r.puntos||0)+' pts · ⏳ Pendiente de entrega</div></div>';
+      h+='<button type="button" class="mycanje-cancel" data-id="'+esc(r.id)+'" style="white-space:nowrap;background:rgba(255,255,255,.06);border:1px solid rgba(255,120,120,.45);color:#ff9d9d;border-radius:10px;padding:9px 13px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">↩️ Cancelar</button>';
+      h+='</div>';
+    });
+    wrap.innerHTML=h;
+    Array.prototype.forEach.call(wrap.querySelectorAll(".mycanje-cancel"), function(b){ b.onclick=function(){ cancelRedeem(b.getAttribute("data-id")); }; });
+  }
+  function cancelRedeem(id){
+    if(!state) return;
+    var arr=localRedemptions(); var row=null;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ row=arr[i]; break; } }
+    if(!row){ toast("No se encontró ese canje"); return; }
+    if(row.delivered){ toast("Este premio ya fue entregado, no se puede cancelar"); renderMyCanjes(); return; }
+    if(row.cancelled){ renderMyCanjes(); return; }
+    if(!confirm("¿Cancelar el canje de \""+row.premio+"\" y recuperar "+fmt(row.puntos||0)+" puntos?")) return;
+    var _apply=function(newPoints, serverOk){
+      var prev=state.points;
+      state.points=(typeof newPoints==="number") ? newPoints : (prev + (+row.puntos||0));
+      row.cancelled=true; row.cancelled_at=new Date().toISOString();
+      upsertLocalRedemption(row);
+      state.history.unshift({ type:"cancel", date:todayStr(), label:"Canje cancelado: "+row.premio, delta:(+row.puntos||0) });
+      saveState();
+      if(!serverOk){ try{ sbDeleteRedemption(row.id); }catch(e){} }
+      renderCatalog(); renderHistory(); renderMyCanjes();
+      countUp(balance, prev, state.points, 800);
+      try{ launchConfetti(70, PAL_GOLD); }catch(e){}
+      toast("Canje cancelado · +"+fmt(row.puntos||0)+" pts recuperados");
+    };
+    if(SB_SECURE && _CRED.u && currentUser!=="demo"){
+      secureCancelRedeem(row).then(function(sr){
+        if(sr && sr.ok){ _apply(sr.points, true); }
+        else if(sr && sr.error==="delivered"){ row.delivered=true; upsertLocalRedemption(row); toast("Este premio ya fue entregado, no se puede cancelar"); renderMyCanjes(); }
+        else { _apply(undefined, false); }
+      }).catch(function(){ _apply(undefined, false); });
+    } else { _apply(undefined, false); }
+  }
   function renderHistory(){
     const wrap = document.getElementById("history");
     if (!state.history.length){ wrap.innerHTML = '<div class="h-empty">Aún no hay actividad. ¡Haz tu primera tirada! 🎰</div>'; return; }
@@ -1446,7 +1503,7 @@ body.login-mode .login-card{margin:0 auto!important}
     state.history.slice(0, 10).forEach(function(h){
       const pos = h.delta >= 0;
       html += '<div class="h-item">' +
-                '<div class="h-ic ' + h.type + '">' + (h.type==="spin" ? "🎰" : (h.type==="revenue" ? "💰" : "🎁")) + '</div>' +
+                '<div class="h-ic ' + h.type + '">' + (h.type==="spin" ? "🎰" : (h.type==="revenue" ? "💰" : (h.type==="cancel" ? "↩️" : "🎁"))) + '</div>' +
                 '<div class="h-body"><div class="h-label">' + h.label + '</div><div class="h-date">' + fechaLarga(h.date) + '</div></div>' +
                 '<div class="h-delta ' + (pos?"pos":"neg") + '">' + (pos?"+":"") + fmt(h.delta) + '</div>' +
               '</div>';
