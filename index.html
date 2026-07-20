@@ -229,6 +229,30 @@
   .r-btn.no { background:rgba(255,255,255,.06); color:var(--muted); cursor:not-allowed; border:1px solid var(--border); }
   .r-need { font-size:11px; color:var(--red2); font-weight:700; }
 
+  /* --- Catálogo mejorado: próximo premio, progreso y niveles --- */
+  .reward { overflow:hidden; }
+  .reward .r-shine { position:absolute; top:0; left:-60%; width:45%; height:100%; transform:skewX(-20deg); background:linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent); opacity:0; pointer-events:none; }
+  .reward:hover .r-shine { opacity:1; animation:cshine 1.1s ease; }
+  @keyframes cshine { from{ left:-60%; } to{ left:135%; } }
+  .reward.t1 { background:linear-gradient(180deg, rgba(205,127,50,.14), rgba(255,255,255,.045)); border-color:rgba(205,127,50,.4); }
+  .reward.t2 { background:linear-gradient(180deg, rgba(185,195,215,.16), rgba(255,255,255,.045)); border-color:rgba(190,200,220,.45); }
+  .reward.t3 { background:linear-gradient(180deg, rgba(232,199,122,.2), rgba(201,16,46,.1)); border-color:rgba(232,199,122,.55); box-shadow:0 6px 20px rgba(232,199,122,.14); }
+  .r-prog { width:100%; height:7px; border-radius:999px; background:rgba(0,0,0,.3); overflow:hidden; margin-top:6px; border:1px solid rgba(255,255,255,.1); }
+  .r-prog-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--gold),var(--gold-light)); transition:width .5s ease; }
+
+  .next-prize { position:relative; overflow:hidden; border-radius:18px; padding:14px 16px; margin-bottom:18px; background:linear-gradient(135deg, rgba(232,199,122,.16), rgba(201,16,46,.14)); border:1px solid rgba(232,199,122,.4); box-shadow:0 10px 28px rgba(0,0,0,.4); }
+  .next-prize.ready { background:linear-gradient(135deg, rgba(47,133,90,.22), rgba(232,199,122,.16)); border-color:rgba(127,224,168,.45); }
+  .np-badge { font-size:12px; font-weight:800; letter-spacing:.3px; color:var(--gold-light); margin-bottom:10px; }
+  .np-body { display:flex; align-items:center; gap:14px; }
+  .np-emoji { font-size:46px; line-height:1; filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); flex:0 0 auto; }
+  .np-info { flex:1; min-width:0; }
+  .np-name { font-size:16px; font-weight:800; color:#fff; margin-bottom:8px; }
+  .np-bar { height:10px; border-radius:999px; background:rgba(0,0,0,.3); overflow:hidden; border:1px solid rgba(255,255,255,.12); }
+  .np-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#E8C77A,#FBEBB8); box-shadow:0 0 12px rgba(232,199,122,.7); transition:width .6s cubic-bezier(.4,0,.2,1); }
+  .np-meta { display:flex; justify-content:space-between; gap:10px; font-size:12.5px; margin-top:7px; color:var(--muted); }
+  .np-meta b { color:var(--gold-light); }
+  .np-btn { width:auto; padding:9px 18px; margin-top:8px; }
+
   .history { display:flex; flex-direction:column; gap:9px; }
   .h-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:13px;
     background:rgba(255,255,255,.045); border:1px solid var(--border); }
@@ -1398,20 +1422,46 @@ body.login-mode .login-card{margin:0 auto!important}
   function renderCatalog(){
     const wrap = document.getElementById("catalog");
     const catalog=catalogItems();
-    let html = "";
+    const pts = state.points || 0;
+    var TIER_CLASS = { "Regalos":"t1", "Electrónica":"t2", "Viajes":"t3" };
+    var heroHtml = "";
+    var locked = catalog.filter(function(x){ return x.cost > pts; });
+    if (locked.length){
+      var nx = locked.slice().sort(function(a,b){ return (a.cost-pts)-(b.cost-pts); })[0];
+      var pctN = nx.cost ? Math.max(0, Math.min(100, Math.round(pts/nx.cost*100))) : 0;
+      heroHtml = '<div class="next-prize"><div class="np-badge">🎯 Tu próximo premio</div><div class="np-body">' +
+                   '<div class="np-emoji">' + nx.emoji + '</div>' +
+                   '<div class="np-info"><div class="np-name">' + nx.name + '</div>' +
+                     '<div class="np-bar"><div class="np-fill" style="width:' + pctN + '%"></div></div>' +
+                     '<div class="np-meta"><span>' + fmt(pts) + ' / ' + fmt(nx.cost) + ' pts</span><b>Te faltan ' + fmt(nx.cost - pts) + '</b></div>' +
+                   '</div></div></div>';
+    } else if (catalog.length){
+      var best = catalog.slice().sort(function(a,b){ return b.cost-a.cost; })[0];
+      var gidxB = catalog.indexOf(best);
+      heroHtml = '<div class="next-prize ready"><div class="np-badge">✨ ¡Puedes canjear cualquier premio!</div><div class="np-body">' +
+                   '<div class="np-emoji">' + best.emoji + '</div>' +
+                   '<div class="np-info"><div class="np-name">' + best.name + '</div>' +
+                     '<div class="np-meta"><span>Tienes ' + fmt(pts) + ' pts</span></div>' +
+                     '<button class="r-btn ok np-btn" data-idx="' + gidxB + '">Canjear ahora</button>' +
+                   '</div></div></div>';
+    }
+    let html = heroHtml;
     TIER_ORDER.forEach(function(tier){
       const items = catalog.filter(function(x){ return x.tier === tier; });
       if (!items.length) return;
+      var tc = TIER_CLASS[tier] || "t1";
       html += '<div class="tier"><div class="tier-name">' + tier + ' <span class="tier-badge">' + (TIER_TAG[tier]||"") + '</span></div><div class="rewards">';
       items.forEach(function(item){
         const gidx = catalog.indexOf(item);
-        const can = state.points >= item.cost;
-        html += '<div class="reward' + (can ? "" : " locked") + '">' +
+        const can = pts >= item.cost;
+        var pct = item.cost ? Math.max(0, Math.min(100, Math.round(pts/item.cost*100))) : 100;
+        html += '<div class="reward ' + tc + (can ? " can" : " locked") + '">' +
+                  '<div class="r-shine"></div>' +
                   '<div class="r-emoji">' + item.emoji + '</div>' +
                   '<div class="r-name">' + item.name + '</div>' +
                   '<div class="r-cost">' + fmt(item.cost) + ' pts</div>' +
                   (can ? '<button class="r-btn ok" data-idx="' + gidx + '">Canjear</button>'
-                       : '<button class="r-btn no" disabled>Bloqueado</button><div class="r-need">Faltan ' + fmt(item.cost - state.points) + '</div>') +
+                       : '<div class="r-prog"><div class="r-prog-fill" style="width:' + pct + '%"></div></div><div class="r-need">' + pct + '% · faltan ' + fmt(item.cost - pts) + '</div>') +
                 '</div>';
       });
       html += '</div></div>';
