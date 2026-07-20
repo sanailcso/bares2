@@ -230,6 +230,8 @@
   .adm-rw-toggle { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#fff; cursor:pointer; margin-left:auto; white-space:nowrap; }
   .adm-rw-toggle input { width:17px; height:17px; accent-color:#5deeff; }
   .adm-reward-row.off { opacity:.5; }
+  .adm-rw-desc { flex:1 1 100%; width:100%; min-height:40px; resize:vertical; border:1px solid rgba(255,255,255,.25); border-radius:8px; background:#100720; color:#fff; padding:8px; font-family:inherit; font-size:13px; line-height:1.4; }
+  .adm-rw-desc::placeholder { color:rgba(255,255,255,.4); }
   .r-name { font-size:14px; font-weight:700; color:#fff; line-height:1.2; min-height:34px; display:flex; align-items:center; }
   .r-cost { font-size:13px; font-weight:800; color:var(--gold-light); }
   .r-btn { margin-top:4px; width:100%; appearance:none; border:none; font-family:inherit; font-size:13.5px; font-weight:800;
@@ -281,6 +283,7 @@
   .pm-icon img { max-width:200px; max-height:200px; object-fit:contain; border-radius:14px; filter:drop-shadow(0 12px 26px rgba(0,0,0,.5)); }
   .pm-emoji { font-size:clamp(90px,26vw,140px); line-height:1; filter:drop-shadow(0 12px 26px rgba(0,0,0,.5)); }
   .pm-name { font-size:22px; font-weight:900; color:#fff; margin-bottom:6px; line-height:1.2; }
+  .pm-desc { font-size:14px; font-weight:600; color:var(--muted); line-height:1.45; margin:0 auto 14px; max-width:300px; white-space:pre-line; }
   .pm-cost { font-size:17px; font-weight:800; color:var(--gold-light); margin-bottom:16px; }
   .pm-prog { height:12px; border-radius:999px; background:rgba(0,0,0,.35); overflow:hidden; border:1px solid rgba(255,255,255,.12); }
   .pm-prog-fill { height:100%; border-radius:999px; transition:width .6s cubic-bezier(.4,0,.2,1); }
@@ -1538,6 +1541,7 @@ body.login-mode .login-card{margin:0 auto!important}
       + (tag ? '<div class="pm-badge">' + esc(tag) + '</div>' : '')
       + '<div class="pm-icon">' + icon + '</div>'
       + '<div class="pm-name">' + esc(it.name) + '</div>'
+      + (it.desc ? '<div class="pm-desc">' + esc(it.desc) + '</div>' : '')
       + '<div class="pm-cost">' + fmt(it.cost) + ' pts</div>'
       + foot
       + '</div>';
@@ -2137,7 +2141,7 @@ body.login-mode .login-card{margin:0 auto!important}
     Array.prototype.forEach.call(document.querySelectorAll(".adm-hudcolor[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.pointsHud=t.pointsHud||{}; t.pointsHud.color=inp.value||"#18052f"; } }); });
     var fb=document.getElementById("admFallback"); if(fb) DRAFT.fallback=fb.value;
     var ov=document.getElementById("admOverride"); if(ov) DRAFT.override=ov.value||null;
-    Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; });
+    Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; var _d=row.querySelector(".adm-rw-desc"); if(_d) r.desc=(_d.value||"").trim(); });
     var rt=document.getElementById("admRate"); if(rt) DRAFT.pointsPer100=parseFloat(rt.value)||30;
     var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); DRAFT.bet.segments=(function(){ var out=[]; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); if(!mi||!wi) return; var mult=parseFloat(mi.value), w=parseFloat(wi.value); if(isNaN(mult)||mult<0) return; if(isNaN(w)||w<0) w=0; out.push({ mult:mult, w:w }); }); return out.length?out:BET_DEFAULT.segments.map(function(x){ return { mult:x.mult, w:x.w }; }); })(); DRAFT.bet.colors=(function(){ var c={}; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), ci=row.querySelector(".adm-seg-color"); if(mi&&ci&&/^#[0-9a-fA-F]{3,8}$/.test(ci.value)){ c[String(parseFloat(mi.value))]=ci.value; } }); return c; })(); }
   }
@@ -2145,7 +2149,7 @@ body.login-mode .login-card{margin:0 auto!important}
   function rewardEditorHtml(){
     if(!Array.isArray(DRAFT.rewards)||!DRAFT.rewards.length) DRAFT.rewards=CATALOG.map(function(x){return Object.assign({},x);});
     var h='<div class="adm-card adm-rewards-card" id="sec-premios"><div class="adm-sec">🎁 Catálogo de premios</div><div class="adm-hint">Añade, edita o elimina premios. Se aplican al catálogo inmediatamente.</div><div class="adm-reward-list">';
-    DRAFT.rewards.forEach(function(r,i){ h+='<div class="adm-reward-row'+(r.enabled===false?' off':'')+'" data-i="'+i+'"><input class="adm-rw-name" value="'+esc(r.name)+'" placeholder="Nombre"><input class="adm-rw-icon" value="'+esc(r.emoji||"🎁")+'" maxlength="8" aria-label="Icono"><input class="adm-rw-cost" type="number" min="1" value="'+Math.max(1,+r.cost||1)+'" aria-label="Puntos"><select class="adm-rw-tier">'+TIER_ORDER.map(function(t){return '<option'+(r.tier===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><button type="button" class="adm-rw-del" data-i="'+i+'">Eliminar</button><div class="adm-rw-extra"><div class="adm-rw-imgbox">'+(r.image?'<img src="'+r.image+'" alt=""><button type="button" class="adm-rw-imgdel" data-i="'+i+'" title="Quitar imagen">×</button>':'<span class="adm-rw-imgph">Sin<br>imagen</span>')+'</div><label class="adm-file adm-rw-imgbtn">🖼️ '+(r.image?'Cambiar':'Subir imagen')+'<input type="file" accept="image/png,image/jpeg,image/webp" class="adm-rw-img" data-i="'+i+'"></label><label class="adm-rw-toggle"><input type="checkbox" class="adm-rw-on" data-i="'+i+'"'+(r.enabled===false?'':' checked')+'> '+(r.enabled===false?'Oculto':'Activo')+'</label></div></div>'; });
+    DRAFT.rewards.forEach(function(r,i){ h+='<div class="adm-reward-row'+(r.enabled===false?' off':'')+'" data-i="'+i+'"><input class="adm-rw-name" value="'+esc(r.name)+'" placeholder="Nombre"><input class="adm-rw-icon" value="'+esc(r.emoji||"🎁")+'" maxlength="8" aria-label="Icono"><input class="adm-rw-cost" type="number" min="1" value="'+Math.max(1,+r.cost||1)+'" aria-label="Puntos"><select class="adm-rw-tier">'+TIER_ORDER.map(function(t){return '<option'+(r.tier===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><button type="button" class="adm-rw-del" data-i="'+i+'">Eliminar</button><div class="adm-rw-extra"><div class="adm-rw-imgbox">'+(r.image?'<img src="'+r.image+'" alt=""><button type="button" class="adm-rw-imgdel" data-i="'+i+'" title="Quitar imagen">×</button>':'<span class="adm-rw-imgph">Sin<br>imagen</span>')+'</div><label class="adm-file adm-rw-imgbtn">🖼️ '+(r.image?'Cambiar':'Subir imagen')+'<input type="file" accept="image/png,image/jpeg,image/webp" class="adm-rw-img" data-i="'+i+'"></label><label class="adm-rw-toggle"><input type="checkbox" class="adm-rw-on" data-i="'+i+'"'+(r.enabled===false?'':' checked')+'> '+(r.enabled===false?'Oculto':'Activo')+'</label><textarea class="adm-rw-desc" data-i="'+i+'" rows="2" placeholder="Detalles opcionales: modelo, color, talla, condiciones...">'+esc(r.desc||"")+'</textarea></div></div>'; });
     h+='</div><button type="button" class="adm-btn primary adm-rw-add">＋ Añadir premio</button></div>'; return h;
   }
 
@@ -2364,6 +2368,7 @@ body.login-mode .login-card{margin:0 auto!important}
     each(".adm-rw-del",function(b){ b.onclick=function(){ collect(); DRAFT.rewards.splice(+b.getAttribute("data-i"),1); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Premio eliminado"); }; });
     each(".adm-rw-name,.adm-rw-icon,.adm-rw-cost,.adm-rw-tier",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} toast("Premio actualizado"); }; });
     each(".adm-rw-on",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast(inp.checked?"Premio visible en el catálogo":"Premio oculto (agotado)"); }; });
+    each(".adm-rw-desc",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} toast("Detalles del premio actualizados"); }; });
     each(".adm-rw-img",function(inp){ inp.onchange=function(){ var i=+inp.getAttribute("data-i"); readRewardImg(inp,function(d){ collect(); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=d; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen del premio actualizada"); }); }; });
     each(".adm-rw-imgdel",function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=null; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen quitada"); }; });
     try{ if(window.Notification && Notification.permission==="default"){ Notification.requestPermission(); } }catch(e){}
