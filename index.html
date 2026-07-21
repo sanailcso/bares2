@@ -299,7 +299,8 @@
   .gs-btn.active { color:#1a0730; background:linear-gradient(180deg,#FBEBB8,#E8C77A); box-shadow:0 6px 16px rgba(232,199,122,.4); }
   .gs-btn:not(.active):active { background:rgba(255,255,255,.06); }
   @keyframes gameSwap { 0%{ opacity:0; transform:translateY(10px) scale(.985); } 100%{ opacity:1; transform:none; } }
-  .game-anim { animation:gameSwap .34s cubic-bezier(.2,.9,.3,1); }
+  @keyframes gameEnter { 0%{ opacity:0; transform:translateY(16px) scale(.93); } 60%{ opacity:1; } 100%{ opacity:1; transform:none; } }
+  .game-anim { animation:gameEnter .42s cubic-bezier(.22,.9,.28,1.05); }
   .ruleta-cta { max-width:520px; margin:14px auto 2px; }
   .rc-inner { display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:18px; text-align:left;
     background:linear-gradient(135deg, rgba(232,199,122,.18), rgba(255,54,81,.13)); border:1px solid rgba(232,199,122,.5);
@@ -786,13 +787,14 @@ body.login-mode .login-card{margin:0 auto!important}
         <div class="lever" id="lever" aria-label="Tirar de la palanca"><div class="lever-rod"></div><div class="lever-knob"></div></div>
       <div class="spin-note" id="spinNote"></div>
       <div class="win-banner" id="winBanner"></div>
-      <div class="ruleta-cta" id="ruletaCta" style="display:none"></div>
       <div class="streak-info">
         <div class="si-title">🔥 Racha diaria · ciclo de 7 días</div>
         <div class="si-sub">Entra cada día. En el día 3 y 6 ganas +150 pts. En el día 7 eliges 1 de 3 cajas sorpresa (300, 400 o 500 pts) y la racha se reinicia.</div>
         <div class="si-milestones" id="siMilestones"></div>
       </div>
     </div>
+
+    <div class="ruleta-cta" id="ruletaCta" style="display:none"></div>
 
     <div id="betPanel" class="bet-panel"></div>
 
