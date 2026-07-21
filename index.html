@@ -301,6 +301,8 @@
   @keyframes gameSwap { 0%{ opacity:0; transform:translateY(10px) scale(.985); } 100%{ opacity:1; transform:none; } }
   @keyframes gameEnter { 0%{ opacity:0; transform:translateY(16px) scale(.93); } 60%{ opacity:1; } 100%{ opacity:1; transform:none; } }
   .game-anim { animation:gameEnter .42s cubic-bezier(.22,.9,.28,1.05); }
+  @keyframes gameLeave { 0%{ opacity:1; transform:none; } 100%{ opacity:0; transform:translateY(-10px) scale(.9); } }
+  .game-leave { animation:gameLeave .22s ease-in both; }
   .ruleta-cta { max-width:520px; margin:14px auto 2px; }
   .rc-inner { display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:18px; text-align:left;
     background:linear-gradient(135deg, rgba(232,199,122,.18), rgba(255,54,81,.13)); border:1px solid rgba(232,199,122,.5);
@@ -1422,9 +1424,9 @@ body.login-mode .login-card{margin:0 auto!important}
     var left=betSpinsLeft();
     var pts=state?state.points:0;
     host.innerHTML =
-      '<button type="button" class="bet-back" id="betBack">\u2190 Volver a los rodillos</button>'+
-      '<div class="section-title">\uD83C\uDFA1 Ruleta de la suerte</div>'+
-      '<div class="bet-card">'+
+      '<div class="bet-card game-cabinet">'+
+        '<div class="bet-marquee">\uD83C\uDFA1 RULETA DE LA SUERTE</div>'+
+        '<button type="button" class="game-switch-btn" id="betBack"><span>\uD83C\uDFB0</span> Cambiar a Rodillos</button>'+
         '<div class="bet-sub">Apuesta tus puntos y multipl\u00edcalos. Como m\u00ednimo conservas lo apostado. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
         '<div class="bet-wheel-wrap">'+
           '<div class="bet-pointer"></div>'+
@@ -1950,18 +1952,33 @@ body.login-mode .login-card{margin:0 auto!important}
     el.innerHTML = '<div class="rc-inner">'
       + '<div class="rc-emoji">\uD83C\uDFA1</div>'
       + '<div class="rc-txt"><div class="rc-title">\u00a1Tienes ' + left + ' tirada' + (left===1?'':'s') + ' de ruleta!</div>'
-      + '<div class="rc-sub">Apuesta tus puntos y multipl\u00edcalos en la ruleta de la suerte</div></div>'
-      + '<button type="button" class="rc-btn" id="rcGo">Ir a Ruleta \u2192</button>'
+      + '<div class="rc-sub">Pulsa para quitar los rodillos y jugar a la ruleta</div></div>'
+      + '<button type="button" class="rc-btn" id="rcGo">Cambiar a Ruleta \u2192</button>'
       + '</div>';
     el.style.display = "";
     var b = document.getElementById("rcGo"); if(b) b.onclick = function(){ setGame("bet"); };
   }
   function setGame(g){
     if(g === "bet" && !isBetEnabled()) return;
-    _game = g;
-    applyGameVisibility();
-    var el = (g === "bet") ? document.getElementById("betPanel") : document.querySelector(".slot");
-    if(el){ el.classList.remove("game-anim"); void el.offsetWidth; el.classList.add("game-anim"); }
+    if(g === _game) return;
+    var slotEl = document.querySelector(".slot"), betEl = document.getElementById("betPanel");
+    var outEl = (_game === "bet") ? betEl : slotEl;
+    var inEl = (g === "bet") ? betEl : slotEl;
+    function finishSwap(){
+      if(outEl) outEl.classList.remove("game-leave");
+      _game = g;
+      applyGameVisibility();
+      if(inEl){ inEl.classList.remove("game-anim"); void inEl.offsetWidth; inEl.classList.add("game-anim"); }
+    }
+    var noMotion = false; try{ noMotion = (typeof reducedMotion==="function") && reducedMotion(); }catch(e){}
+    if(outEl && !noMotion){
+      outEl.classList.remove("game-anim");
+      void outEl.offsetWidth;
+      outEl.classList.add("game-leave");
+      setTimeout(finishSwap, 220);
+    } else {
+      finishSwap();
+    }
   }
   (function(){ var b1=document.getElementById("gsSlot"), b2=document.getElementById("gsBet"); if(b1) b1.onclick=function(){ setGame("slot"); }; if(b2) b2.onclick=function(){ setGame("bet"); }; try{ applyGameVisibility(); }catch(e){} })();
   spinBtn.addEventListener("click", spin);
@@ -2484,6 +2501,11 @@ body.login-mode .login-card{margin:0 auto!important}
 </script>
 <style id="bet-css">
 .bet-panel{margin-top:6px}
+.bet-card.game-cabinet{border:0!important;border-radius:25px;padding:22px 18px 20px;background:linear-gradient(160deg,#24104a 0%,#11102a 40%,#070712 100%);box-shadow:inset 0 0 0 4px #ff4bc2,inset 0 0 0 8px #5c1ba0,0 0 30px rgba(255,36,179,.5)}
+.bet-marquee{font:1000 clamp(22px,5vw,30px)/1 Impact,"Arial Black",sans-serif;letter-spacing:.03em;color:#fff;text-align:center;margin:2px 0 12px;text-shadow:0 3px 0 #7d146f,0 6px 0 #3a1167,0 0 18px #ff29c6;transform:skew(-4deg)}
+.game-switch-btn{display:inline-flex;align-items:center;gap:8px;-webkit-appearance:none;appearance:none;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:900;padding:10px 18px;border-radius:999px;color:#1a0730;background:linear-gradient(180deg,#FBEBB8,#E8C77A);box-shadow:0 6px 16px rgba(232,199,122,.45);transition:transform .15s;margin-bottom:14px}
+.game-switch-btn span{font-size:17px;line-height:1}
+.game-switch-btn:active{transform:translateY(1px)}
 .bet-card{background:linear-gradient(160deg,#1b0836,#0d0420);border:2px solid #ffcf45;border-radius:18px;padding:18px 16px;text-align:center;position:relative;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 0 22px rgba(255,120,220,.08)}
 .bet-sub{color:#e7d9ff;font-size:13.5px;line-height:1.5;margin-bottom:14px}.bet-sub b{color:#ffe277}
 .bet-wheel-wrap{position:relative;width:230px;height:230px;margin:6px auto 4px}
