@@ -794,11 +794,9 @@ body.login-mode .login-card{margin:0 auto!important}
         <div class="si-sub">Entra cada día. En el día 3 y 6 ganas +150 pts. En el día 7 eliges 1 de 3 cajas sorpresa (300, 400 o 500 pts) y la racha se reinicia.</div>
         <div class="si-milestones" id="siMilestones"></div>
       </div>
+      <div class="ruleta-cta" id="ruletaCta"></div>
+      <div id="betPanel" class="bet-panel"></div>
     </div>
-
-    <div class="ruleta-cta" id="ruletaCta" style="display:none"></div>
-
-    <div id="betPanel" class="bet-panel"></div>
 
     <div class="streak-hero" id="streakHero"></div>
 
@@ -1934,36 +1932,34 @@ body.login-mode .login-card{margin:0 auto!important}
   function applyGameVisibility(){
     var betOn = isBetEnabled();
     if(!betOn) _game = "slot";
-    var sw = document.getElementById("gameSwitch");
-    if(sw) sw.style.display = betOn ? "flex" : "none";
-    var slot = document.querySelector(".slot"), bp = document.getElementById("betPanel");
-    if(slot) slot.style.display = (_game === "slot") ? "" : "none";
-    if(bp) bp.style.display = (betOn && _game === "bet") ? "" : "none";
-    var b1 = document.getElementById("gsSlot"), b2 = document.getElementById("gsBet");
-    if(b1) b1.classList.toggle("active", _game === "slot");
-    if(b2) b2.classList.toggle("active", _game === "bet");
+    var slot = document.querySelector(".slot");
+    if(slot) slot.classList.toggle("game-bet", !!(betOn && _game === "bet"));
     try{ renderRuletaCta(); }catch(e){}
   }
   function renderRuletaCta(){
     var el = document.getElementById("ruletaCta"); if(!el) return;
     var betOn = isBetEnabled();
     var left = (typeof betSpinsLeft === "function") ? betSpinsLeft() : (state ? (state.betSpins||0) : 0);
-    if(!betOn || !state || left <= 0 || _game !== "slot"){ el.style.display = "none"; el.innerHTML = ""; return; }
+    var slotEl = document.querySelector(".slot");
+    var show = !!(betOn && state && left > 0 && _game === "slot");
+    if(slotEl) slotEl.classList.toggle("show-rc", show);
+    if(!show){ el.innerHTML = ""; return; }
     el.innerHTML = '<div class="rc-inner">'
       + '<div class="rc-emoji">\uD83C\uDFA1</div>'
       + '<div class="rc-txt"><div class="rc-title">\u00a1Tienes ' + left + ' tirada' + (left===1?'':'s') + ' de ruleta!</div>'
       + '<div class="rc-sub">Pulsa para quitar los rodillos y jugar a la ruleta</div></div>'
       + '<button type="button" class="rc-btn" id="rcGo">Cambiar a Ruleta \u2192</button>'
       + '</div>';
-    el.style.display = "";
     var b = document.getElementById("rcGo"); if(b) b.onclick = function(){ setGame("bet"); };
   }
   function setGame(g){
     if(g === "bet" && !isBetEnabled()) return;
     if(g === _game) return;
-    var slotEl = document.querySelector(".slot"), betEl = document.getElementById("betPanel");
-    var outEl = (_game === "bet") ? betEl : slotEl;
-    var inEl = (g === "bet") ? betEl : slotEl;
+    var slotEl = document.querySelector(".slot");
+    var reels = slotEl ? slotEl.querySelector(".reels-wrap") : null;
+    var betEl = document.getElementById("betPanel");
+    var outEl = (_game === "bet") ? betEl : reels;
+    var inEl = (g === "bet") ? betEl : reels;
     function finishSwap(){
       if(outEl) outEl.classList.remove("game-leave");
       _game = g;
@@ -2506,6 +2502,15 @@ body.login-mode .login-card{margin:0 auto!important}
 .game-switch-btn{display:inline-flex;align-items:center;gap:8px;-webkit-appearance:none;appearance:none;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:900;padding:10px 18px;border-radius:999px;color:#1a0730;background:linear-gradient(180deg,#FBEBB8,#E8C77A);box-shadow:0 6px 16px rgba(232,199,122,.45);transition:transform .15s;margin-bottom:14px}
 .game-switch-btn span{font-size:17px;line-height:1}
 .game-switch-btn:active{transform:translateY(1px)}
+.slot #ruletaCta{display:none;margin:2px 0 0}
+.slot.show-rc #ruletaCta{display:block}
+.slot #betPanel{display:none;margin:0}
+.slot.game-bet{min-height:0!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;padding:16px 14px 18px!important;overflow:visible!important}
+.slot.game-bet .reels-wrap,.slot.game-bet .spin-btn,.slot.game-bet .lever,.slot.game-bet .spin-note,.slot.game-bet .win-banner,.slot.game-bet .streak-info,.slot.game-bet .marquee,.slot.game-bet .balance-wrap,.slot.game-bet #ruletaCta{display:none!important}
+.slot.game-bet #betPanel{display:block!important;width:100%!important}
+.slot .bet-card.game-cabinet{background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important}
+@media(max-width:600px){.slot #ruletaCta{order:2}.slot #betPanel{order:2}}
+@media(min-width:601px){.slot #ruletaCta{position:absolute;z-index:9;left:8%;right:8%;bottom:20px}.slot.show-rc .streak-info{display:none!important}}
 .bet-card{background:linear-gradient(160deg,#1b0836,#0d0420);border:2px solid #ffcf45;border-radius:18px;padding:18px 16px;text-align:center;position:relative;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 0 22px rgba(255,120,220,.08)}
 .bet-sub{color:#e7d9ff;font-size:13.5px;line-height:1.5;margin-bottom:14px}.bet-sub b{color:#ffe277}
 .bet-wheel-wrap{position:relative;width:230px;height:230px;margin:6px auto 4px}
