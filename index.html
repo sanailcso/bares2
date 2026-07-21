@@ -722,6 +722,14 @@ body.login-mode .login-card{margin:0 auto!important}
 .adm-canje-toggle.done{background:rgba(59,208,122,.18);border-color:rgba(59,208,122,.5);color:#8dffb0}
 @media(max-width:520px){.adm-canje-toggle{padding:8px 10px;font-size:12px}.adm-canje-item{gap:8px}.adm-canje-prize{font-size:14px}}.streak-hero{margin:16px 0 2px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(225,29,59,.18),rgba(138,92,255,.15));border:1px solid rgba(255,54,81,.45);box-shadow:0 4px 18px rgba(0,0,0,.35)}.sh-headline{font-weight:900;font-size:clamp(16px,4.4vw,20px);color:#ffe277;text-shadow:0 2px 3px rgba(0,0,0,.55);line-height:1.15}.sh-sub{margin-top:6px;font-size:13.5px;line-height:1.45;color:#fff;opacity:.94}.sh-sub b{color:#8ff7ff}.sh-track{display:flex;gap:6px;margin-top:14px}.sh-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}.sh-badge{font-size:11px;font-weight:900;color:#8a7aa8;line-height:1}.sh-day.mile .sh-badge{color:#ffd34e}.sh-day.box .sh-badge{font-size:14px}.sh-dot{width:100%;height:10px;border-radius:999px;background:rgba(255,255,255,.13)}.sh-day.done .sh-dot{background:linear-gradient(90deg,#FF3651,#ff8a3c);box-shadow:0 0 8px rgba(255,90,60,.5)}.sh-day.next .sh-dot{background:rgba(255,226,119,.4);box-shadow:0 0 0 2px rgba(255,226,119,.75)}.sh-num{font-size:10.5px;font-weight:800;color:#cbb8e6}.sh-day.done .sh-num{color:#fff}.adm-menu{position:sticky;top:0;z-index:40;margin:-4px -2px 16px;padding:10px 2px;background:linear-gradient(180deg,rgba(12,7,8,.97),rgba(12,7,8,.82));backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}.adm-menu-t{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#8a7aa8;margin:0 2px 8px}.adm-menu-row{display:flex;flex-wrap:wrap;gap:8px}.adm-menu-i{cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;color:#fff;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:999px;padding:8px 13px;transition:transform .08s,background .15s,border-color .15s}.adm-menu-i:hover{background:rgba(93,238,255,.14);border-color:rgba(93,238,255,.5)}.adm-menu-i:active{transform:scale(.95)}.adm-card,.adm-rewards-card{scroll-margin-top:120px}@keyframes admFlash{0%{box-shadow:0 0 0 0 rgba(93,238,255,0)}30%{box-shadow:0 0 0 3px rgba(93,238,255,.6)}100%{box-shadow:0 0 0 0 rgba(93,238,255,0)}}.adm-flash{animation:admFlash 1.2s ease}
 </style>
+<style id="reel-polish-v2">
+/* Rodillos: simbolos mas grandes y con mas presencia visual */
+.slot .cell{ padding:1px!important; }
+.slot .symbol-img{ width:100%!important; height:100%!important; transform:scale(1.05) translateZ(0)!important; transform-origin:center 47%!important; filter:drop-shadow(0 8px 10px rgba(0,0,0,.55)) drop-shadow(0 0 16px rgba(255,190,110,.28))!important; }
+.slot .symbol-emoji{ transform:scale(1.12); filter:drop-shadow(0 6px 7px rgba(0,0,0,.5)); }
+/* Realce sutil de la fila central (linea de premio) */
+.slot .reels-wrap .reel::before{ content:""; position:absolute; left:0; right:0; top:33.33%; height:33.34%; z-index:2; pointer-events:none; box-shadow:inset 0 0 0 1px rgba(255,236,120,.30), inset 0 0 20px rgba(255,190,110,.12); background:linear-gradient(180deg, rgba(255,236,120,.12), rgba(255,236,120,0) 42%, rgba(255,236,120,0) 58%, rgba(255,236,120,.12)); }
+</style>
 </head>
 <body>
   <div id="bgLayer"></div>
@@ -2406,7 +2414,7 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<div class="adm-card" id="sec-update"><div class="adm-sec">🔄 Publicar actualización</div>';
     h+='<div class="adm-hint">Cuando cambies el tema (Halloween, Navidad, logo, fondos, premios...) pulsa este botón para <b>publicar los cambios y forzar</b> que todos los clientes vean la versión nueva la próxima vez que abran la app.</div>';
     h+='<button type="button" class="adm-btn primary" id="admForceUpdate" style="margin-top:10px">🔄 Publicar y forzar actualización</button>';
-    h+='<div class="adm-upload-note" id="admForceNote">Se guardan tus cambios y se marca una versión nueva para todos.</div></div>';
+    h+='<div class="adm-upload-note" id="admForceNote">Se guardan tus cambios y se marca una versi��n nueva para todos.</div></div>';
     h+='<div class="adm-card" id="sec-analiticas"><div class="adm-sec">📊 Analíticas</div>';
     h+='<div class="adm-hint">Resumen de actividad en tiempo real (clientes, puntos, tiradas, ruleta y canjes). Necesita conexión con el servidor.</div>';
     h+='<button type="button" class="adm-canje-refresh" id="admStatsRefresh" style="margin-bottom:10px">↻ Actualizar analíticas</button>';
