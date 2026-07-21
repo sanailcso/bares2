@@ -1261,6 +1261,17 @@ body.login-mode .login-card{margin:0 auto!important}
   }
   function isImageSymbol(v){ return typeof v==="string" && ((/^(data:image\/|blob:|https?:\/\/|\.{0,2}\/)/i).test(v) || (/\.(png|jpe?g|webp|gif|svg)(\?|$)/i).test(v)); }
   function symbolMarkup(v){ if(isImageSymbol(v)){ var safe=String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;"); return '<img class="symbol-img" src="'+safe+'" alt="">'; } return '<span class="symbol-emoji">'+String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span>'; }
+  function symFromCode(code){
+    if(code==="J"||code==="j") return CUR_SYM.jackpot;
+    if(code==="P"||code==="p") return CUR_SYM.prize;
+    var f=(CUR_SYM.fillers&&CUR_SYM.fillers.length)?CUR_SYM.fillers:DEFAULT_SYM.fillers;
+    var n=(typeof code==="number")?code:parseInt(code,10); if(isNaN(n)) n=0;
+    return f[((n%f.length)+f.length)%f.length] || f[0] || "\u26bd";
+  }
+  function symsFromCodes(codes){
+    if(!codes||!codes.length) return null;
+    var out=[]; for(var i=0;i<5;i++){ out.push(symFromCode(codes[i])); } return out;
+  }
   function setReelsStatic(symbols){
     for (let i=0;i<5;i++){
       const strip = reels[i].querySelector(".strip");
@@ -1289,10 +1300,11 @@ body.login-mode .login-card{margin:0 auto!important}
     }
   }
 
-  function rollTier(){ const r = Math.random()*100; if (r < 1) return 50; if (r < 4) return 30; return 10; }
+  function rollTier(){ const r = Math.random()*100; if (r < 1) return 500; if (r < 4) return 300; return 100; }
   function targetFor(tier){
-    if (tier === 50) return [WIN50, WIN50, WIN50, WIN50, WIN50];
-    if (tier === 30) return [WIN30, WIN30, WIN30, WIN30, WIN30];
+    tier = (tier===50?500:(tier===30?300:(tier===10?100:tier)));
+    if (tier === 500) return [WIN50, WIN50, WIN50, WIN50, WIN50];
+    if (tier === 300) return [WIN30, WIN30, WIN30, WIN30, WIN30];
     let out; do { out=[rand(SYMBOLS),rand(SYMBOLS),rand(SYMBOLS),rand(SYMBOLS),rand(SYMBOLS)]; } while (out.every(function(x){ return x===out[0]; }));
     return out;
   }
@@ -1317,7 +1329,7 @@ body.login-mode .login-card{margin:0 auto!important}
     if(_sr && _sr.ok===false){ spinning=false; if(_sr.error==="already"){ state.lastSpin=todayStr(); } _serverSpin=null; renderSpinState(); return; }
     _serverSpin = (_sr && _sr.ok) ? _sr : null;
     const tier = _serverSpin ? _serverSpin.tier : rollTier();
-    const target = targetFor(tier);
+    const target = (_serverSpin && _serverSpin.symbols) ? (symsFromCodes(_serverSpin.symbols) || targetFor(tier)) : targetFor(tier);
     const durs = [1750, 2050, 2350, 2650, 3000];
     let done = 0;
     for (let i=0;i<5;i++){
@@ -1348,7 +1360,7 @@ body.login-mode .login-card{margin:0 auto!important}
     state.streak = (state.lastSpin === yest && prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
     state.lastSpin = today; state.lastSymbols = target; state.lastWin = tier;
     const prev = state.points; state.points += tier;
-    const label = tier===50 ? "¡JACKPOT! Tirada diaria" : (tier===30 ? "¡Triple! Tirada diaria" : "Tirada diaria");
+    const label = tier===500 ? "¡JACKPOT! Tirada diaria" : (tier===300 ? "¡Triple! Tirada diaria" : "Tirada diaria");
     state.history.unshift({ type:"spin", date:today, label:label, delta:tier });
     var stepBonus = 0;
     if (state.streak === 3 || state.streak === 6){ stepBonus = STREAK_STEP_BONUS; state.points += stepBonus; state.history.unshift({ type:"spin", date:today, label:"🔥 Bonus de racha (" + state.streak + " días seguidos)", delta:stepBonus }); }
@@ -1369,10 +1381,11 @@ body.login-mode .login-card{margin:0 auto!important}
   }
 
   function celebrate(tier){
+    tier = (tier===50?500:(tier===30?300:(tier===10?100:tier)));
     const rect = document.querySelector(".reels").getBoundingClientRect();
     const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
     const slotEl = document.querySelector(".slot");
-    if (tier === 50){
+    if (tier === 500){
       jackpotFanfare(); flashScreen();
       if (!reducedMotion()){ slotEl.classList.remove("jackpot-shake"); void slotEl.offsetWidth; slotEl.classList.add("jackpot-shake"); setTimeout(function(){ slotEl.classList.remove("jackpot-shake"); }, 900); }
       launchConfetti(150, PAL_GOLD);
@@ -1381,7 +1394,7 @@ body.login-mode .login-card{margin:0 auto!important}
       spawnCoins(cx, cy);
       spawnCherries(); setTimeout(spawnCherries, 500); setTimeout(spawnCherries, 1000);
       showPop(CUR_SYM.jackpot, "+500 pts", "¡JACKPOT!", "pop-50");
-    } else if (tier === 30){
+    } else if (tier === 300){
       chimeWin(); launchConfetti(160, PAL_BLUE); spawnCoins(cx, cy);
       showPop(CUR_SYM.prize, "+300 pts", "¡Premio especial!", "pop-30");
     } else {
@@ -1392,8 +1405,9 @@ body.login-mode .login-card{margin:0 auto!important}
   }
 
   function showBanner(tier, silent){
-    var sym = tier===50 ? WIN50 : (tier===30 ? WIN30 : (CUR_SYM.fillers[0]||"⚽"));
-    var label = tier===50 ? "JACKPOT" : (tier===30 ? "PREMIO ESPECIAL" : "PREMIO");
+    tier = (tier===50?500:(tier===30?300:(tier===10?100:tier)));
+    var sym = tier===500 ? WIN50 : (tier===300 ? WIN30 : (CUR_SYM.fillers[0]||"⚽"));
+    var label = tier===500 ? "JACKPOT" : (tier===300 ? "PREMIO ESPECIAL" : "PREMIO");
     winBanner.innerHTML = '<span class="win-symbol">'+symbolMarkup(sym)+'</span><span class="win-copy"><b>'+label+'</b><span>Has ganado <strong>+'+tier+' puntos</strong></span></span>';
     winBanner.classList.add("show");
   }
@@ -2309,6 +2323,13 @@ body.login-mode .login-card{margin:0 auto!important}
      +'<button type="button" class="adm-add2" id="admJugRefresh">↻ Cargar jugadas</button></div>'
      +'<div id="admJugList"><div class="adm-canje-empty">Elige un cliente (o «Todos») y pulsa «Cargar jugadas».</div></div></div>';
   }
+  function jugadaReelHtml(codes){
+    if(!codes||!codes.length) return '';
+    function _cell(v){ if(isImageSymbol(v)){ var s=String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;"); return '<img src="'+s+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block">'; } return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    var cells='';
+    for(var i=0;i<codes.length;i++){ cells+='<span style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:19px;line-height:1;border:1px solid rgba(93,238,255,.25);border-radius:7px;background:rgba(0,0,0,.32);overflow:hidden">'+_cell(symFromCode(codes[i]))+'</span>'; }
+    return '<div style="display:flex;gap:5px;margin-top:8px;align-items:center;flex-wrap:wrap"><span style="font-size:11px;opacity:.7;margin-right:3px">🎰 Rodillos:</span>'+cells+'</div>';
+  }
   function renderJugadasHtml(list){
     if(!list||!list.length) return '<div class="adm-canje-empty">No hay jugadas registradas todavía.</div>';
     var h='<div class="adm-reward-list">';
@@ -2326,6 +2347,7 @@ body.login-mode .login-card{margin:0 auto!important}
       var dtxt=(d<0?'-':(d>0?'+':''))+fmt(Math.abs(d))+' pts';
       var saldo=''; if(m.before!=null&&m.after!=null){ saldo='Saldo: '+fmt(m.before)+' → '+fmt(m.after)+' pts'; }
       var folio=m.folio?('Folio '+esc(m.folio)):('#'+e.id);
+      var reelHtml=(game==="rodillos"||e.type==="spin")?jugadaReelHtml(m.symbols):'';
       h+='<div style="padding:10px;border:1px solid rgba(93,238,255,.22);border-radius:10px;background:rgba(0,0,0,.22)">'
         +'<div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center">'
         +'<span style="font-size:18px">'+ic+'</span>'
@@ -2335,7 +2357,7 @@ body.login-mode .login-card{margin:0 auto!important}
         +'<span>👤 '+esc(e.bar||e.username||'—')+'</span>'
         +'<span>🕒 '+esc(when)+'</span>'
         +(saldo?('<span>'+esc(saldo)+'</span>'):'')
-        +'<span style="opacity:.7">'+esc(folio)+'</span></div></div>';
+        +'<span style="opacity:.7">'+esc(folio)+'</span></div>'+reelHtml+'</div>';
     });
     h+='</div>';
     return h;
