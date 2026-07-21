@@ -2301,6 +2301,59 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<div style="margin-top:12px;font-size:10.5px;color:#8a7aa8">Actualizado: '+(st.ts?new Date(st.ts).toLocaleString("es-ES"):"\u2014")+'</div>';
     return h;
   }
+  function jugadasCardHtml(){
+    var opts=Object.keys(USERS).map(function(k){ return '<option value="'+esc(k)+'">'+esc(USERS[k].bar||USERS[k].nombre||k)+'</option>'; }).join("");
+    return '<div class="adm-card" id="sec-jugadas"><div class="adm-sec">🎲 Registro de jugadas</div>'
+     +'<div class="adm-hint">Resultado exacto de cada tirada de rodillos y giro de ruleta: fecha y hora, folio único y saldo antes/después. Útil ante cualquier reclamación de un cliente.</div>'
+     +'<div class="adm-crform" style="margin-bottom:10px"><select id="admJugCliente"><option value="">Todos los clientes</option>'+opts+'</select>'
+     +'<button type="button" class="adm-add2" id="admJugRefresh">↻ Cargar jugadas</button></div>'
+     +'<div id="admJugList"><div class="adm-canje-empty">Elige un cliente (o «Todos») y pulsa «Cargar jugadas».</div></div></div>';
+  }
+  function renderJugadasHtml(list){
+    if(!list||!list.length) return '<div class="adm-canje-empty">No hay jugadas registradas todavía.</div>';
+    var h='<div class="adm-reward-list">';
+    list.forEach(function(e){
+      var m=e.meta||{};
+      var when=''; if(e.created_at){ try{ when=new Date(e.created_at).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(_e){} }
+      var game=m.game||""; var ic='🎰'; var desc='';
+      if(game==="ruleta"||e.type==="bet"){ ic='🎡'; desc='Ruleta · apuesta '+fmt(m.stake||0)+' pts → x'+(m.mult!=null?m.mult:"?")+' · devuelve '+fmt(m.ret||0)+' pts'; }
+      else if(game==="caja"||/caja/i.test(e.label||"")){ ic='🎁'; desc='Caja sorpresa · +'+fmt(m.result!=null?m.result:(e.delta||0))+' pts'; }
+      else if(game==="rodillos"||e.type==="spin"){ ic='🎰'; desc='Rodillos · +'+fmt(m.result!=null?m.result:(e.delta||0))+' pts'+((m.bonus&&m.bonus>0)?(' · bonus +'+fmt(m.bonus)):'')+(m.box?' · 🎉 caja día 7':''); }
+      else if(e.type==="redeem"){ ic='🛍️'; desc=esc(e.label||'Canje'); }
+      else { desc=esc(e.label||e.type||'—'); }
+      var d=(+e.delta||0);
+      var dcol=d>0?'#7fe0a8':(d<0?'#ff9a9a':'#cbb8e6');
+      var dtxt=(d<0?'-':(d>0?'+':''))+fmt(Math.abs(d))+' pts';
+      var saldo=''; if(m.before!=null&&m.after!=null){ saldo='Saldo: '+fmt(m.before)+' → '+fmt(m.after)+' pts'; }
+      var folio=m.folio?('Folio '+esc(m.folio)):('#'+e.id);
+      h+='<div style="padding:10px;border:1px solid rgba(93,238,255,.22);border-radius:10px;background:rgba(0,0,0,.22)">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center">'
+        +'<span style="font-size:18px">'+ic+'</span>'
+        +'<span style="flex:1;min-width:170px;font-weight:700">'+desc+'</span>'
+        +'<span style="font-weight:800;color:'+dcol+'">'+dtxt+'</span></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-size:12px;opacity:.82">'
+        +'<span>👤 '+esc(e.bar||e.username||'—')+'</span>'
+        +'<span>🕒 '+esc(when)+'</span>'
+        +(saldo?('<span>'+esc(saldo)+'</span>'):'')
+        +'<span style="opacity:.7">'+esc(folio)+'</span></div></div>';
+    });
+    h+='</div>';
+    return h;
+  }
+  function loadAdminJugadas(){
+    var box=document.getElementById("admJugList"); if(!box) return;
+    var selEl=document.getElementById("admJugCliente"); var uname=selEl?(selEl.value||""):"";
+    if(!(SB_ON && _admPin)){ box.innerHTML='<div class="adm-canje-empty">El registro necesita conexión con el servidor y sesión de administrador (PIN).</div>'; return; }
+    box.innerHTML='<div class="adm-canje-empty">Cargando…</div>';
+    fetch(SB_URL+"/rest/v1/rpc/app_admin_events",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin, p_username:(uname||null), p_limit:400 }) })
+      .then(function(r){ return r.text().then(function(t){ return { ok:r.ok, status:r.status, text:t }; }); })
+      .then(function(res){
+        if(!res.ok){ var mm=""; try{ var j=JSON.parse(res.text); mm=j.message||j.hint||j.details||""; }catch(e){} var miss=(res.status===404 || /PGRST202/.test(res.text) || /Could not find|does not exist|no existe|schema cache/i.test(mm)); var tip=miss?("El servidor aún no reconoce la función. En Supabase → SQL Editor ejecuta app_result_log.sql (incluye la recarga del esquema) y espera ~30s."):("El servidor respondió con un error."); box.innerHTML='<div class="adm-canje-empty">No se pudo cargar el registro.<br><span style="font-size:12px;opacity:.85;display:block;margin-top:6px">'+tip+'</span><span style="font-size:11px;opacity:.6;display:block;margin-top:6px">HTTP '+res.status+(mm?(" · "+esc(mm)):"")+'</span></div>'; return; }
+        var data=null; try{ data=JSON.parse(res.text); }catch(e){}
+        var list=(data&&data.events)?data.events:[];
+        box.innerHTML=renderJugadasHtml(list);
+      }).catch(function(){ box.innerHTML='<div class="adm-canje-empty">Sin conexión con el servidor. Inténtalo de nuevo.</div>'; });
+  }
   function loadAdminStats(){
     var box=document.getElementById("admStats"); if(!box) return;
     if(!(SB_ON && _admPin)){ box.innerHTML='<div class="adm-canje-empty">Las anal\u00edticas necesitan conexi\u00f3n con el servidor y sesi\u00f3n de administrador (PIN).</div>'; return; }
@@ -2325,6 +2378,7 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<button type="button" class="adm-menu-i" data-t="sec-ajustes">⚙️ Ajustes</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-apuesta">🎡 Apuestas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-historial">📜 Historial</button>'; h+='<button type="button" class="adm-menu-i" data-t="sec-clientes">👥 Clientes</button>';
+    h+='<button type="button" class="adm-menu-i" data-t="sec-jugadas">🎲 Jugadas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-recaudacion">💰 Recaudación</button>';
     h+='</div></nav>';
     h+='<div class="adm-card" id="sec-update"><div class="adm-sec">🔄 Publicar actualización</div>';
@@ -2401,6 +2455,7 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<div class="adm-hint" style="margin-top:6px">💡 El <b>retorno medio</b> indica cuánto recupera de media el cliente por cada punto apostado. Si es mayor que x1 (rojo) los clientes ganan puntos a la larga; si es x1 o menos (verde) la casa mantiene el margen.</div>';
     h+='</div>';
     h+=historialCardHtml();
+    h+=jugadasCardHtml();
     var barOpts=Object.keys(USERS).map(function(k){ return '<option value="'+esc(k)+'">'+esc(USERS[k].bar||USERS[k].nombre||k)+'</option>'; }).join("");
     h+='<div class="adm-card" id="sec-clientes"><div class="adm-sec">Clientes / Usuarios</div>';
     h+='<div class="adm-hint">Da de alta a los dueños de bares que usarán la app. Los usuarios son en minúsculas y sin espacios. Los usuarios <b>demo</b> y <b>manolo</b> son de prueba y siempre existen.</div>';
@@ -2442,9 +2497,11 @@ body.login-mode .login-card{margin:0 auto!important}
   function wireAdmin(){
     var g=function(id){ return document.getElementById(id); };
     g("admClose").onclick=closeAdmin;
-    var _menu=document.querySelector(".adm-menu"); if(_menu){ _menu.addEventListener("click", function(e){ var b=e.target.closest?e.target.closest(".adm-menu-i"):null; if(!b) return; var t=document.getElementById(b.getAttribute("data-t")); if(t){ t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.add("adm-flash"); setTimeout(function(){ t.classList.remove("adm-flash"); },1300); } if(b.getAttribute("data-t")==="sec-analiticas"){ try{ loadAdminStats(); }catch(e){} } if(b.getAttribute("data-t")==="sec-historial"){ try{ loadCanjes(false); }catch(e){} } }); }
+    var _menu=document.querySelector(".adm-menu"); if(_menu){ _menu.addEventListener("click", function(e){ var b=e.target.closest?e.target.closest(".adm-menu-i"):null; if(!b) return; var t=document.getElementById(b.getAttribute("data-t")); if(t){ t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.add("adm-flash"); setTimeout(function(){ t.classList.remove("adm-flash"); },1300); } if(b.getAttribute("data-t")==="sec-analiticas"){ try{ loadAdminStats(); }catch(e){} } if(b.getAttribute("data-t")==="sec-historial"){ try{ loadCanjes(false); }catch(e){} } if(b.getAttribute("data-t")==="sec-jugadas"){ try{ loadAdminJugadas(); }catch(e){} } }); }
     var _segList=document.getElementById("admSegList"); if(_segList){ _segList.addEventListener("input", function(e){ var t=e.target; if(t&&t.classList&&(t.classList.contains("adm-seg-mult")||t.classList.contains("adm-seg-w"))) recalcSegPct(); }); _segList.addEventListener("click", function(e){ var db=(e.target&&e.target.closest)?e.target.closest(".adm-seg-del"):null; if(db){ var row=db.closest(".adm-seg-row"); if(row&&row.parentNode){ row.parentNode.removeChild(row); recalcSegPct(); } } }); var _sa=document.getElementById("admSegAdd"); if(_sa) _sa.onclick=function(){ _segList.insertAdjacentHTML("beforeend", segRowHtml({mult:2,w:5}, null)); recalcSegPct(); }; var _srb=document.getElementById("admSegReset"); if(_srb) _srb.onclick=function(){ var mm=BET_DEFAULT.segments.map(function(sg){ return sg.mult; }); var cc=assignBetColors(mm,{}); var html=""; BET_DEFAULT.segments.forEach(function(sg,ix){ html+=segRowHtml(sg, cc[ix]); }); _segList.innerHTML=html; recalcSegPct(); toast("Ruleta restaurada"); }; recalcSegPct(); }
     var _hrf=document.getElementById("admHistRefresh"); if(_hrf){ _hrf.onclick=function(){ _hrf.disabled=true; loadCanjes(false); setTimeout(function(){ _hrf.disabled=false; },1200); }; }
+    var _jrf=document.getElementById("admJugRefresh"); if(_jrf){ _jrf.onclick=function(){ _jrf.disabled=true; loadAdminJugadas(); setTimeout(function(){ _jrf.disabled=false; },1000); }; }
+    var _jcl=document.getElementById("admJugCliente"); if(_jcl){ _jcl.onchange=function(){ loadAdminJugadas(); }; }
     g("admPreview").onclick=function(){ collect(); paintTheme(DRAFT, resolveTheme(DRAFT)); toast("Vista previa aplicada"); };
     g("admSave").onclick=function(){ collect(); saveDraft(); toast("Borrador guardado en este dispositivo"); };
     g("admDiscard").onclick=function(){ localStorage.removeItem("tikitaka_admin_cfg"); DRAFT=clone(ACTIVE_CFG); renderAdmin(); toast("Cambios descartados"); };
