@@ -293,6 +293,14 @@
   .pm-btn.ok:active { transform:translateY(1px); }
   .pm-btn.no { background:rgba(255,255,255,.06); color:var(--muted); cursor:not-allowed; border:1px solid var(--border); }
 
+  .game-switch { display:flex; gap:8px; max-width:420px; margin:6px auto 14px; padding:6px; border-radius:999px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.14); box-shadow:inset 0 2px 8px rgba(0,0,0,.4); }
+  .gs-btn { flex:1; -webkit-appearance:none; appearance:none; border:none; cursor:pointer; font-family:inherit; font-size:14.5px; font-weight:800; color:#cbb8e6; padding:11px 12px; border-radius:999px; background:transparent; display:inline-flex; align-items:center; justify-content:center; gap:7px; transition:.18s; }
+  .gs-btn .gs-ic { font-size:18px; }
+  .gs-btn.active { color:#1a0730; background:linear-gradient(180deg,#FBEBB8,#E8C77A); box-shadow:0 6px 16px rgba(232,199,122,.4); }
+  .gs-btn:not(.active):active { background:rgba(255,255,255,.06); }
+  @keyframes gameSwap { 0%{ opacity:0; transform:translateY(10px) scale(.985); } 100%{ opacity:1; transform:none; } }
+  .game-anim { animation:gameSwap .34s cubic-bezier(.2,.9,.3,1); }
+
   .history { display:flex; flex-direction:column; gap:9px; }
   .h-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:13px;
     background:rgba(255,255,255,.045); border:1px solid var(--border); }
@@ -739,6 +747,10 @@ body.login-mode .login-card{margin:0 auto!important}
       <div class="streak" id="streak"></div>
     </div>
 
+        <div class="game-switch" id="gameSwitch" style="display:none">
+          <button type="button" class="gs-btn active" id="gsSlot"><span class="gs-ic">🎰</span> Rodillos</button>
+          <button type="button" class="gs-btn" id="gsBet"><span class="gs-ic">🎡</span> Ruleta</button>
+        </div>
         <div class="slot">
         <div class="marquee">
           <div class="bulbs" id="bulbsTop"></div>
@@ -766,9 +778,9 @@ body.login-mode .login-card{margin:0 auto!important}
       </div>
     </div>
 
-    <div class="streak-hero" id="streakHero"></div>
-
     <div id="betPanel" class="bet-panel"></div>
+
+    <div class="streak-hero" id="streakHero"></div>
 
     <div class="section-title">Catálogo de premios</div>
     <div id="catalog"></div>
@@ -1357,8 +1369,8 @@ body.login-mode .login-card{margin:0 auto!important}
   function renderBet(){
     var host=document.getElementById("betPanel"); if(!host) return;
     var bc=activeBetCfg();
-    if(!bc.enabled){ host.style.display="none"; host.innerHTML=""; return; }
-    host.style.display="";
+    if(!bc.enabled){ host.innerHTML=""; try{ applyGameVisibility(); }catch(e){} return; }
+    try{ applyGameVisibility(); }catch(e){}
     var layout=wheelLayout(bc.segments), n=layout.length, step=360/n, grad=[], labels="", _bcolors=assignBetColors(layout, (bc&&bc.colors)||{});
     for(var i=0;i<n;i++){
       var c=_bcolors[i];
@@ -1872,6 +1884,28 @@ body.login-mode .login-card{margin:0 auto!important}
   userInput.addEventListener("keydown", function(e){ if(e.key==="Enter") passInput.focus(); });
   document.getElementById("logoutBtn").addEventListener("click", logout);
   (function(){ var _pb=document.getElementById("pwdBtn"); if(_pb) _pb.addEventListener("click", function(){ openPwdModal(); }); })();
+  var _game = "slot";
+  function isBetEnabled(){ try{ var bc=activeBetCfg(); return !!(bc && bc.enabled); }catch(e){ return false; } }
+  function applyGameVisibility(){
+    var betOn = isBetEnabled();
+    if(!betOn) _game = "slot";
+    var sw = document.getElementById("gameSwitch");
+    if(sw) sw.style.display = betOn ? "flex" : "none";
+    var slot = document.querySelector(".slot"), bp = document.getElementById("betPanel");
+    if(slot) slot.style.display = (_game === "slot") ? "" : "none";
+    if(bp) bp.style.display = (betOn && _game === "bet") ? "" : "none";
+    var b1 = document.getElementById("gsSlot"), b2 = document.getElementById("gsBet");
+    if(b1) b1.classList.toggle("active", _game === "slot");
+    if(b2) b2.classList.toggle("active", _game === "bet");
+  }
+  function setGame(g){
+    if(g === "bet" && !isBetEnabled()) return;
+    _game = g;
+    applyGameVisibility();
+    var el = (g === "bet") ? document.getElementById("betPanel") : document.querySelector(".slot");
+    if(el){ el.classList.remove("game-anim"); void el.offsetWidth; el.classList.add("game-anim"); }
+  }
+  (function(){ var b1=document.getElementById("gsSlot"), b2=document.getElementById("gsBet"); if(b1) b1.onclick=function(){ setGame("slot"); }; if(b2) b2.onclick=function(){ setGame("bet"); }; try{ applyGameVisibility(); }catch(e){} })();
   spinBtn.addEventListener("click", spin);
   document.getElementById("lever").addEventListener("click", spin);
 
