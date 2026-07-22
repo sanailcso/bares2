@@ -1,5 +1,5 @@
 /* Tiki Taka PWA service worker */
-var CACHE = "tikitaka-v51";
+var CACHE = "tikitaka-v52";
 var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png", "./img/bg-default.png", "./img/bg-halloween.png", "./img/bg-navidad.png", "./img/brand-login.png", "./img/logo.png", "./img/sym-filler-1.webp", "./img/sym-filler-2.webp", "./img/sym-filler-3.webp", "./img/sym-filler-4.webp", "./img/sym-filler-5.webp", "./img/sym-jackpot.webp", "./img/sym-prize.webp"];
 self.addEventListener("install", function(e){
   self.skipWaiting();
@@ -23,4 +23,21 @@ self.addEventListener("fetch", function(e){
       return caches.match(req).then(function(hit){ return hit || caches.match("./index.html"); });
     })
   );
+});
+
+/* ===== Notificaciones push ===== */
+self.addEventListener("push", function(e){
+  var data={};
+  try{ data = e.data ? e.data.json() : {}; }catch(err){ try{ data={ title:"Tiki Taka", body:(e.data?e.data.text():"") }; }catch(_e){ data={}; } }
+  var title = data.title || "Tiki Taka";
+  var opts = { body: data.body||"", tag: data.tag||"tikitaka", renotify:true, icon: data.icon||"./icons/icon-192.png", badge: data.badge||"./icons/icon-192.png", data:{ url: data.url||"./index.html" } };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+self.addEventListener("notificationclick", function(e){
+  e.notification.close();
+  var target = (e.notification.data && e.notification.data.url) || "./index.html";
+  e.waitUntil(self.clients.matchAll({ type:"window", includeUncontrolled:true }).then(function(list){
+    for(var i=0;i<list.length;i++){ var c=list[i]; if("focus" in c){ try{ if(c.url.indexOf(self.location.origin)===0){ c.navigate(target); } }catch(err){} return c.focus(); } }
+    if(self.clients.openWindow) return self.clients.openWindow(target);
+  }));
 });

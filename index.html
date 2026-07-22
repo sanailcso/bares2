@@ -1004,6 +1004,7 @@ body.login-mode .login-card{margin:0 auto!important}
   /* ===== SUPABASE · registro central en la nube ===== */
   var SB_URL="https://vlhsclbqvdrzznmlahpm.supabase.co";
   var SB_KEY="sb_publishable_tYyCMEfRiHqHufw2bKsZcA_x-OLWuhO";
+  var VAPID_PUBLIC="REEMPLAZA_CON_TU_CLAVE_PUBLICA_VAPID"; // clave pública VAPID (Web Push). Genérala con: npx web-push generate-vapid-keys
   var SB_ON=!!(SB_URL && SB_KEY);
   var _sbLoggedLen={};
   function sbHeaders(extra){ var h={ "apikey":SB_KEY, "Authorization":"Bearer "+SB_KEY, "Content-Type":"application/json" }; if(extra){ for(var k in extra){ h[k]=extra[k]; } } return h; }
@@ -1081,7 +1082,7 @@ body.login-mode .login-card{margin:0 auto!important}
       if(ex) return;
       var b=document.createElement("button"); b.id="notifFab"; b.type="button"; b.textContent="🔔 Activar avisos";
       b.setAttribute("style","position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99999;background:linear-gradient(135deg,#b7791f,#c05621);color:#fff;border:none;border-radius:999px;padding:11px 20px;font-weight:800;font-size:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);cursor:pointer");
-      b.onclick=function(){ requestNotif().then(function(){ ensureNotifBtn(); }); };
+      b.onclick=function(){ requestNotif().then(function(){ ensureNotifBtn(); subscribeClientPush(); }); };
       document.body.appendChild(b);
     }catch(e){}
   }
@@ -1095,6 +1096,31 @@ body.login-mode .login-card{margin:0 auto!important}
       localStorage.setItem(key,"1");
       if((state.streak||0)>0){ showNotif("🔥 ¡No pierdas tu racha!","Llevas "+state.streak+" día"+((state.streak||0)>1?"s":"")+" seguidos. Entra y gira hoy para mantenerla.","streak"); }
       else { showNotif("🎰 ��Tu tirada diaria te espera!","Gira los rodillos y gana puntos y tiradas de ruleta.","daily"); }
+    }catch(e){}
+  }
+  /* ===== Notificaciones push (Web Push + Supabase Edge Function) ===== */
+  function _vapidReady(){ return !!(VAPID_PUBLIC && VAPID_PUBLIC.indexOf("REEMPLAZA")<0); }
+  function pushSupported(){ return (typeof navigator!=="undefined" && "serviceWorker" in navigator && "PushManager" in window); }
+  function urlB64ToUint8(base64){ try{ var pad="=".repeat((4-base64.length%4)%4); var b64=(base64+pad).replace(/-/g,"+").replace(/_/g,"/"); var raw=atob(b64); var arr=new Uint8Array(raw.length); for(var i=0;i<raw.length;i++){ arr[i]=raw.charCodeAt(i); } return arr; }catch(e){ return new Uint8Array(); } }
+  function _getPushSub(){
+    if(!pushSupported() || !_vapidReady() || !notifSupported() || Notification.permission!=="granted") return Promise.resolve(null);
+    return navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.getSubscription().then(function(sub){
+        if(sub) return sub;
+        return reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+      });
+    }).catch(function(){ return null; });
+  }
+  function subscribeClientPush(){
+    try{
+      if(!SB_ON || !SB_SECURE || !_CRED.u || !_CRED.p) return;
+      _getPushSub().then(function(sub){ if(!sub) return; try{ sbRpc("app_push_subscribe",{ p_username:_CRED.u, p_password:_CRED.p, p_sub:sub.toJSON() }).catch(function(){}); }catch(e){} });
+    }catch(e){}
+  }
+  function subscribeAdminPush(){
+    try{
+      if(!SB_ON || !_admPin) return;
+      _getPushSub().then(function(sub){ if(!sub) return; try{ sbRpc("app_admin_push_subscribe",{ p_pin:_admPin, p_sub:sub.toJSON() }).catch(function(){}); }catch(e){} });
     }catch(e){}
   }
   /* ===== Canjes de premios (panel backoffice + control de entregado) ===== */
@@ -1243,6 +1269,7 @@ body.login-mode .login-card{margin:0 auto!important}
           try{ if(SB_SECURE) refreshPlayer(); }catch(e){}
         });
         try{ ensureNotifBtn(); }catch(e){}
+        try{ subscribeClientPush(); }catch(e){}
       };
       if(serverState && typeof serverState==="object" && Object.keys(serverState).length){ applyLoaded(Object.assign(defaultState(), serverState)); }
       else { sbLoadState(u).then(applyLoaded); }
@@ -2647,7 +2674,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var _rt=g("admRate"); if(_rt) _rt.onchange=function(){ collect(); };
     var _bon=g("admBetOn"); if(_bon) _bon.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } };
     ["admBetMin","admBetMax","admBetDay"].forEach(function(id){ var el=g(id); if(el) el.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } }; });
-    (function(){ var _nb=g("admNotifBtn"); if(_nb) _nb.onclick=function(){ requestNotif(); }; try{ ensureNotifBtn(); }catch(e){} })();
+    (function(){ var _nb=g("admNotifBtn"); if(_nb) _nb.onclick=function(){ requestNotif().then(function(){ ensureNotifBtn(); subscribeAdminPush(); }); }; try{ ensureNotifBtn(); }catch(e){} try{ subscribeAdminPush(); }catch(e){} })();
     (function(){ var _sr=g("admStatsRefresh"); if(_sr) _sr.onclick=function(){ loadAdminStats(); }; })();
     var _ac=g("admAddCredit"); if(_ac) _ac.onclick=function(){ collect(); var u=g("admCrBar").value; var eur=parseFloat(g("admCrEur").value)||0; var concept=(g("admCrConcept").value||"").trim(); if(!u){ toast("Elige un bar"); return; } if(eur<=0){ toast("Introduce una recaudación válida"); return; } var per100=parseFloat(g("admRate")&&g("admRate").value)||30; var pts=Math.round(eur/100*per100); DRAFT.credits=DRAFT.credits||[]; DRAFT.credits.push({ id:"rev-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), u:u, eur:eur, pts:pts, concept:concept, date:todayStr() }); saveDraft(); renderAdmin(); toast("Recaudación registrada: +"+pts+" pts para "+((USERS[u]&&USERS[u].bar)||u)); };
     var _au=g("admAddUser"); if(_au) _au.onclick=function(){ collect(); var u=(g("admUUser").value||"").toLowerCase().trim().replace(/[^a-z0-9_.\-]/g,""); var pass=(g("admUPass").value||"").trim(); var nombre=(g("admUNombre").value||"").trim(); var bar=(g("admUBar").value||"").trim(); if(!u){ toast("Escribe un nombre de usuario"); return; } if(!pass){ toast("Escribe una contraseña"); return; } DRAFT.users=DRAFT.users||[]; if(DRAFT.users.some(function(x){return x.u===u;})||(u in BUILTIN_USERS)){ toast("Ese usuario ya existe"); return; } DRAFT.users.push({ u:u, pass:pass, nombre:nombre||u, bar:bar||nombre||u }); saveDraft(); applyCfgUsers(DRAFT); g("admUUser").value=""; g("admUPass").value=""; g("admUNombre").value=""; g("admUBar").value=""; renderAdmin(); var _lbl=(bar||nombre||u); if(SB_SECURE && _admPin){ toast("Guardando "+_lbl+" en el servidor…"); sbRpc("app_admin_upsert_user",{ p_pin:_admPin, p_username:u, p_password:pass, p_nombre:nombre||u, p_bar:bar||nombre||u }).then(function(res){ if(res && res.ok){ toast("✔ Cliente añadido y activado: "+_lbl); } else { toast("⚠ Añadido en local, pero el servidor lo rechazó ("+((res&&res.error)||"error")+"). Revisa el PIN o vuelve a ejecutar el secure-setup.sql."); } }).catch(function(){ toast("⚠ Añadido en local, pero no se pudo contactar con el servidor. Ejecuta el secure-setup.sql más reciente."); }); } else { toast("Cliente añadido (solo local): "+_lbl); } };
