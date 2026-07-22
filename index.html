@@ -722,6 +722,30 @@ body.login-mode .login-card{margin:0 auto!important}
 .adm-canje-toggle.done{background:rgba(59,208,122,.18);border-color:rgba(59,208,122,.5);color:#8dffb0}
 @media(max-width:520px){.adm-canje-toggle{padding:8px 10px;font-size:12px}.adm-canje-item{gap:8px}.adm-canje-prize{font-size:14px}}.streak-hero{margin:16px 0 2px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(225,29,59,.18),rgba(138,92,255,.15));border:1px solid rgba(255,54,81,.45);box-shadow:0 4px 18px rgba(0,0,0,.35)}.sh-headline{font-weight:900;font-size:clamp(16px,4.4vw,20px);color:#ffe277;text-shadow:0 2px 3px rgba(0,0,0,.55);line-height:1.15}.sh-sub{margin-top:6px;font-size:13.5px;line-height:1.45;color:#fff;opacity:.94}.sh-sub b{color:#8ff7ff}.sh-track{display:flex;gap:6px;margin-top:14px}.sh-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}.sh-badge{font-size:11px;font-weight:900;color:#8a7aa8;line-height:1}.sh-day.mile .sh-badge{color:#ffd34e}.sh-day.box .sh-badge{font-size:14px}.sh-dot{width:100%;height:10px;border-radius:999px;background:rgba(255,255,255,.13)}.sh-day.done .sh-dot{background:linear-gradient(90deg,#FF3651,#ff8a3c);box-shadow:0 0 8px rgba(255,90,60,.5)}.sh-day.next .sh-dot{background:rgba(255,226,119,.4);box-shadow:0 0 0 2px rgba(255,226,119,.75)}.sh-num{font-size:10.5px;font-weight:800;color:#cbb8e6}.sh-day.done .sh-num{color:#fff}.adm-menu{position:sticky;top:0;z-index:40;margin:-4px -2px 16px;padding:10px 2px;background:linear-gradient(180deg,rgba(12,7,8,.97),rgba(12,7,8,.82));backdrop-filter:blur(6px);border-bottom:1px solid var(--border)}.adm-menu-t{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#8a7aa8;margin:0 2px 8px}.adm-menu-row{display:flex;flex-wrap:wrap;gap:8px}.adm-menu-i{cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;color:#fff;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:999px;padding:8px 13px;transition:transform .08s,background .15s,border-color .15s}.adm-menu-i:hover{background:rgba(93,238,255,.14);border-color:rgba(93,238,255,.5)}.adm-menu-i:active{transform:scale(.95)}.adm-card,.adm-rewards-card{scroll-margin-top:120px}@keyframes admFlash{0%{box-shadow:0 0 0 0 rgba(93,238,255,0)}30%{box-shadow:0 0 0 3px rgba(93,238,255,.6)}100%{box-shadow:0 0 0 0 rgba(93,238,255,0)}}.adm-flash{animation:admFlash 1.2s ease}
 </style>
+<style id="ranking-css">
+.rk-pills{display:flex;gap:6px;margin:0 0 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:5px}
+.rk-pill{flex:1;cursor:pointer;font-family:inherit;font-weight:800;font-size:12.5px;color:#cbb8e6;background:transparent;border:none;border-radius:9px;padding:9px 6px;transition:background .15s,color .15s}
+.rk-pill.on{color:#1a0730;background:linear-gradient(180deg,#FBEBB8,#E8C77A);box-shadow:0 3px 10px rgba(232,199,122,.35)}
+.rk-hero{margin:4px 0 14px;padding:16px;border-radius:16px;text-align:center;background:linear-gradient(135deg,rgba(255,54,129,.22),rgba(138,92,255,.20));border:1px solid rgba(255,215,102,.5);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.rk-hero-lab{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#e8c77a}
+.rk-hero-rank{font-size:40px;font-weight:900;color:#fff;line-height:1.05;text-shadow:0 2px 4px rgba(0,0,0,.5)}
+.rk-hero-of{font-size:15px;font-weight:700;color:#cbb8e6}
+.rk-hero-gap{margin-top:8px;font-size:14px;color:#fff;opacity:.95}
+.rk-hero-gap b{color:#ffe277}
+.rk-list{display:flex;flex-direction:column;gap:7px}
+.rk-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.rk-row.podium{background:rgba(255,215,102,.10);border-color:rgba(255,215,102,.28)}
+.rk-row.me{background:linear-gradient(180deg,rgba(255,215,102,.22),rgba(255,215,102,.10));border-color:#ffd766;box-shadow:0 3px 12px rgba(232,199,122,.3)}
+.rk-pos{min-width:38px;font-size:19px;font-weight:900;color:#ffe277;text-align:center}
+.rk-name{flex:1;font-weight:800;color:#fff;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-row:not(.me) .rk-name{color:#bca9d8;font-weight:700}
+.rk-you{display:inline-block;margin-left:6px;font-size:10px;font-weight:900;letter-spacing:.08em;color:#1a0730;background:#ffd766;border-radius:6px;padding:2px 6px;vertical-align:middle}
+.rk-pts{font-weight:900;color:#8ff7ff;font-size:15px;white-space:nowrap}
+.rk-pts small{font-size:11px;font-weight:700;color:#cbb8e6}
+.rk-sep{text-align:center;color:#8a7aa8;letter-spacing:.3em;margin:8px 0}
+.rk-empty{padding:20px;text-align:center;color:#cbb8e6;font-size:14px;line-height:1.5}
+.rk-foot{margin-top:14px;padding:12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.14);color:#cbb8e6;font-size:12.5px;line-height:1.5;text-align:center}
+</style>
 <style id="reel-polish-v2">
 /* Rodillos: simbolos mas grandes y con mas presencia visual */
 .slot .cell{ padding:1px!important; }
@@ -775,6 +799,7 @@ body.login-mode .login-card{margin:0 auto!important}
       <button type="button" class="unav-i" data-nav="premios"><span class="unav-ic">🎁</span><span class="unav-tx">Premios</span></button>
       <button type="button" class="unav-i" data-nav="canjes"><span class="unav-ic">✅</span><span class="unav-tx">Canjes</span></button>
       <button type="button" class="unav-i" data-nav="historial"><span class="unav-ic">🕒</span><span class="unav-tx">Historial</span></button>
+      <button type="button" class="unav-i" data-nav="ranking"><span class="unav-ic">🏆</span><span class="unav-tx">Ranking</span></button>
     </nav>
 
     <div class="tab-panel" id="tab-jugar" data-panel="jugar">
@@ -845,6 +870,10 @@ body.login-mode .login-card{margin:0 auto!important}
         <button class="demo-btn" id="demoReset">♻️ Reiniciar cuenta</button>
       </div>
     </div>
+    </div>
+    <div class="tab-panel" id="tab-ranking" data-panel="ranking" hidden>
+    <div class="section-title">🏆 Ranking de bares</div>
+    <div id="rankingWrap"></div>
     </div>
   </div>
 
@@ -1215,6 +1244,52 @@ body.login-mode .login-card{margin:0 auto!important}
   }
 
   function logout(){ try{ localStorage.removeItem("tikitaka_session"); }catch(e){} currentUser = ""; state = null; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
+
+  /* ===== RANKING de bares (anonimo, por periodo) ===== */
+  var _rankPeriod="month";
+  window.tkRankPeriod=function(p){ _rankPeriod=p; loadRanking(); };
+  function rankPeriodLabel(){ return _rankPeriod==="month"?"este mes":(_rankPeriod==="year"?"este año":"histórico"); }
+  function rankPillsHtml(){
+    function pill(p,l){ return '<button type="button" class="rk-pill'+(_rankPeriod===p?" on":"")+'" data-rp="'+p+'">'+l+'</button>'; }
+    return '<div class="rk-pills">'+pill("month","📅 Mes")+pill("year","🗓️ Año")+pill("all","🏅 Histórico")+'</div>';
+  }
+  function tkRankBadge(rank){ return rank===1?"🥇":(rank===2?"🥈":(rank===3?"🥉":("#"+rank))); }
+  function loadRanking(){
+    var wrap=document.getElementById("rankingWrap"); if(!wrap) return;
+    if(!(SB_ON && SB_SECURE && _CRED.u) || currentUser==="demo"){ wrap.innerHTML='<div class="rk-empty">El ranking estará disponible cuando inicies sesión con tu bar y empieces a jugar. 🎰</div>'; return; }
+    wrap.innerHTML=rankPillsHtml()+'<div class="rk-empty">Cargando ranking…</div>';
+    sbRpc("app_leaderboard",{ p_username:_CRED.u, p_password:_CRED.p, p_top:20, p_period:_rankPeriod }).then(function(res){
+      if(!res || !res.ok){ wrap.innerHTML=rankPillsHtml()+'<div class="rk-empty">No se pudo cargar el ranking ahora mismo.</div>'; return; }
+      renderRanking(res);
+    }).catch(function(){ wrap.innerHTML=rankPillsHtml()+'<div class="rk-empty">No se pudo cargar el ranking. Si es la primera vez, ejecuta <b>app_leaderboard.sql</b> en Supabase.</div>'; });
+  }
+  function renderRanking(res){
+    var wrap=document.getElementById("rankingWrap"); if(!wrap) return;
+    var me=res.me||null, top=res.top||[], total=res.total||top.length;
+    var info=(typeof USERS!=="undefined" && USERS[currentUser])?USERS[currentUser]:{}; var myName=esc(info.bar||info.nombre||currentUser);
+    var plab=rankPeriodLabel();
+    var h=rankPillsHtml();
+    if(me){
+      h+='<div class="rk-hero"><div class="rk-hero-lab">Tu posición · '+plab+'</div><div class="rk-hero-rank">'+tkRankBadge(me.rank)+'<span class="rk-hero-of"> de '+total+' bares</span></div>';
+      if(me.rank>1 && me.gap_to_next>0){ h+='<div class="rk-hero-gap">🔥 Te faltan <b>'+fmt(me.gap_to_next)+' pts</b> para adelantar al puesto #'+(me.rank-1)+'</div>'; }
+      else if(me.rank===1){ h+='<div class="rk-hero-gap">👑 ¡Eres el número 1 '+plab+'! No dejes que te alcancen.</div>'; }
+      h+='</div>';
+    }
+    h+='<div class="rk-list">';
+    var meInTop=false;
+    for(var i=0;i<top.length;i++){ var r=top[i]; if(r.me) meInTop=true;
+      var cls="rk-row"+(r.me?" me":"")+(r.rank<=3?" podium":"");
+      var name=r.me?('🍺 '+myName+' <span class="rk-you">TÚ</span>'):'Bar anónimo';
+      h+='<div class="'+cls+'"><span class="rk-pos">'+tkRankBadge(r.rank)+'</span><span class="rk-name">'+name+'</span><span class="rk-pts">'+fmt(r.points)+'<small> pts</small></span></div>';
+    }
+    h+='</div>';
+    if(me && !meInTop){ h+='<div class="rk-sep">•  •  •</div><div class="rk-list"><div class="rk-row me"><span class="rk-pos">#'+me.rank+'</span><span class="rk-name">🍺 '+myName+' <span class="rk-you">TÚ</span></span><span class="rk-pts">'+fmt(me.points)+'<small> pts</small></span></div></div>'; }
+    if(!top.length){ h+='<div class="rk-empty">Aún no hay puntuaciones '+plab+'. ¡Sé de los primeros! 🎰</div>'; }
+    h+='<div class="rk-foot">🔒 Ranking anónimo: solo tú ves el nombre de tu bar. Puntos <b>ganados</b> ('+plab+'), sin descontar los premios que canjees.</div>';
+    wrap.innerHTML=h;
+  }
+  window.tkLoadRanking=loadRanking;
+  try{ document.addEventListener("click",function(ev){ var t=ev.target; while(t && t!==document){ if(t.classList && t.classList.contains("rk-pill")){ var p=t.getAttribute("data-rp"); if(p) window.tkRankPeriod(p); break; } t=t.parentNode; } }); }catch(e){}
 
   function spunToday(){ return state.lastSpin === todayStr(); }
 
@@ -2665,7 +2740,7 @@ body.login-mode .login-card{margin:0 auto!important}
 @media(max-width:800px){.bet-big .bb-mult{font-size:76px}.bet-big .bb-msg{font-size:18px}}
 @media(max-width:800px){.bet-wheel-wrap{width:200px;height:200px}.bet-go{width:86%}}
 </style>
-<script id="user-nav">(function(){var current="jugar";function apply(name){var panels=document.querySelectorAll(".tab-panel");for(var i=0;i<panels.length;i++){panels[i].hidden=(panels[i].getAttribute("data-panel")!==name);}var nav=document.getElementById("userNav");var btns=nav?nav.querySelectorAll(".unav-i"):[];for(var j=0;j<btns.length;j++){btns[j].classList.toggle("active",btns[j].getAttribute("data-nav")===name);}current=name;try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}}function go(name){if(name===current)return;apply(name);try{history.pushState({tk:"tk-tab",name:name},"");}catch(e){}}window.__tkNav={go:go,apply:apply,current:function(){return current;}};function initUserNav(){var nav=document.getElementById("userNav");if(!nav)return;var btns=nav.querySelectorAll(".unav-i");for(var k=0;k<btns.length;k++){(function(b){b.addEventListener("click",function(){go(b.getAttribute("data-nav"));});})(btns[k]);}}if(document.readyState!=="loading")initUserNav();else document.addEventListener("DOMContentLoaded",initUserNav);})();</script>
+<script id="user-nav">(function(){var current="jugar";function apply(name){var panels=document.querySelectorAll(".tab-panel");for(var i=0;i<panels.length;i++){panels[i].hidden=(panels[i].getAttribute("data-panel")!==name);}var nav=document.getElementById("userNav");var btns=nav?nav.querySelectorAll(".unav-i"):[];for(var j=0;j<btns.length;j++){btns[j].classList.toggle("active",btns[j].getAttribute("data-nav")===name);}current=name;try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}try{if(name==="ranking"&&window.tkLoadRanking)window.tkLoadRanking();}catch(e){}}function go(name){if(name===current)return;apply(name);try{history.pushState({tk:"tk-tab",name:name},"");}catch(e){}}window.__tkNav={go:go,apply:apply,current:function(){return current;}};function initUserNav(){var nav=document.getElementById("userNav");if(!nav)return;var btns=nav.querySelectorAll(".unav-i");for(var k=0;k<btns.length;k++){(function(b){b.addEventListener("click",function(){go(b.getAttribute("data-nav"));});})(btns[k]);}}if(document.readyState!=="loading")initUserNav();else document.addEventListener("DOMContentLoaded",initUserNav);})();</script>
 <script id="tropical-layout">document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("login-mode");var s=document.querySelector(".slot"),b=document.querySelector(".balance-wrap");if(s&&b)s.insertBefore(b,s.firstChild);});</script><script id="pwa-boot">
 (function(){
   if("serviceWorker" in navigator){ window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }
