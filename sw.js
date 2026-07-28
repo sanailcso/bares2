@@ -1,6 +1,6 @@
 /* Tiki Taka PWA service worker */
-var CACHE = "tikitaka-v55";
-var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png", "./img/bg-default.png", "./img/bg-halloween.png", "./img/bg-navidad.png", "./img/brand-login.png", "./img/logo.png", "./img/sym-filler-1.webp", "./img/sym-filler-2.webp", "./img/sym-filler-3.webp", "./img/sym-filler-4.webp", "./img/sym-filler-5.webp", "./img/sym-jackpot.webp", "./img/sym-prize.webp"];
+var CACHE = "tikitaka-v56";
+var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/badge-96.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png", "./img/bg-default.png", "./img/bg-halloween.png", "./img/bg-navidad.png", "./img/brand-login.png", "./img/logo.png", "./img/sym-filler-1.webp", "./img/sym-filler-2.webp", "./img/sym-filler-3.webp", "./img/sym-filler-4.webp", "./img/sym-filler-5.webp", "./img/sym-jackpot.webp", "./img/sym-prize.webp"];
 self.addEventListener("install", function(e){
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(SHELL).catch(function(){}); }));
@@ -30,7 +30,17 @@ self.addEventListener("push", function(e){
   var data={};
   try{ data = e.data ? e.data.json() : {}; }catch(err){ try{ data={ title:"Tiki Taka", body:(e.data?e.data.text():"") }; }catch(_e){ data={}; } }
   var title = data.title || "Tiki Taka";
-  var opts = { body: data.body||"", tag: data.tag||"tikitaka", renotify:true, icon: data.icon||"./icons/icon-192.png", badge: data.badge||"./icons/icon-192.png", data:{ url: data.url||"./index.html" } };
+  /* Rutas ABSOLUTAS: las relativas fallan segun donde este alojada la PWA */
+  function abs(u, fb){ try{ return new URL(u||fb, self.location.href).href; }catch(err){ return fb; } }
+  var opts = {
+    body: data.body||"",
+    tag: data.tag||"tikitaka",
+    renotify: true,
+    icon:  abs(data.icon,  "./icons/icon-192.png"),   /* logo a color, cuadro grande */
+    badge: abs(data.badge, "./icons/badge-96.png"),   /* SILUETA monocroma para la barra de estado */
+    data: { url: abs(data.url, "./index.html") }
+  };
+  if(data.image){ opts.image = abs(data.image, ""); }
   e.waitUntil(self.registration.showNotification(title, opts));
 });
 self.addEventListener("notificationclick", function(e){

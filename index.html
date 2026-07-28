@@ -1019,7 +1019,7 @@ body.login-mode .login-card{margin:0 auto!important}
   function sbRpc(fn, args){
     if(!SB_ON) return Promise.reject(new Error("nosb"));
     return fetch(SB_URL+"/rest/v1/rpc/"+fn, { method:"POST", headers:sbHeaders(), body:JSON.stringify(args||{}) })
-      .then(function(r){ if(!r.ok){ var e=new Error("rpc "+r.status); e.status=r.status; e.isServer=true; throw e; } return r.json(); });
+      .then(function(r){ if(!r.ok) throw new Error("rpc "+r.status); return r.json(); });
   }
   function secureAuthLogin(u,p){
     return sbRpc("app_login",{ p_username:u, p_password:p }).then(function(res){
@@ -1062,7 +1062,10 @@ body.login-mode .login-card{margin:0 auto!important}
   function showNotif(title, body, tag){
     try{
       if(!notifSupported() || Notification.permission!=="granted") return;
-      var opts={ body:body||"", tag:tag||"tikitaka" };
+      var opts={ body:body||"", tag:tag||"tikitaka", renotify:true };
+      /* Icono SIEMPRE (antes solo se ponia si DEFAULT_LOGO era http, y es una ruta relativa, asi que nunca se ponia) */
+      try{ opts.icon=new URL("./icons/icon-192.png", location.href).href; }catch(e){ opts.icon="./icons/icon-192.png"; }
+      try{ opts.badge=new URL("./icons/badge-96.png", location.href).href; }catch(e){ opts.badge="./icons/badge-96.png"; }
       try{ if(typeof DEFAULT_LOGO!=="undefined" && /^https?:\/\//.test(DEFAULT_LOGO)){ opts.icon=DEFAULT_LOGO; } }catch(e){}
       if(navigator.serviceWorker && navigator.serviceWorker.ready){ navigator.serviceWorker.ready.then(function(reg){ try{ reg.showNotification(title, opts); }catch(e){ try{ new Notification(title, opts); }catch(_e){} } }).catch(function(){ try{ new Notification(title, opts); }catch(_e){} }); }
       else { try{ new Notification(title, opts); }catch(e){} }
@@ -1244,18 +1247,17 @@ body.login-mode .login-card{margin:0 auto!important}
     if (!u || !p){ loginError("Introduce usuario y contraseña."); return; }
     loginMsg.textContent = "";
     try{ document.getElementById("loginBtn").disabled = true; }catch(e){}
-    secureAuthLogin(u,p).catch(function(err){ return (err && err.isServer) ? "servererr" : "offline"; }).then(function(res){
+    secureAuthLogin(u,p).catch(function(){ return "offline"; }).then(function(res){
       try{ document.getElementById("loginBtn").disabled = false; }catch(e){}
       var info=null, serverState=null;
-      if(res && res!=="offline" && res!=="servererr"){ info={nombre:res.nombre,bar:res.bar}; serverState=res.state; }
+      if(res && res!=="offline"){ info={nombre:res.nombre,bar:res.bar}; serverState=res.state; }
       else if(SB_ON){
         if(res==="offline"){ loginError("⚠️ Sin conexión. Necesitas internet para iniciar sesión."); return; }
-        if(res==="servererr"){ loginError("⚠️ El servidor no pudo procesar el login. Revisa la función app_login en Supabase (ver fix-login.sql)."); return; }
         try{ localStorage.removeItem("tikitaka_session"); }catch(e){} loginError("❌ Usuario o contraseña incorrectos."); return;
       }
       else { var li=USERS[u]; if(li && li.pass===p){ info={nombre:li.nombre,bar:li.bar}; } }
       if(!info){ try{ localStorage.removeItem("tikitaka_session"); }catch(e){} loginError("❌ Usuario o contraseña incorrectos."); return; }
-      finishLogin(u, info, serverState, ((res && res!=="offline" && res!=="servererr" && res.token) ? res.token : null));
+      finishLogin(u, info, serverState, ((res && res!=="offline" && res.token) ? res.token : null));
     });
   }
 
