@@ -58,6 +58,7 @@ alter table public.sessions enable row level security;
 revoke all on public.sessions from anon, authenticated;
 
 -- Limpieza oportunista de sesiones caducadas
+drop function if exists public.fn_sessions_gc();
 create or replace function public.fn_sessions_gc() returns void
 language sql security definer set search_path = public as $$
   delete from public.sessions where expires_at < now();
@@ -67,6 +68,7 @@ $$;
 -- 3) HELPER DE AUTENTICACIÓN POR TOKEN
 --    Devuelve el username si el token es válido; null en otro caso.
 -- ------------------------------------------------------------
+drop function if exists public.fn_auth_token(uuid);
 create or replace function public.fn_auth_token(p_token uuid)
 returns text
 language plpgsql security definer set search_path = public as $$
@@ -87,6 +89,9 @@ end$$;
 --    (idealmente con crypt() si ya guardas hashes) y añade la
 --    creación de sesión + devolver el token.
 -- ------------------------------------------------------------
+-- Obligatorio: la versión antigua de app_login tiene otro tipo de retorno
+-- y Postgres NO permite reemplazarla (error 42P13). Hay que borrarla primero.
+drop function if exists public.app_login(text, text);
 create or replace function public.app_login(p_username text, p_password text)
 returns json
 language plpgsql security definer set search_path = public as $$
@@ -119,6 +124,7 @@ end$$;
 -- ------------------------------------------------------------
 -- 5) REANUDAR SESIÓN (lo llama la app al arrancar)
 -- ------------------------------------------------------------
+drop function if exists public.app_resume(uuid);
 create or replace function public.app_resume(p_token uuid)
 returns json
 language plpgsql security definer set search_path = public as $$
@@ -173,6 +179,7 @@ end$$;
 --
 --    EJEMPLO COMPLETO con app_state:
 -- ------------------------------------------------------------
+drop function if exists public.app_state(uuid);
 create or replace function public.app_state(p_token uuid)
 returns json
 language plpgsql security definer set search_path = public as $$
@@ -215,11 +222,20 @@ grant execute on function public.app_state(uuid)        to anon, authenticated;
 
 -- ------------------------------------------------------------
 -- 8) OPCIONAL PERO RECOMENDADO
---   a) Borra las firmas ANTIGUAS de las funciones (con p_password)
---      para que nadie pueda llamarlas:
+--   a) Borra las firmas ANTIGUAS (con p_password) DESPUÉS de crear las
+--      nuevas con p_token, para que nadie pueda llamarlas:
 --        drop function if exists public.app_spin(text, text);
 --        drop function if exists public.app_redeem(text, text, text);
---        ... (ajusta a tus firmas reales)
+--        drop function if exists public.app_cancel_redeem(text, text, text, text);
+--        drop function if exists public.app_bet(text, text, integer);
+--        drop function if exists public.app_claim_credits(text, text);
+--        drop function if exists public.app_save_state(text, text, jsonb);
+--        drop function if exists public.app_state(text, text);
+--        drop function if exists public.app_pick_box(text, text);
+--        drop function if exists public.app_leaderboard(text, text, integer, text);
+--        drop function if exists public.app_push_subscribe(text, text, jsonb);
+--      Si alguna responde "function does not exist", mira la firma exacta en
+--      Database → Functions y ajusta los tipos (p.ej. numeric en vez de integer).
 --   b) Migra contraseñas a hash con pgcrypto:
 --        create extension if not exists pgcrypto;
 --        alter table public.players add column if not exists pass_hash text;

@@ -1019,7 +1019,7 @@ body.login-mode .login-card{margin:0 auto!important}
   function sbRpc(fn, args){
     if(!SB_ON) return Promise.reject(new Error("nosb"));
     return fetch(SB_URL+"/rest/v1/rpc/"+fn, { method:"POST", headers:sbHeaders(), body:JSON.stringify(args||{}) })
-      .then(function(r){ if(!r.ok) throw new Error("rpc "+r.status); return r.json(); });
+      .then(function(r){ if(!r.ok){ var e=new Error("rpc "+r.status); e.status=r.status; e.isServer=true; throw e; } return r.json(); });
   }
   function secureAuthLogin(u,p){
     return sbRpc("app_login",{ p_username:u, p_password:p }).then(function(res){
@@ -1244,17 +1244,18 @@ body.login-mode .login-card{margin:0 auto!important}
     if (!u || !p){ loginError("Introduce usuario y contraseña."); return; }
     loginMsg.textContent = "";
     try{ document.getElementById("loginBtn").disabled = true; }catch(e){}
-    secureAuthLogin(u,p).catch(function(){ return "offline"; }).then(function(res){
+    secureAuthLogin(u,p).catch(function(err){ return (err && err.isServer) ? "servererr" : "offline"; }).then(function(res){
       try{ document.getElementById("loginBtn").disabled = false; }catch(e){}
       var info=null, serverState=null;
-      if(res && res!=="offline"){ info={nombre:res.nombre,bar:res.bar}; serverState=res.state; }
+      if(res && res!=="offline" && res!=="servererr"){ info={nombre:res.nombre,bar:res.bar}; serverState=res.state; }
       else if(SB_ON){
         if(res==="offline"){ loginError("⚠️ Sin conexión. Necesitas internet para iniciar sesión."); return; }
+        if(res==="servererr"){ loginError("⚠️ El servidor no pudo procesar el login. Revisa la función app_login en Supabase (ver fix-login.sql)."); return; }
         try{ localStorage.removeItem("tikitaka_session"); }catch(e){} loginError("❌ Usuario o contraseña incorrectos."); return;
       }
       else { var li=USERS[u]; if(li && li.pass===p){ info={nombre:li.nombre,bar:li.bar}; } }
       if(!info){ try{ localStorage.removeItem("tikitaka_session"); }catch(e){} loginError("❌ Usuario o contraseña incorrectos."); return; }
-      finishLogin(u, info, serverState, ((res && res!=="offline" && res.token) ? res.token : null));
+      finishLogin(u, info, serverState, ((res && res!=="offline" && res!=="servererr" && res.token) ? res.token : null));
     });
   }
 
