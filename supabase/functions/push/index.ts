@@ -93,6 +93,10 @@ async function sendTo(sub: Record<string, unknown>, payload: unknown): Promise<b
     return true;
   } catch (error) {
     const status = (error as { statusCode?: number })?.statusCode;
+    console.error("Push delivery failed", {
+      status: status ?? null,
+      message: error instanceof Error ? error.message : String(error),
+    });
     if (status === 404 || status === 410) {
       await supabase.rpc("app_push_prune", { p_endpoint: sub?.endpoint }).catch(() => undefined);
     }
