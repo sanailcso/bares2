@@ -1,5 +1,15 @@
 # Tiki Taka - APK de prueba (TWA sobre GitHub Pages)
 
+## Enlace verificado
+
+La huella de la nueva clave ya figura en `assetlinks.json`. Android exige que
+ese contenido esté publicado exactamente en
+`https://sanailcso.github.io/.well-known/assetlinks.json`. Al ser `bares2` una
+GitHub Page de proyecto, este repositorio queda bajo `/bares2/` y no puede
+ocupar por sí solo esa ruta raíz. Copia `assetlinks.json` al repositorio que
+publica la página raíz `sanailcso.github.io` antes de distribuir el APK; de lo
+contrario se abrirá el fallback de Custom Tabs.
+
 Todo esto esta ya rellenado con TUS datos reales:
 
 - Web: `https://sanailcso.github.io/bares2/`

@@ -2,6 +2,19 @@
 
 Proyecto actual: `bxyjassnjcyegqnimdsq` (`eu-west-1`).
 
+## Recaudaciones
+
+Actualmente se registran manualmente desde el backoffice mediante
+`app_admin_add_revenue`. La tabla conserva `source = 'manual'` y admite un
+`external_id` único para que, más adelante, el sistema de máquinas pueda enviar
+registros idempotentes sin duplicar puntos. Esa integración aún no está activa.
+
+## Avisos automáticos
+
+Supabase Cron comprueba cada hora si son las 11:05 en `Europe/Madrid` y solicita
+el recordatorio diario una sola vez. Otro trigger avisa al administrador tras
+cada canje. Ambos leen el secreto desde Vault; ningún secreto se guarda en Git.
+
 ## Instalación desde cero
 
 1. Crea un proyecto vacío de Supabase.

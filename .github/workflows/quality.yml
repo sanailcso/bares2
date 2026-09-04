@@ -1,0 +1,25 @@
+name: Calidad
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar JavaScript
+        run: node --check assets/app.js
+      - name: Validar estructura y reglas críticas
+        run: node tests/quality.mjs
+      - name: Comprobar diferencias
+        run: git diff --check
