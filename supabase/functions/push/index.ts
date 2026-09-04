@@ -93,11 +93,16 @@ async function sendTo(sub: Record<string, unknown>, payload: unknown): Promise<b
     return true;
   } catch (error) {
     const status = (error as { statusCode?: number })?.statusCode;
+    const responseBody = String((error as { body?: unknown })?.body ?? "");
     console.error("Push delivery failed", {
       status: status ?? null,
       message: error instanceof Error ? error.message : String(error),
     });
-    if (status === 404 || status === 410) {
+    const staleSubscription =
+      status === 404 ||
+      status === 410 ||
+      (status === 403 && responseBody.includes("VAPID credentials"));
+    if (staleSubscription) {
       await supabase.rpc("app_push_prune", { p_endpoint: sub?.endpoint }).catch(() => undefined);
     }
     return false;
