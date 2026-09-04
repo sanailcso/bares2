@@ -1,3 +1,6 @@
+-- OBSOLETO: no ejecutar en la instalación nueva.
+-- La versión canónica está en supabase/migrations/20260903093000_reconstruct_backend.sql.
+
 -- ============================================================
 -- TIKI TAKA · reparar-todo.sql   (SOLUCIÓN DEFINITIVA)
 --

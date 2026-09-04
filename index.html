@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- despliegue: 2026-09-03-security-hardening -->
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -150,6 +151,8 @@
   .spin-btn:disabled { background:linear-gradient(180deg,#2c3a2e,#1f2822); border-color:rgba(126,224,163,.25); color:#9fd7b3; box-shadow:none; cursor:default; filter:none; }
   .spin-btn:disabled::after { display:none; }
   .spin-note { text-align:center; font-size:13px; color:var(--muted); margin:10px 0 0; min-height:18px; }
+  /* Cuenta atras hasta la proxima tirada. tabular-nums evita que el texto baile al cambiar los digitos. */
+  .cd-time { display:inline-block; min-width:78px; padding:1px 8px; margin-left:5px; border-radius:7px; background:rgba(255,226,119,.16); border:1px solid rgba(255,226,119,.6); color:#ffe277; font-weight:900; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; letter-spacing:.04em; }
   .win-banner { text-align:center; margin-top:12px; font-size:19px; font-weight:900; min-height:26px;
     opacity:0; transform:translateY(6px); transition:opacity .3s, transform .3s; }
   .win-banner.show { opacity:1; transform:translateY(0); }
@@ -825,6 +828,11 @@ body.login-mode .login-card{margin:0 auto!important}
             <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
             <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
             <div class="payline"></div>
+            <div class="cd-lock" id="cdLock" aria-live="polite">
+              <span class="cd-lock-lab">Próxima tirada en</span>
+              <span class="cd-lock-time" id="cdTime">--:--:--</span>
+              <span class="cd-lock-sub">Vuelve mañana y sigue tu racha 🔥</span>
+            </div>
           </div>
           <div class="ruleta-cta" id="ruletaCta"></div>
         </div>
@@ -834,13 +842,14 @@ body.login-mode .login-card{margin:0 auto!important}
       <div class="win-banner" id="winBanner"></div>
       <div class="streak-info">
         <div class="si-title">🔥 Racha diaria · ciclo de 7 días</div>
-        <div class="si-sub">Entra cada día. En el día 3 y 6 ganas +150 pts. En el día 7 eliges 1 de 3 cajas sorpresa (300, 400 o 500 pts) y la racha se reinicia.</div>
+        <div class="si-sub" id="siSub">Entra cada día y suma puntos. En el día 7 eliges 1 de 3 cajas sorpresa y la racha se reinicia.</div>
         <div class="si-milestones" id="siMilestones"></div>
       </div>
       <div id="betPanel" class="bet-panel"></div>
     </div>
 
     <div class="streak-hero" id="streakHero"></div>
+    <div id="onboarding"></div>
     </div>
 
     <div class="tab-panel" id="tab-premios" data-panel="premios" hidden>
@@ -865,7 +874,10 @@ body.login-mode .login-card{margin:0 auto!important}
         <button class="demo-btn" id="demoDay">⏩ Simular día siguiente</button>
         <button class="demo-btn" id="demoPts">➕ +20000 puntos</button>
         <button class="demo-btn" id="demoStreak">🔥 +1 día de racha</button>
-        <button class="demo-btn" id="demoJackpot">🍒 Ver JACKPOT (500)</button>
+        <button class="demo-btn" id="demoBox">🎁 Abrir caja semanal</button>
+        <button class="demo-btn" id="demoGolden">⭐ Activar Ronda Dorada</button>
+        <button class="demo-btn" id="demoRuleta">🎡 +3 tiradas de ruleta</button>
+        <button class="demo-btn" id="demoJackpot">🍒 Ver JACKPOT</button>
         <button class="demo-btn" id="demoSpecial">�� Ver premio (300)</button>
         <button class="demo-btn" id="demoReset">♻️ Reiniciar cuenta</button>
       </div>
@@ -898,7 +910,6 @@ body.login-mode .login-card{margin:0 auto!important}
   /*__CONFIG_START__*/
   const USERS = {
     "demo":   { pass: "demo", nombre: "Bar Demo", bar: "Bar Demo" },
-    "manolo": { pass: "1234", nombre: "Manolo",   bar: "Bar Manolo" },
   };
   /*__CONFIG_END__*/
   var BUILTIN_USERS = JSON.parse(JSON.stringify(USERS));
@@ -965,13 +976,13 @@ body.login-mode .login-card{margin:0 auto!important}
   const PAL_RED  = ["#E11D3B","#FF3651","#9d0c23","#FFFFFF","#FFC9D0"];
   const PAL_BLUE = ["#3AA0FF","#7FD4FF","#1E6FCB","#FFFFFF","#CDEEFF"];
   const PAL_GOLD = ["#FBEBB8","#E8C77A","#A9791F","#FFFFFF","#FFE9A8"];
-  const STREAK_STEP_BONUS = 150;   // cada 3 dias
+  const STREAK_STEP_BONUS = 35;   // cada 3 dias (reescalado con la tirada)
   const STREAK_CYCLE = 7;         // a los 7 dias: caja sorpresa y reinicio
-  const BOX_VALUES = [300, 400, 500];
+  const BOX_VALUES = [70, 90, 110];
   const CYCLE_MILESTONES = [
-    { day:3, bonus:150, box:false },
-    { day:6, bonus:150, box:false },
-    { day:7, bonus:0,  box:true  },
+    { day:3, bonus:STREAK_STEP_BONUS, box:false, name:"⚡ Bonus de impulso" },
+    { day:6, bonus:STREAK_STEP_BONUS, box:false, name:"🔥 Bonus de constancia" },
+    { day:7, bonus:0, box:true, name:"🎁 Caja final" },
   ];
 
   const CATALOG = [
@@ -994,7 +1005,7 @@ body.login-mode .login-card{margin:0 auto!important}
   let currentUser = "", state = null, spinning = false;
 
   function stateKey(u){ return "tikitaka_" + u; }
-  function defaultState(){ return { points:0, streak:0, lastSpin:null, lastSymbols:null, lastWin:0, history:[], dayOffset:0, appliedCredits:{}, pendingBox:false, bets:null, betSpins:0 }; }
+  function defaultState(){ return { points:0, streak:0, lastSpin:null, lastSymbols:null, lastWin:0, history:[], dayOffset:0, appliedCredits:{}, pendingBox:false, bets:null, betSpins:0, goldenRound:false }; }
   function loadState(u){
     try { const raw = localStorage.getItem(stateKey(u)); if (raw){ return Object.assign(defaultState(), JSON.parse(raw)); } } catch(e){}
     return defaultState();
@@ -1002,10 +1013,10 @@ body.login-mode .login-card{margin:0 auto!important}
   function saveState(){ try { localStorage.setItem(stateKey(currentUser), JSON.stringify(state)); } catch(e){} try{ sbSaveState(); sbSyncEvents(); }catch(e){} }
 
   /* ===== SUPABASE · registro central en la nube ===== */
-  var SB_URL="https://vlhsclbqvdrzznmlahpm.supabase.co";
-  var SB_KEY="sb_publishable_tYyCMEfRiHqHufw2bKsZcA_x-OLWuhO";
-  var VAPID_PUBLIC="BFiPxdmVowS5exLIkyMKEieScklcIorQrshxcb1MCX37mA-9u-ONlMYoyY4L1zGXxVI284AldYKo9_rR6tIao1A"; // clave pública VAPID (Web Push)
-  var PUSH_FN_URL="https://vlhsclbqvdrzznmlahpm.functions.supabase.co/push"; // Edge Function de push
+  var SB_URL="https://bxyjassnjcyegqnimdsq.supabase.co";
+  var SB_KEY="sb_publishable_28tZIevxR3lrkUZsfn9e8g_jHDyqFPy";
+  var VAPID_PUBLIC="BBoLOiWoweBkdJhEVRz6jrczOQpDtH3fHQOtTkWIo8T6q5ewJi6mH8VW5Z1Wh1ufVlIuvBWeKTqQyzxW6MyPf98";
+  var PUSH_FN_URL=SB_URL+"/functions/v1/push";
   var SB_ON=!!(SB_URL && SB_KEY);
   var _sbLoggedLen={};
   function sbHeaders(extra){ var h={ "apikey":SB_KEY, "Authorization":"Bearer "+SB_KEY, "Content-Type":"application/json" }; if(extra){ for(var k in extra){ h[k]=extra[k]; } } return h; }
@@ -1071,6 +1082,14 @@ body.login-mode .login-card{margin:0 auto!important}
       else { try{ new Notification(title, opts); }catch(e){} }
     }catch(e){}
   }
+  function notifyOnceToday(kind, title, body, tag){
+    try{ if(!state||!notifSupported()||Notification.permission!=="granted") return false; var k="tikitaka_useful_notif_"+currentUser+"_"+kind+"_"+todayStr(); if(localStorage.getItem(k)) return false; localStorage.setItem(k,"1"); showNotif(title,body,tag||kind); return true; }catch(e){ return false; }
+  }
+  function maybePrizeReady(){
+    try{ if(!state) return; var items=catalogItems().filter(function(x){ return x&&x.enabled!==false&&(+x.cost||0)>0&&(state.points||0)>=(+x.cost||0); }); if(!items.length) return; var item=items.sort(function(a,b){return (+a.cost||0)-(+b.cost||0);})[0]; notifyOnceToday("prize","🎁 ¡Ya puedes canjear un premio!","Ya tienes puntos suficientes para "+item.name+". Entra al catálogo para verlo.","prize-ready"); }catch(e){}
+  }
+  function notifyGoldenRound(){ notifyOnceToday("golden","⭐ Ronda dorada desbloqueada","Tu racha semanal ha desbloqueado una ronda especial de ruleta.","golden-round"); }
+
   function requestNotif(){
     if(!notifSupported()){ try{ toast("Tu navegador no admite avisos"); }catch(e){} return Promise.resolve("unsupported"); }
     if(Notification.permission==="granted") return Promise.resolve("granted");
@@ -1078,16 +1097,8 @@ body.login-mode .login-card{margin:0 auto!important}
     try{ return Notification.requestPermission().then(function(pm){ if(pm==="granted"){ try{ toast("🔔 Avisos activados"); }catch(e){} showNotif("Tiki Taka","¡Avisos activados! Te avisaremos de tus premios y tu racha."); } else { try{ toast("Avisos no activados"); }catch(e){} } return pm; }); }catch(e){ return Promise.resolve("default"); }
   }
   function ensureNotifBtn(){
-    try{
-      if(!notifSupported()) return;
-      var ex=document.getElementById("notifFab");
-      if(Notification.permission!=="default"){ if(ex && ex.parentNode) ex.parentNode.removeChild(ex); return; }
-      if(ex) return;
-      var b=document.createElement("button"); b.id="notifFab"; b.type="button"; b.textContent="🔔 Activar avisos";
-      b.setAttribute("style","position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:99999;background:linear-gradient(135deg,#b7791f,#c05621);color:#fff;border:none;border-radius:999px;padding:11px 20px;font-weight:800;font-size:14px;box-shadow:0 6px 22px rgba(0,0,0,.35);cursor:pointer");
-      b.onclick=function(){ requestNotif().then(function(){ ensureNotifBtn(); subscribeClientPush(); }); };
-      document.body.appendChild(b);
-    }catch(e){}
+    /* No interrumpir los primeros accesos: se pide solo tras el primer giro y se aplaza 30 días si se rechaza. */
+    try{ if(!notifSupported()||Notification.permission!=="default"||!currentUser||!state||!state.lastSpin) return; var k="tikitaka_notif_later_"+currentUser, until=+(localStorage.getItem(k)||0); if(until>Date.now()||document.getElementById("notifPrompt")) return; var d=document.createElement("div"); d.id="notifPrompt"; d.innerHTML='<div class="np-card"><b>🔔 Activa tus avisos cuando quieras</b><span>Te avisaremos de la tirada diaria, la racha y premios disponibles.</span><button id="notifAllow">Activar avisos</button><button id="notifLater">Ahora no</button></div>'; d.style.cssText='position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(0,0,0,.58);padding:20px'; d.querySelector('.np-card').style.cssText='max-width:340px;padding:22px;border-radius:18px;background:#241040;color:#fff;text-align:center;display:grid;gap:12px;box-shadow:0 18px 50px #000'; var bs=d.querySelectorAll('button');bs[0].style.cssText='min-height:46px;border:0;border-radius:10px;background:#ff3651;color:#fff;font-weight:900';bs[1].style.cssText='min-height:42px;border:0;background:transparent;color:#d8d3ee;font-weight:800';d.querySelector('#notifAllow').onclick=function(){requestNotif().then(function(){subscribeClientPush();d.remove();});};d.querySelector('#notifLater').onclick=function(){localStorage.setItem(k,String(Date.now()+30*86400000));d.remove();};document.body.appendChild(d); }catch(e){}
   }
   function maybeStreakReminder(){
     try{
@@ -1097,8 +1108,8 @@ body.login-mode .login-card{margin:0 auto!important}
       if(localStorage.getItem(key)) return;
       if(state.lastSpin===t) return;
       localStorage.setItem(key,"1");
-      if((state.streak||0)>0){ showNotif("🔥 ¡No pierdas tu racha!","Llevas "+state.streak+" día"+((state.streak||0)>1?"s":"")+" seguidos. Entra y gira hoy para mantenerla.","streak"); }
-      else { showNotif("🎰 ��Tu tirada diaria te espera!","Gira los rodillos y gana puntos y tiradas de ruleta.","daily"); }
+      if((state.streak||0)>0){ showNotif("🔥 Protege tu racha de "+state.streak+" día"+((state.streak||0)>1?"s":""),"Haz tu giro de hoy: el próximo hito de la racha está cada vez más cerca.","streak"); }
+      else { showNotif("🎰 Tu tirada diaria está disponible","Haz girar los rodillos para ganar puntos y desbloquear tiradas de ruleta.","daily"); }
     }catch(e){}
   }
   /* ===== Notificaciones push (Web Push + Supabase Edge Function) ===== */
@@ -1135,7 +1146,7 @@ body.login-mode .login-card{margin:0 auto!important}
   function localRedemptions(){ try{ return JSON.parse(localStorage.getItem(LS_REDEEM)||"[]"); }catch(e){ return []; } }
   function saveLocalRedemptions(a){ try{ localStorage.setItem(LS_REDEEM, JSON.stringify((a||[]).slice(0,400))); }catch(e){} }
   function upsertLocalRedemption(row){ var a=localRedemptions(); var f=false; for(var i=0;i<a.length;i++){ if(a[i].id===row.id){ a[i]=Object.assign({},a[i],row); f=true; break; } } if(!f) a.unshift(row); saveLocalRedemptions(a); }
-  function recordRedemption(item, today, serverOk){ try{ var info=(typeof USERS!=="undefined" && USERS[currentUser])?USERS[currentUser]:{}; var rid=currentUser+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); var row={ id:rid, username:currentUser, bar:(info.bar||info.nombre||currentUser), premio:item.name, puntos:item.cost, created_at:new Date().toISOString(), delivered:false, delivered_at:null, cancelled:false, cancelled_at:null }; upsertLocalRedemption(row); return rid; }catch(e){ return null; } }
+  function recordRedemption(item, today, serverOk, serverId){ try{ var info=(typeof USERS!=="undefined" && USERS[currentUser])?USERS[currentUser]:{}; var rid=serverId||currentUser+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); var row={ id:rid, username:currentUser, bar:(info.bar||info.nombre||currentUser), premio:item.name, puntos:item.cost, created_at:new Date().toISOString(), delivered:false, delivered_at:null, cancelled:false, cancelled_at:null }; upsertLocalRedemption(row); return rid; }catch(e){ return null; } }
   function sbLoadRedemptions(){ if(SB_SECURE && _admPin){ return sbRpc("app_admin_redemptions",{ p_pin:_admPin }).catch(function(){ return null; }); } return Promise.resolve(null); /* [SEGURIDAD] sin via legacy */ }
   function sbSetDelivered(id, delivered){ if(!SB_ON) return Promise.resolve(false); if(SB_SECURE && _admPin){ return sbRpc("app_admin_set_delivered",{ p_pin:_admPin, p_id:id, p_delivered:delivered }).then(function(){ return true; }).catch(function(){ return false; }); } return Promise.resolve(false); /* [SEGURIDAD] sin PATCH directo */ }
   function sbCancelRemote(id){ /* [SEGURIDAD] La cancelacion remota la hace app_cancel_redeem; sin PATCH directo. */ return Promise.resolve(false); }
@@ -1165,6 +1176,43 @@ body.login-mode .login-card{margin:0 auto!important}
         else { done(); }
       }
     }catch(e){}
+  }
+  /* ===== Puntos por recaudacion de maquina =====
+     Dos tramos:
+       base         3 pts por euro (300 por cada 100 EUR), sobre todo lo recaudado
+       crecimiento  pts extra solo por lo que supere la media historica del bar
+     La comparacion se hace en euros POR DIA, nunca en euros absolutos, porque
+     las visitas de cobro cubren periodos muy distintos (de 5 a 48 dias).
+     El tope rentable del bonus lo marca vuestra cuota en cada bar: por encima
+     de unos 17 pts/EUR deja de compensar en los bares de cuota baja. */
+  var GROWTH_DEFAULT = 15;
+  function baseHistorica(u, credits){
+    var lista = (credits || []).filter(function(c){
+      return c && String(c.u) === String(u) && (+c.dias) > 0 && (+c.eur) > 0;
+    });
+    if(!lista.length) return null;
+    var lim = shiftStr(todayStr(), -90);
+    var sel = lista.filter(function(c){ return String(c.date || "") >= lim; });
+    if(!sel.length) sel = lista.slice(-3);
+    var eur = 0, dias = 0;
+    sel.forEach(function(c){ eur += (+c.eur); dias += (+c.dias); });
+    return dias > 0 ? (eur / dias) : null;
+  }
+  function growthRate(u, cfg){
+    var porBar = cfg && cfg.growthByBar && cfg.growthByBar[u];
+    if(porBar === 0 || porBar) return (+porBar) || 0;
+    return (cfg && typeof cfg.growthPerEur === "number") ? cfg.growthPerEur : GROWTH_DEFAULT;
+  }
+  function calcCreditPoints(u, eur, dias, credits, cfg, per100){
+    var base = Math.round(eur / 100 * per100);
+    var ref = baseHistorica(u, credits);
+    var media = (dias > 0) ? (eur / dias) : null;
+    var exceso = 0, bonus = 0;
+    if(ref !== null && media !== null && media > ref){
+      exceso = (media - ref) * dias;
+      bonus = Math.round(exceso * growthRate(u, cfg));
+    }
+    return { base:base, bonus:bonus, pts:base + bonus, ref:ref, media:media, exceso:exceso };
   }
   function applyRevenueCredits(){
     if(!state || !currentUser) return 0;
@@ -1212,7 +1260,16 @@ body.login-mode .login-card{margin:0 auto!important}
   function pad(n){ return String(n).padStart(2, "0"); }
   function ymd(ts){ const d = new Date(ts); return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
   function baseNow(){ return Date.now() + (state ? state.dayOffset : 0) * 86400000; }
-  function todayStr(){ return ymd(baseNow()); }
+  /* El servidor decide el dia con (now() at time zone 'Europe/Madrid')::date,
+     asi que el cliente debe usar el mismo huso o no coincidiran. Si el
+     navegador no soporta Intl con zona, se cae a la hora del dispositivo. */
+  var _fmtMadridYmd = null;
+  try{ _fmtMadridYmd = new Intl.DateTimeFormat("en-CA", { timeZone:"Europe/Madrid", year:"numeric", month:"2-digit", day:"2-digit" }); }catch(e){ _fmtMadridYmd = null; }
+  function ymdMadrid(ts){
+    if(!_fmtMadridYmd) return ymd(ts);
+    try{ return _fmtMadridYmd.format(new Date(ts)).replace(/\//g, "-"); }catch(e){ return ymd(ts); }
+  }
+  function todayStr(){ return ymdMadrid(baseNow()); }
   function shiftStr(str, delta){ const p = str.split("-").map(Number); const d = new Date(p[0], p[1]-1, p[2]+delta); return ymd(d.getTime()); }
   function fmt(n){ return Number(n).toLocaleString("es-ES"); }
   function fechaLarga(str){ const p = str.split("-").map(Number); const d = new Date(p[0], p[1]-1, p[2]);
@@ -1262,13 +1319,16 @@ body.login-mode .login-card{margin:0 auto!important}
   }
 
   function finishLogin(u, info, serverState, token){
-      currentUser = u; passInput.value = ""; try{ if(token){ localStorage.setItem("tikitaka_session", JSON.stringify({u:u,t:token})); } else { localStorage.removeItem("tikitaka_session"); } }catch(e){}
+      currentUser = u; passInput.value = ""; try{ if(token){ localStorage.setItem("tikitaka_session", JSON.stringify({v:2,u:u,t:token,nombre:info.nombre,bar:info.bar})); } else { localStorage.removeItem("tikitaka_session"); } }catch(e){}
       loginCard.style.display = "none"; appCard.style.display = "block"; document.body.classList.remove("login-mode");
       document.getElementById("hello").innerHTML = "Hola, <b>" + info.nombre + "</b> 👋 · " + info.bar;
       ensureAudio();
       try{ spinBtn.disabled = true; spinNote.textContent = "Cargando tus datos…"; }catch(e){}
       var applyLoaded=function(st){
+        var localState = loadState(u);
         state = st;
+        /* El progreso de bienvenida no puede desaparecer al renovar sesión o cambiar contraseña. */
+        if(localState && localState.onboardingRoulette) state.onboardingRoulette=true;
         _sbLoggedLen[u] = (state.history || []).length;
         render(true);
         try{ var _db=document.getElementById("demoBar"); if(_db){ _db.style.display = (currentUser==="demo") ? "" : "none"; } }catch(e){}
@@ -1290,13 +1350,13 @@ body.login-mode .login-card{margin:0 auto!important}
     if(_sess.t){
       sbRpc("app_resume",{ p_token:_sess.t }).then(function(res){
         if(res && res.ok){ SB_SECURE=true; _CRED.u=_sess.u; _CRED.t=_sess.t; finishLogin(_sess.u, { nombre:(res.nombre||_sess.u), bar:(res.bar||"") }, (res.state||{})); }
-        else { try{ localStorage.removeItem("tikitaka_session"); }catch(e){} }
-      }).catch(function(){ /* sin conexión: se mantiene para el próximo intento */ });
+        else if(res && (res.error==="auth" || res.error==="expired")){ try{ localStorage.removeItem("tikitaka_session"); }catch(e){} }
+      }).catch(function(){ try{ finishLogin(_sess.u,{nombre:_sess.nombre||_sess.u,bar:_sess.bar||""},null); }catch(e){} });
     }
     else if(_sess.p){ userInput.value=_sess.u; passInput.value=_sess.p||""; tryLogin(); } /* migración desde formato antiguo: un solo uso para obtener token */
   }
 
-  function logout(){ try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
+  function logout(){ var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
   function forceLogout(){ /* [SEGURIDAD] token caducado o invalido: cerrar sesion */ try{ toast("Tu sesión ha caducado. Vuelve a iniciar sesión."); }catch(e){} logout(); }
 
   /* ===== RANKING de bares (anonimo, por periodo) ===== */
@@ -1351,18 +1411,36 @@ body.login-mode .login-card{margin:0 auto!important}
     if (initial){ balance.textContent = fmt(state.points); }
     renderStreak();
     renderMilestones();
+    renderOnboarding();
     renderSpinState();
     renderCatalog();
+    maybePrizeReady();
     renderBet();
     renderHistory();
     renderMyCanjes();
     if (state && state.pendingBox){ setTimeout(function(){ openBoxPicker(); }, 600); }
   }
 
+  /* ===== Vigencia de la racha =====
+     El valor guardado solo vale si la ultima tirada fue hoy o ayer. Si se
+     salto un dia la racha esta muerta y debe mostrarse como cero, aunque el
+     numero antiguo siga almacenado hasta la proxima tirada. */
+  function rachaViva(){
+    if(!state) return 0;
+    var s = state.streak || 0;
+    if(s <= 0) return 0;
+    var hoy = todayStr();
+    if(state.lastSpin === hoy || state.lastSpin === shiftStr(hoy, -1)) return s;
+    return 0;
+  }
+  function rachaPerdida(){ return !!(state && (state.streak || 0) > 0 && rachaViva() === 0); }
+
+  function renderOnboarding(){ var e=document.getElementById("onboarding"); if(!e||!state)return; var a=[['🎰','Primer giro',!!state.lastSpin],['🎡','Probar ruleta',!!state.onboardingRoulette || !!(state.bets&&state.bets.count)],['🎁','Abrir premios',!!state.onboardingCatalog],['🔥','Día 3',rachaViva()>=3]],n=a.filter(function(x){return x[2]}).length;if(n===4){e.innerHTML='';return}e.innerHTML='<div style="margin:14px 0;padding:13px;border:1px solid rgba(93,238,255,.4);border-radius:14px;background:rgba(53,172,230,.12);color:#fff"><b>🚀 Tus primeros pasos · '+n+'/4</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">'+a.map(function(x){return '<span style="padding:7px;border-radius:8px;background:'+(x[2]?'rgba(53,173,104,.25)':'rgba(0,0,0,.2)')+'">'+(x[2]?'✓ ':x[0]+' ')+x[1]+'</span>'}).join('')+'</div></div>'; }
+
   function renderStreak(){
     const el = document.getElementById("streak");
-    const s = state.streak || 0;
-    if (s <= 0){ el.innerHTML = "🔥 Empieza tu racha hoy"; }
+    const s = rachaViva();
+    if (s <= 0){ el.innerHTML = rachaPerdida() ? "💔 Racha perdida · empieza otra hoy" : "🔥 Empieza tu racha hoy"; }
     else { el.innerHTML = "🔥 Racha de <b style='margin:0 3px'>" + s + "</b> día" + (s===1?"":"s") + " seguido" + (s===1?"":"s"); }
   }
 
@@ -1370,12 +1448,12 @@ body.login-mode .login-card{margin:0 auto!important}
     renderStreakHero();
     const wrap = document.getElementById("siMilestones");
     if (!wrap) return;
-    const s = state.streak || 0;
+    const s = rachaViva();
     let html = "";
     CYCLE_MILESTONES.forEach(function(m){
       const done = s >= m.day;
-      const val = m.box ? "🎁 30-50" : ("+" + m.bonus + " pts");
-      html += `<div class="si-chip ${done ? "done" : ""}"><span class="si-days">${done ? "✓ " : ""}Día ${m.day}</span><span class="si-bonus">${val}</span></div>`;
+      const val = m.box ? ("🎁 " + Math.min.apply(null,BOX_VALUES) + "-" + Math.max.apply(null,BOX_VALUES)) : ("+" + m.bonus + " pts");
+      html += `<div class="si-chip ${done ? "done" : ""}"><span class="si-days">${done ? "✓ " : ""}Día ${m.day}</span><span class="si-bonus">${m.name}<br>${val}</span></div>`;
     });
     wrap.innerHTML = html;
   }
@@ -1385,15 +1463,16 @@ body.login-mode .login-card{margin:0 auto!important}
   }
   function renderStreakHero(){
     var el=document.getElementById("streakHero"); if(!el||typeof state==="undefined"||!state) return;
-    var s=state.streak||0; var goal=nextStreakGoal(s); var head="", sub="";
-    if(state.pendingBox){ head="🎁 ¡Tienes una caja sorpresa esperando!"; sub="Elígela abajo y gana hasta <b>50 puntos</b>."; }
-    else if(s<=0){ head="🔥 ¡Empieza tu racha y gana premios!"; sub="Entra a jugar cada día: al <b>3er</b> y <b>6º</b> día ganas <b>+15 pts</b>, y al <b>7º</b> eliges una <b>caja sorpresa</b> de hasta 50 pts. 🎁"; }
-    else if(s>=7){ head="🎁 ¡Hoy eliges tu caja sorpresa!"; sub="Elige 1 de 3 cajas y llévate <b>30, 40 o 50 puntos</b>. Después empieza una racha nueva."; }
-    else if(goal && goal.box){ head=(goal.left===1)?"🎁 ¡Mañana eliges tu caja sorpresa!":("🎁 Te faltan "+goal.left+" días para tu caja sorpresa"); sub="Vuelve "+(goal.left===1?"mañana":("y juega "+goal.left+" días seguidos"))+", elige 1 de 3 cajas y gana <b>30, 40 o 50 puntos</b>."; }
-    else if(goal){ head=(goal.left===1)?"🔥 ¡Solo te falta 1 día para tu premio!":("🔥 Te faltan "+goal.left+" días para tu premio"); sub="Entra cada día y al llegar al <b>día "+goal.day+"</b> ganas <b>+"+goal.bonus+" pts</b>. ¡Y al 7º día, caja sorpresa de hasta 50 pts! 🎁"; }
+    var s=rachaViva(); var goal=nextStreakGoal(s); var head="", sub="";
+    if(state.pendingBox){ head="🎁 ¡Tienes una caja sorpresa esperando!"; sub="Elígela abajo y gana hasta <b>"+Math.max.apply(null,BOX_VALUES)+" puntos</b>."; }
+    else if(rachaPerdida()){ head="💔 Has perdido tu racha"; sub="Faltaste un día y la cuenta vuelve a empezar. Gira hoy para arrancar una racha nueva. 🎁"; }
+    else if(s<=0){ head="🔥 ¡Empieza tu racha y gana premios!"; sub="Entra a jugar cada día: al <b>3er</b> y <b>6º</b> día ganas <b>+"+STREAK_STEP_BONUS+" pts</b>, y al <b>7º</b> eliges una <b>caja sorpresa</b> de hasta "+Math.max.apply(null,BOX_VALUES)+" pts. 🎁"; }
+    else if(s>=7){ head="🎁 ¡Hoy eliges tu caja sorpresa!"; sub="Elige 1 de 3 cajas y llévate <b>"+BOX_VALUES.join(", ")+" puntos</b>. Después empieza una racha nueva."; }
+    else if(goal && goal.box){ head=(goal.left===1)?"🎁 ¡Mañana eliges tu caja sorpresa!":("🎁 Te faltan "+goal.left+" días para tu caja sorpresa"); sub="Vuelve "+(goal.left===1?"mañana":("y juega "+goal.left+" días seguidos"))+", elige 1 de 3 cajas y gana <b>"+BOX_VALUES.join(", ")+" puntos</b>."; }
+    else if(goal){ head=(goal.left===1)?"🔥 ¡Solo te falta 1 día para tu premio!":("🔥 Te faltan "+goal.left+" días para tu premio"); sub="Entra cada día y al llegar al <b>día "+goal.day+"</b> ganas <b>+"+goal.bonus+" pts</b>. ¡Y al 7º día, caja sorpresa de hasta "+Math.max.apply(null,BOX_VALUES)+" pts! 🎁"; }
     else { head="🔥 ¡Sigue jugando cada día!"; sub="Mantén tu racha para seguir ganando premios."; }
     var track="";
-    for(var d=1; d<=7; d++){ var cls="sh-day"; if(d<=s) cls+=" done"; else if(d===s+1) cls+=" next"; var badge="·"; if(d===3||d===6){ cls+=" mile"; badge="+15"; } else if(d===7){ cls+=" box"; badge="🎁"; } track+='<div class="'+cls+'"><span class="sh-badge">'+badge+'</span><span class="sh-dot"></span><span class="sh-num">'+d+'</span></div>'; }
+    for(var d=1; d<=7; d++){ var cls="sh-day"; if(d<=s) cls+=" done"; else if(d===s+1) cls+=" next"; var badge="·"; if(d===3||d===6){ cls+=" mile"; badge="+"+STREAK_STEP_BONUS; } else if(d===7){ cls+=" box"; badge="🎁"; } track+='<div class="'+cls+'"><span class="sh-badge">'+badge+'</span><span class="sh-dot"></span><span class="sh-num">'+d+'</span></div>'; }
     el.innerHTML='<div class="sh-headline">'+head+'</div><div class="sh-sub">'+sub+'</div><div class="sh-track">'+track+'</div>';
   }
   function isImageSymbol(v){ return typeof v==="string" && ((/^(data:image\/|blob:|https?:\/\/|\.{0,2}\/)/i).test(v) || (/\.(png|jpe?g|webp|gif|svg)(\?|$)/i).test(v)); }
@@ -1420,15 +1499,64 @@ body.login-mode .login-card{margin:0 auto!important}
     }
   }
 
+  /* ===== Cuenta atras hasta la proxima tirada ===== */
+  var _cdTimer = null;
+  /* Milisegundos hasta la medianoche local, respetando el dayOffset del modo demo. */
+  var _fmtMadridHms = null;
+  try{ _fmtMadridHms = new Intl.DateTimeFormat("en-GB", { timeZone:"Europe/Madrid", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }); }catch(e){ _fmtMadridHms = null; }
+  /* Tiempo hasta la medianoche de Madrid. Se resta la hora actual en vez de
+     construir una fecha, para no pelearse con el cambio de hora. */
+  function msHastaProximaTirada(){
+    var n = baseNow();
+    if(_fmtMadridHms){
+      try{
+        var p = _fmtMadridHms.format(new Date(n)).split(":");
+        var h = +p[0], m = +p[1], s = +p[2];
+        if(h === 24) h = 0;
+        return ((23 - h) * 3600 + (59 - m) * 60 + (60 - s)) * 1000;
+      }catch(e){}
+    }
+    var d = new Date(n);
+    var next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0).getTime();
+    return Math.max(0, next - n);
+  }
+  function fmtCuenta(ms){
+    var s = Math.floor(ms / 1000);
+    return pad(Math.floor(s / 3600)) + ":" + pad(Math.floor((s % 3600) / 60)) + ":" + pad(s % 60);
+  }
+  function pararCuenta(){ if(_cdTimer){ clearInterval(_cdTimer); _cdTimer = null; } }
+  function ticCuenta(){
+    /* Al pasar la medianoche, todayStr() cambia y spunToday() pasa a false solo. */
+    if(!state || !spunToday()){
+      pararCuenta();
+      renderSpinState();
+      try{ toast("🎰 ¡Ya tienes una nueva tirada disponible!"); }catch(e){}
+      return;
+    }
+    var el = document.getElementById("cdTime");
+    if(!el){ pararCuenta(); return; }
+    el.textContent = fmtCuenta(msHastaProximaTirada());
+  }
+  function arrancarCuenta(){ pararCuenta(); ticCuenta(); _cdTimer = setInterval(ticCuenta, 1000); }
+  /* Apaga los rodillos en gris y superpone el cartel con la cuenta atras. */
+  function bloquearRodillos(on){
+    var box = document.querySelector(".reels");
+    if(box) box.classList.toggle("locked", !!on);
+  }
+
   function renderSpinState(){
     refreshSymbols();
     if (spunToday()){
       spinBtn.disabled = true;
       spinBtn.textContent = "✓ YA JUGADO";
       spinNote.textContent = "Vuelve mañana para tu próxima tirada 🔥";
+      bloquearRodillos(true);
+      arrancarCuenta();
       setReelsStatic(state.lastSymbols || [CUR_SYM.fillers[0], CUR_SYM.prize, CUR_SYM.jackpot, CUR_SYM.prize, CUR_SYM.fillers[1]||CUR_SYM.fillers[0]]);
       if (state.lastWin){ showBanner(state.lastWin, true); }
     } else {
+      pararCuenta();
+      bloquearRodillos(false);
       spinBtn.disabled = false;
       spinBtn.textContent = "GIRAR";
       spinNote.textContent = "Tienes 1 tirada gratis hoy · ¡mucha suerte!";
@@ -1437,11 +1565,25 @@ body.login-mode .login-card{margin:0 auto!important}
     }
   }
 
-  function rollTier(){ const r = Math.random()*100; if (r < 1) return 500; if (r < 4) return 300; return 100; }
+  /* ===== Premios de la tirada diaria =====
+     Media de 22,2 pts (antes 110). El peso de los puntos debe venir de la
+     recaudacion de la maquina, no del juego gratis.
+     OJO: la misma tabla vive en app_spin (servidor) y esa manda sobre esta.
+     No se reutiliza el 100 como tope porque era el premio base del baremo
+     viejo y sigue guardado en los historiales. */
+  const TIER_TOP = 120, TIER_MID = 60, TIER_LOW = 20;
+  /* Traduce los valores de baremos anteriores (500/300/100 y 50/30/10). */
+  function normTier(t){
+    if(t === 1200 || t === 500 || t === 50 || t === 120) return TIER_TOP;
+    if(t === 600 || t === 300 || t === 30 || t === 60) return TIER_MID;
+    if(t === 200 || t === 100 || t === 10 || t === 20) return TIER_LOW;
+    return t;
+  }
+  function rollTier(){ const r = Math.random()*100; if (r < 1) return TIER_TOP; if (r < 4) return TIER_MID; return TIER_LOW; }
   function targetFor(tier){
-    tier = (tier===50?500:(tier===30?300:(tier===10?100:tier)));
-    if (tier === 500) return [WIN50, WIN50, WIN50, WIN50, WIN50];
-    if (tier === 300) return [WIN30, WIN30, WIN30, WIN30, WIN30];
+    tier = normTier(tier);
+    if (tier === TIER_TOP) return [WIN50, WIN50, WIN50, WIN50, WIN50];
+    if (tier === TIER_MID) return [WIN30, WIN30, WIN30, WIN30, WIN30];
     let out; do { out=[rand(SYMBOLS),rand(SYMBOLS),rand(SYMBOLS),rand(SYMBOLS),rand(SYMBOLS)]; } while (out.every(function(x){ return x===out[0]; }));
     return out;
   }
@@ -1497,7 +1639,7 @@ body.login-mode .login-card{margin:0 auto!important}
     state.streak = (state.lastSpin === yest && prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
     state.lastSpin = today; state.lastSymbols = target; state.lastWin = tier;
     const prev = state.points; state.points += tier;
-    const label = tier===500 ? "¡JACKPOT! Tirada diaria" : (tier===300 ? "¡Triple! Tirada diaria" : "Tirada diaria");
+    const label = tier===TIER_TOP ? "¡JACKPOT! Tirada diaria" : (tier===TIER_MID ? "¡Triple! Tirada diaria" : "Tirada diaria");
     state.history.unshift({ type:"spin", date:today, label:label, delta:tier });
     var stepBonus = 0;
     if (state.streak === 3 || state.streak === 6){ stepBonus = STREAK_STEP_BONUS; state.points += stepBonus; state.history.unshift({ type:"spin", date:today, label:"🔥 Bonus de racha (" + state.streak + " días seguidos)", delta:stepBonus }); }
@@ -1509,10 +1651,12 @@ body.login-mode .login-card{margin:0 auto!important}
     else { _bsAward=1+Math.floor(Math.random()*3); state.betSpins=((state.betSpins||0)+_bsAward); }
     if(_bsAward>0){ state.history.unshift({ type:"bet", date:today, label:"\uD83C\uDFA1 +"+_bsAward+" tirada"+(_bsAward>1?"s":"")+" de ruleta", delta:0 }); }
     saveState();
-    renderStreak(); renderMilestones(); renderSpinState(); renderCatalog(); renderHistory(); try{ renderBet(); }catch(e){}
+    renderStreak(); renderMilestones(); renderOnboarding(); renderSpinState(); renderCatalog(); renderHistory(); try{ renderBet(); }catch(e){}
     countUp(balance, prev, state.points, 900);
     celebrate(tier);
     if(_bsAward>0){ setTimeout(function(){ try{ showPop("\uD83C\uDFA1", "+"+_bsAward, "tirada"+(_bsAward>1?"s":"")+" de ruleta", "pop-30"); }catch(e){} try{ renderBet(); }catch(e){} }, 1500); }
+    /* Deja que el usuario vea la combinación final y su premio antes de cambiar de juego. */
+    setTimeout(function(){ if(isBetEnabled() && betSpinsLeft()>0){ setGame("bet"); } }, 5200);
     if (stepBonus){ setTimeout(function(){ showPop("🔥", "+" + stepBonus + " pts", "¡Bonus de racha! " + state.streak + " días seguidos", "pop-30"); launchConfetti(120, PAL_RED); }, 2700); }
     if (boxDay){ setTimeout(function(){ openBoxPicker(); }, 2700); }
   }
@@ -1522,7 +1666,7 @@ body.login-mode .login-card{margin:0 auto!important}
     const rect = document.querySelector(".reels").getBoundingClientRect();
     const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
     const slotEl = document.querySelector(".slot");
-    if (tier === 500){
+    if (tier === TIER_TOP){
       jackpotFanfare(); flashScreen();
       if (!reducedMotion()){ slotEl.classList.remove("jackpot-shake"); void slotEl.offsetWidth; slotEl.classList.add("jackpot-shake"); setTimeout(function(){ slotEl.classList.remove("jackpot-shake"); }, 900); }
       launchConfetti(150, PAL_GOLD);
@@ -1530,27 +1674,27 @@ body.login-mode .login-card{margin:0 auto!important}
       setTimeout(function(){ launchConfetti(120, PAL_RED); }, 840);
       spawnCoins(cx, cy);
       spawnCherries(); setTimeout(spawnCherries, 500); setTimeout(spawnCherries, 1000);
-      showPop(CUR_SYM.jackpot, "+500 pts", "¡JACKPOT!", "pop-50");
-    } else if (tier === 300){
+      showPop(CUR_SYM.jackpot, "+"+tier+" pts", "¡JACKPOT!", "pop-50");
+    } else if (tier === TIER_MID){
       chimeWin(); launchConfetti(160, PAL_BLUE); spawnCoins(cx, cy);
-      showPop(CUR_SYM.prize, "+300 pts", "¡Premio especial!", "pop-30");
+      showPop(CUR_SYM.prize, "+"+tier+" pts", "¡Premio especial!", "pop-30");
     } else {
       chimeSmall(); launchConfetti(70, PAL_RED);
-      showPop(CUR_SYM.fillers[0]||"⚽", "+100 pts", "¡Tirada de hoy!", "pop-10");
+      showPop(CUR_SYM.fillers[0]||"⚽", "+"+tier+" pts", "¡Tirada de hoy!", "pop-10");
     }
     showBanner(tier, false);
   }
 
   function showBanner(tier, silent){
-    tier = (tier===50?500:(tier===30?300:(tier===10?100:tier)));
-    var sym = tier===500 ? WIN50 : (tier===300 ? WIN30 : (CUR_SYM.fillers[0]||"⚽"));
-    var label = tier===500 ? "JACKPOT" : (tier===300 ? "PREMIO ESPECIAL" : "PREMIO");
+    tier = normTier(tier);
+    var sym = tier===TIER_TOP ? WIN50 : (tier===TIER_MID ? WIN30 : (CUR_SYM.fillers[0]||"⚽"));
+    var label = tier===TIER_TOP ? "JACKPOT" : (tier===TIER_MID ? "PREMIO ESPECIAL" : "PREMIO");
     winBanner.innerHTML = '<span class="win-symbol">'+symbolMarkup(sym)+'</span><span class="win-copy"><b>'+label+'</b><span>Has ganado <strong>+'+tier+' puntos</strong></span></span>';
     winBanner.classList.add("show");
   }
 
   /* ===== Ruleta de apuestas (multiplicadores) · logica en servidor (app_bet) con fallback ===== */
-  var BET_DEFAULT = { enabled:true, min:100, max:1000, perDay:3, segments:[{mult:1,w:180},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}] };
+  var BET_DEFAULT = { enabled:true, min:100, max:1000, perDay:3, segments:[{mult:0,w:15},{mult:0.5,w:45},{mult:1,w:110},{mult:1.5,w:18},{mult:2,w:8},{mult:3,w:3},{mult:5,w:1}] };
   var BET_COLORS = ["#7a1f3d","#2b6cb0","#2f855a","#b7791f","#c05621","#9b2c2c","#553c9a","#0f766e"];
   var BET_MULT_COLORS = { "0.5":"#9b2c2c", "1":"#2b6cb0", "1.5":"#2f855a", "2":"#b7791f", "3":"#c05621", "5":"#553c9a" };
   function betColor(m,i){ return BET_MULT_COLORS[String(m)] || BET_COLORS[i%BET_COLORS.length]; }
@@ -1588,11 +1732,13 @@ body.login-mode .login-card{margin:0 auto!important}
     }
     var left=betSpinsLeft();
     var pts=state?state.points:0;
+    var golden=!!(state&&state.goldenRound);
     host.innerHTML =
-      '<div class="bet-card game-cabinet">'+
-        '<div class="bet-marquee">\uD83C\uDFA1 RULETA DE LA SUERTE</div>'+
+      '<div class="bet-card game-cabinet '+(golden?'golden-cabinet':'')+'">'+
+        '<div class="bet-marquee">'+(golden?'⭐ RULETA DORADA':'\uD83C\uDFA1 RULETA DE LA SUERTE')+'</div>'+
         '<button type="button" class="game-switch-btn" id="betBack"><span>\uD83C\uDFB0</span> Cambiar a Rodillos</button>'+
-        '<div class="bet-sub">Apuesta tus puntos y multipl\u00edcalos. Como m\u00ednimo conservas lo apostado. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
+        (golden?'<div class="golden-round"><span class="gr-crown">♛</span><span><b>RONDA DORADA</b><small>Tu giro semanal exclusivo</small></span><span class="gr-stars">✦ ✦</span></div>':'')+
+        '<div class="bet-sub">Apuesta tus puntos: puedes perder, recuperar o multiplicar lo apostado. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
         '<div class="bet-wheel-wrap">'+
           '<div class="bet-pointer"></div>'+
           '<div class="bet-wheel" id="betWheel" style="background:conic-gradient('+grad.join(",")+')">'+labels+'</div>'+
@@ -1623,7 +1769,11 @@ body.login-mode .login-card{margin:0 auto!important}
     var resEl=document.getElementById("betResult"), goEl=document.getElementById("betGo");
     if(!state || state.points<stake){ if(resEl) resEl.textContent="No tienes puntos suficientes \uD83D\uDE05"; return; }
     if(betSpinsLeft()<=0){ if(resEl) resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; return; }
-    _betBusy=true; goEl.disabled=true; resEl.textContent="Girando\u2026 \uD83C\uDF40";
+    var goldenPlay=!!(state&&state.goldenRound);
+    state.onboardingRoulette=true; saveState(); renderOnboarding();
+    /* En iPhone/Android hay que esperar a que el contexto de audio se reanude desde este toque. */
+    playRouletteAudio();
+    _betBusy=true; goEl.disabled=true; resEl.textContent=goldenPlay?"Ronda dorada en juego… ⭐":"Girando\u2026 \uD83C\uDF40";
     var wheel=document.getElementById("betWheel");
     var segs=bc.segments, layout=wheelLayout(bc.segments), n=layout.length, step=360/n;
     var finish=function(mult, newPts, left){
@@ -1644,15 +1794,17 @@ body.login-mode .login-card{margin:0 auto!important}
         renderCatalog(); renderHistory();
         countUp(balance, prev, state.points, 800);
         if(mult>=2){ launchConfetti(140, (typeof PAL_GOLD!=="undefined"?PAL_GOLD:undefined)); try{ chime(); }catch(e){} }
+        if(goldenPlay){ state.goldenRound=false; saveState(); launchConfetti(90, (typeof PAL_GOLD!=="undefined"?PAL_GOLD:undefined)); }
         if(mult<1){ resEl.innerHTML='<span class="bet-lose">\u2717 x'+mult+' \u00b7 perdiste '+(-delta)+' pts</span>'; }
         else if(mult===1){ resEl.innerHTML='<span class="bet-even">= x1 \u00b7 conservas tus puntos</span>'; }
         else { resEl.innerHTML='<span class="bet-win">\uD83C\uDF89 x'+mult+' \u00b7 +'+delta+' pts</span>'; }
         var _big=document.getElementById("betBig");
-        if(_big){ var _bc2=(mult<1?"bb-lose":(mult===1?"bb-even":"bb-win")); var _bm=(mult<1?("Perdiste "+(-delta)+" pts"):(mult===1?"Conservas tus puntos":"¡Ganaste +"+delta+" pts!")); _big.innerHTML='<div class="bb-mult '+_bc2+'">x'+mult+'</div><div class="bb-msg '+_bc2+'">'+_bm+'</div>'; _big.classList.add("show"); setTimeout(function(){ _big.classList.remove("show"); }, 2300); }
+        if(_big){ var _bc2=(mult<1?"bb-lose":(mult===1?"bb-even":"bb-win")); var _bm=(mult<1?("Perdiste "+(-delta)+" pts"):(mult===1?"Conservas tus puntos":"¡Ganaste +"+delta+" pts!")); _big.innerHTML='<div class="bb-mult '+_bc2+'">x'+mult+'</div><div class="bb-msg '+_bc2+'">'+_bm+'</div>'; _big.classList.add("show"); setTimeout(function(){ _big.classList.remove("show"); }, 850); }
         var usedLeft = (typeof left==="number") ? left : betSpinsLeft();
         var lEl=document.getElementById("betLeft"); if(lEl) lEl.textContent=usedLeft;
         if(typeof left==="number"){ _serverSpins=left; state.betSpins=left; }
         _betBusy=false; goEl.disabled=(usedLeft<=0);
+        if(usedLeft<=0) setGame("slot");
       }, 3500);
     };
     secureBet(stake).then(function(sr){
@@ -1682,7 +1834,7 @@ body.login-mode .login-card{margin:0 auto!important}
     }).catch(function(){});
   }
   var _playerPoll=null;
-  function startPlayerSync(){ try{ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ refreshPlayer(); } else { try{ maybeStreakReminder(); }catch(e){} } }); }catch(e){} if(_playerPoll) clearInterval(_playerPoll); _playerPoll=setInterval(function(){ if(!document.hidden) refreshPlayer(); }, 25000); }
+  function startPlayerSync(){ try{ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ refreshPlayer(); try{ if(_cdTimer) ticCuenta(); }catch(e){} } else { try{ maybeStreakReminder(); }catch(e){} } }); }catch(e){} if(_playerPoll) clearInterval(_playerPoll); _playerPoll=setInterval(function(){ if(!document.hidden) refreshPlayer(); }, 25000); }
   try{ startPlayerSync(); }catch(e){}
   function renderCatalog(){
     const wrap = document.getElementById("catalog");
@@ -1781,10 +1933,10 @@ body.login-mode .login-card{margin:0 auto!important}
     const item = catalogItems()[idx];
     if (!item || state.points < item.cost) return;
     const today = todayStr();
-    var _finish=function(newPoints, serverOk){
+    var _finish=function(newPoints, serverOk, serverId){
       const prev = state.points;
       state.points = (typeof newPoints==="number") ? newPoints : (prev - item.cost);
-      var _cid = recordRedemption(item, today, serverOk);
+      var _cid = recordRedemption(item, today, serverOk, serverId);
       state.history.unshift({ type:"redeem", date:today, label:"Canje: " + item.name, delta:-item.cost, canjeId:_cid });
       saveState();
       renderCatalog(); renderHistory(); renderMyCanjes();
@@ -1796,7 +1948,7 @@ body.login-mode .login-card{margin:0 auto!important}
     if(currentUser==="demo"){ _finish(undefined, false); return; } /* demo: canje local */
     if(!(SB_SECURE && _CRED.t)){ toast("⚠️ Necesitas conexión para canjear premios."); return; } /* [SEGURIDAD] fallo cerrado */
     secureRedeem(item).then(function(sr){
-        if(sr && sr.ok){ _finish(sr.points, true); }
+        if(sr && sr.ok){ _finish(sr.points, true, sr.id); }
         else if(sr && sr.error==="funds"){ toast("No tienes puntos suficientes"); }
         else if(sr && sr.error==="noprize"){ toast("Ese premio ya no está disponible"); }
         else if(sr && sr.error==="auth"){ forceLogout(); }
@@ -1893,18 +2045,7 @@ body.login-mode .login-card{margin:0 auto!important}
       .then(function(res){ if (res && res.ok) return true; if (attempt < 5) return _delay(800).then(function(){ return _post(body, attempt+1); }); return false; })
       .catch(function(){ if (attempt < 5) return _delay(800).then(function(){ return _post(body, attempt+1); }); return false; });
   }
-  function postCanje(item, today){
-    const info = USERS[currentUser] || {};
-    const body = new URLSearchParams();
-    body.append("form-name", "canjes");
-    body.append("usuario", currentUser);
-    body.append("bar", info.bar || "");
-    body.append("premio", item.name);
-    body.append("puntos", String(item.cost));
-    body.append("fecha", today + " " + new Date().toLocaleTimeString("es-ES"));
-    body.append("id", currentUser + "-" + Date.now().toString(36));
-    _post(body, 1);
-  }
+  function postCanje(){ /* El canje ya queda registrado de forma atómica en Supabase. */ }
 
   let actx = null;
   function ensureAudio(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx && actx.state==="suspended") actx.resume(); }
@@ -1932,6 +2073,20 @@ body.login-mode .login-card{margin:0 auto!important}
       og.gain.setValueAtTime(0.028,tt); og.gain.exponentialRampToValueAtTime(0.0004,tt+0.02);
       o.connect(og); og.connect(actx.destination); o.start(tt); o.stop(tt+0.03);
       time+=step; step*=1.055; }
+  }
+  function playRouletteAudio(){
+    ensureAudio();
+    if(!actx) return;
+    var play=function(){
+      /* Señal inequívoca al arrancar: confirma que el dispositivo tiene sonido activo. */
+      try{ var t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain(); o.type="sine"; o.frequency.setValueAtTime(440,t); o.frequency.linearRampToValueAtTime(880,t+.12); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.22,t+.02); g.gain.exponentialRampToValueAtTime(.0005,t+.20); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+.22); }catch(e){}
+      rouletteWhir();
+    };
+    try{ if(actx.state==="suspended"){ actx.resume().then(play).catch(function(){}); } else { play(); } }catch(e){ try{ play(); }catch(_e){} }
+  }
+  function rouletteWhir(){ if(!actx) return; var t=actx.currentTime, dur=3.35;
+    try{ var src=actx.createBufferSource(); src.buffer=noiseBuffer(dur); var bp=actx.createBiquadFilter(); bp.type="bandpass"; bp.Q.value=1.1; bp.frequency.setValueAtTime(900,t); bp.frequency.exponentialRampToValueAtTime(230,t+dur); var g=actx.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.08,t+.12); g.gain.exponentialRampToValueAtTime(.0004,t+dur); src.connect(bp); bp.connect(g); g.connect(actx.destination); src.start(t); src.stop(t+dur); }catch(e){}
+    var time=.02, step=.055; while(time<dur-.15){ var tt=t+time, o=actx.createOscillator(), og=actx.createGain(); o.type="square"; o.frequency.value=1250; og.gain.setValueAtTime(.06,tt); og.gain.exponentialRampToValueAtTime(.0003,tt+.012); o.connect(og); og.connect(actx.destination); o.start(tt); o.stop(tt+.018); time+=step; step*=1.06; }
   }
   function tick(){ if(!actx) return; var t=actx.currentTime;
     /* golpe grave de bloqueo del rodillo */
@@ -2001,12 +2156,15 @@ body.login-mode .login-card{margin:0 auto!important}
       var prev = state.points;
       if(typeof serverPts==="number"){ state.points = serverPts; state.streak = 0; } else { state.points = prev + val; }
       state.pendingBox = false;
+      state.goldenRound = true;
       state.history.unshift({ type:"spin", date:todayStr(), label:"🎁 Caja sorpresa (7 días de racha)", delta:val });
+      state.history.unshift({ type:"bet", date:todayStr(), label:"⭐ Ronda dorada desbloqueada", delta:0 });
       saveState();
+      notifyGoldenRound();
       countUp(balance, prev, state.points, 900);
       launchConfetti(160, PAL_GOLD);
       renderCatalog(); renderHistory();
-      setTimeout(function(){ bp.classList.remove("show"); }, 2800);
+      setTimeout(function(){ bp.classList.remove("show"); try{ if(betSpinsLeft()>0) setGame("bet"); }catch(e){} }, 2800);
     };
     if(currentUser==="demo"){ _reveal(_boxVals[i]); return; } /* demo: caja local */
     if(!(SB_SECURE && _CRED.t)){ toast("⚠️ Necesitas conexión para abrir la caja."); try{ bp.classList.remove("show"); }catch(e){} return; } /* [SEGURIDAD] fallo cerrado */
@@ -2104,7 +2262,7 @@ body.login-mode .login-card{margin:0 auto!important}
   function isBetEnabled(){ try{ var bc=activeBetCfg(); return !!(bc && bc.enabled); }catch(e){ return false; } }
   function applyGameVisibility(){
     var betOn = isBetEnabled();
-    if(!betOn) _game = "slot";
+    if(!betOn || (state && betSpinsLeft()<=0)) _game = "slot";
     var slot = document.querySelector(".slot");
     if(slot) slot.classList.toggle("game-bet", !!(betOn && _game === "bet"));
     try{ renderRuletaCta(); }catch(e){}
@@ -2127,7 +2285,7 @@ body.login-mode .login-card{margin:0 auto!important}
   }
   function setGame(g){
     if(g === "bet" && !isBetEnabled()) return;
-    if(g === _game) return;
+    if(g === _game){ applyGameVisibility(); return; }
     var slotEl = document.querySelector(".slot");
     var reels = slotEl ? slotEl.querySelector(".reels-wrap") : null;
     var betEl = document.getElementById("betPanel");
@@ -2150,6 +2308,7 @@ body.login-mode .login-card{margin:0 auto!important}
     }
   }
   (function(){ var b1=document.getElementById("gsSlot"), b2=document.getElementById("gsBet"); if(b1) b1.onclick=function(){ setGame("slot"); }; if(b2) b2.onclick=function(){ setGame("bet"); }; try{ applyGameVisibility(); }catch(e){} })();
+  document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest('[data-nav="premios"]');if(b&&state){state.onboardingCatalog=true;saveState();renderOnboarding();}});
   spinBtn.addEventListener("click", spin);
   document.getElementById("lever").addEventListener("click", spin);
 
@@ -2162,6 +2321,9 @@ body.login-mode .login-card{margin:0 auto!important}
     } else { applyPts(prev+2000); }
   });
   document.getElementById("demoStreak").addEventListener("click", function(){ demoAddStreak(); });
+  document.getElementById("demoBox").addEventListener("click", function(){ if(currentUser!=="demo") return; state.pendingBox=true; saveState(); openBoxPicker(); });
+  document.getElementById("demoGolden").addEventListener("click", function(){ if(currentUser!=="demo") return; state.goldenRound=true; state.betSpins=(state.betSpins||0)+1; state.history.unshift({type:"bet",date:todayStr(),label:"⭐ Ronda dorada de prueba",delta:0}); saveState(); renderBet(); toast("Ronda Dorada activada · entra a la ruleta ⭐"); setGame("bet"); });
+  document.getElementById("demoRuleta").addEventListener("click", function(){ if(currentUser!=="demo") return; state.betSpins=(state.betSpins||0)+3; state.history.unshift({type:"bet",date:todayStr(),label:"🎡 +3 tiradas de ruleta de prueba",delta:0}); saveState(); renderBet(); toast("+3 tiradas añadidas"); setGame("bet"); });
   function demoAddStreak(){
     var prevStreak = state.streak || 0;
     state.streak = (prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
@@ -2170,7 +2332,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var boxDay = (state.streak === 7);
     if (boxDay){ state.pendingBox = true; }
     saveState();
-    renderStreak(); renderMilestones(); renderCatalog(); renderHistory();
+    renderStreak(); renderMilestones(); renderOnboarding(); renderCatalog(); renderHistory(); try{ renderBet(); }catch(e){}
     if (stepBonus){ countUp(balance, prev, state.points, 700); showPop("🔥", "+" + stepBonus + " pts", "¡Bonus de racha! " + state.streak + " días seguidos", "pop-30"); launchConfetti(120, PAL_RED); }
     else if (boxDay){ openBoxPicker(); }
     else { toast("Racha demo: día " + state.streak); }
@@ -2185,7 +2347,7 @@ body.login-mode .login-card{margin:0 auto!important}
   /* PIN de admin: validado SOLO en el servidor (app_admin_check) */
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
   var DEFAULT_LOGO = './img/logo.png';
-  var BUILTIN = { logo:DEFAULT_LOGO, themes:[ {id:"default",name:"Cl\u00e1sico",img:BG_THEMES["default"], sym:{jackpot:"🍒",prize:"💎",fillers:["⚽","👟","🥅","🎯"]}}, {id:"halloween",name:"Halloween",img:BG_THEMES["halloween"], sym:{jackpot:"🎃",prize:"👻",fillers:["🦇","🕷️","🍬","🕯️"]}}, {id:"navidad",name:"Navidad",img:BG_THEMES["navidad"], sym:{jackpot:"🎄",prize:"���",fillers:["🎅","🔔","⛄","��"]}} ], schedule:[ {themeId:"halloween",from:{m:10,d:15},to:{m:10,d:31}}, {themeId:"navidad",from:{m:12,d:1},to:{m:1,d:6}} ], fallback:"default", override:null, pointsPer100:30, bet:{enabled:true,min:100,max:1000,perDay:3,segments:[{mult:1,w:180},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}]}, credits:[] };
+  var BUILTIN = { logo:DEFAULT_LOGO, themes:[ {id:"default",name:"Cl\u00e1sico",img:BG_THEMES["default"], sym:{jackpot:"🍒",prize:"💎",fillers:["⚽","👟","🥅","🎯"]}}, {id:"halloween",name:"Halloween",img:BG_THEMES["halloween"], sym:{jackpot:"🎃",prize:"👻",fillers:["🦇","🕷️","🍬","🕯️"]}}, {id:"navidad",name:"Navidad",img:BG_THEMES["navidad"], sym:{jackpot:"🎄",prize:"���",fillers:["🎅","🔔","⛄","��"]}} ], schedule:[ {themeId:"halloween",from:{m:10,d:15},to:{m:10,d:31}}, {themeId:"navidad",from:{m:12,d:1},to:{m:1,d:6}} ], fallback:"default", override:null, pointsPer100:300, growthPerEur:15, growthByBar:{}, bet:{enabled:true,min:100,max:1000,perDay:3,segments:[{mult:1,w:180},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}]}, credits:[] };
   var TROPICAL_IMAGE_SYMBOLS = {mode:"images",imageJackpot:"./img/sym-jackpot.webp",imagePrize:"./img/sym-prize.webp",imageFillers:["./img/sym-filler-1.webp","./img/sym-filler-2.webp","./img/sym-filler-3.webp","./img/sym-filler-4.webp","./img/sym-filler-5.webp"]};
   (BUILTIN.themes||[]).forEach(function(t){ if(t.id==="default"){ t.sym=t.sym||{}; t.sym.mode="images"; t.sym.imageJackpot=TROPICAL_IMAGE_SYMBOLS.imageJackpot; t.sym.imagePrize=TROPICAL_IMAGE_SYMBOLS.imagePrize; t.sym.imageFillers=TROPICAL_IMAGE_SYMBOLS.imageFillers.slice(); } });
   var ACTIVE_CFG = clone(BUILTIN);
@@ -2234,13 +2396,13 @@ body.login-mode .login-card{margin:0 auto!important}
       var er=document.getElementById("pwdErr");
       var o=document.getElementById("pwdOld").value, n=document.getElementById("pwdNew").value, n2=document.getElementById("pwdNew2").value;
       if(!o){ er.textContent="Escribe tu contrase\u00f1a actual."; return; }
-      if((n||"").length<4){ er.textContent="La nueva debe tener al menos 4 caracteres."; return; }
+      if((n||"").length<8){ er.textContent="La nueva debe tener al menos 8 caracteres."; return; }
       if(n!==n2){ er.textContent="Las contrase\u00f1as nuevas no coinciden."; return; }
       er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
       sbRpc("app_change_password",{ p_username:currentUser, p_old_password:o, p_new_password:n }).then(function(r){
         if(r && r.ok){ close(); toast("\u2705 Contrase\u00f1a actualizada correctamente."); }
-        else if(r && r.error==="auth"){ er.style.color="#ff8a9c"; er.textContent="La contrase\u00f1a actual no es correcta."; }
-        else if(r && r.error==="short"){ er.style.color="#ff8a9c"; er.textContent="La nueva es demasiado corta."; }
+        else if(r && r.error==="password"){ er.style.color="#ff8a9c"; er.textContent="La contrase\u00f1a actual no es correcta."; }
+        else if(r && r.error==="weak"){ er.style.color="#ff8a9c"; er.textContent="La nueva es demasiado corta."; }
         else { er.style.color="#ff8a9c"; er.textContent="No se pudo cambiar. Int\u00e9ntalo de nuevo."; }
       }).catch(function(){ er.style.color="#ff8a9c"; er.textContent="Sin conexi\u00f3n con el servidor."; });
     };
@@ -2298,7 +2460,7 @@ body.login-mode .login-card{margin:0 auto!important}
     document.getElementById("pwdSave").onclick=function(){
       var er=document.getElementById("pwdErr");
       var n=document.getElementById("pwdNew").value, n2=document.getElementById("pwdNew2").value;
-      if((n||"").length<4){ er.style.color="#ff8a9c"; er.textContent="Debe tener al menos 4 caracteres."; return; }
+      if((n||"").length<8){ er.style.color="#ff8a9c"; er.textContent="Debe tener al menos 8 caracteres."; return; }
       if(n!==n2){ er.style.color="#ff8a9c"; er.textContent="Las contrase\u00f1as no coinciden."; return; }
       er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
       fetch(SB_URL+"/rest/v1/rpc/app_admin_upsert_user",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin, p_username:_uu, p_password:n, p_nombre:_nom, p_bar:_bar }) })
@@ -2353,7 +2515,7 @@ body.login-mode .login-card{margin:0 auto!important}
       var nom=(document.getElementById("edNombre").value||"").trim();
       var bar=(document.getElementById("edBar").value||"").trim();
       var np=(document.getElementById("edPass").value||"");
-      if(np && np.length<4){ er.style.color="#ff8a9c"; er.textContent="La nueva contrase\u00f1a debe tener al menos 4 caracteres."; return; }
+      if(np && np.length<8){ er.style.color="#ff8a9c"; er.textContent="La nueva contrase\u00f1a debe tener al menos 8 caracteres."; return; }
       if(!nom){ nom=username; } if(!bar){ bar=nom; }
       var newp=parseInt(document.getElementById("edPoints").value,10); if(isNaN(newp)) newp=_curPts; newp=Math.max(0,Math.min(1000000,newp));
       er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
@@ -2380,7 +2542,7 @@ body.login-mode .login-card{margin:0 auto!important}
     var ov=_pwdOverlay();
     ov.innerHTML='<div style="background:#1a0a2e;border:1px solid #7540af;border-radius:16px;max-width:340px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.6)">'+
       '<div style="font-weight:900;font-size:17px;color:#ffe277;margin-bottom:4px">\uD83D\uDD11 Restablecer contrase\u00f1a</div>'+
-      '<div style="font-size:12.5px;color:#cbb8e6;margin-bottom:14px">Cliente: <b style="color:#8ff7ff">'+esc(username)+'</b>. Escribe la nueva contrase\u00f1a (m\u00ednimo 4).</div>'+
+      '<div style="font-size:12.5px;color:#cbb8e6;margin-bottom:14px">Cliente: <b style="color:#8ff7ff">'+esc(username)+'</b>. Escribe la nueva contrase\u00f1a (m\u00ednimo 8).</div>'+
       '<input id="pwdNew" type="password" placeholder="Nueva contrase\u00f1a" autocomplete="new-password" style="'+_PWD_INP+'">'+
       '<input id="pwdNew2" type="password" placeholder="Repite la nueva" autocomplete="new-password" style="'+_PWD_INP+'">'+
       '<div id="pwdErr" style="color:#ff8a9c;font-size:12px;min-height:16px;margin:0 0 10px"></div>'+
@@ -2391,7 +2553,7 @@ body.login-mode .login-card{margin:0 auto!important}
     document.getElementById("pwdSave").onclick=function(){
       var er=document.getElementById("pwdErr");
       var n=document.getElementById("pwdNew").value, n2=document.getElementById("pwdNew2").value;
-      if((n||"").length<4){ er.textContent="Debe tener al menos 4 caracteres."; return; }
+      if((n||"").length<8){ er.textContent="Debe tener al menos 8 caracteres."; return; }
       if(n!==n2){ er.textContent="Las contrase\u00f1as no coinciden."; return; }
       er.style.color="#cbb8e6"; er.textContent="Guardando\u2026";
       sbRpc("app_admin_reset_password",{ p_pin:_admPin, p_username:username, p_new_password:n }).then(function(r){
@@ -2422,7 +2584,8 @@ body.login-mode .login-card{margin:0 auto!important}
     var fb=document.getElementById("admFallback"); if(fb) DRAFT.fallback=fb.value;
     var ov=document.getElementById("admOverride"); if(ov) DRAFT.override=ov.value||null;
     Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; var _d=row.querySelector(".adm-rw-desc"); if(_d) r.desc=(_d.value||"").trim(); });
-    var rt=document.getElementById("admRate"); if(rt) DRAFT.pointsPer100=parseFloat(rt.value)||30;
+    var rt=document.getElementById("admRate"); if(rt) DRAFT.pointsPer100=parseFloat(rt.value)||300;
+    var gr=document.getElementById("admGrowth"); if(gr){ var _g=parseFloat(gr.value); DRAFT.growthPerEur=isNaN(_g)?15:_g; }
     var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); DRAFT.bet.segments=(function(){ var out=[]; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); if(!mi||!wi) return; var mult=parseFloat(mi.value), w=parseFloat(wi.value); if(isNaN(mult)||mult<0) return; if(isNaN(w)||w<0) w=0; out.push({ mult:mult, w:w }); }); return out.length?out:BET_DEFAULT.segments.map(function(x){ return { mult:x.mult, w:x.w }; }); })(); DRAFT.bet.colors=(function(){ var c={}; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), ci=row.querySelector(".adm-seg-color"); if(mi&&ci&&/^#[0-9a-fA-F]{3,8}$/.test(ci.value)){ c[String(parseFloat(mi.value))]=ci.value; } }); return c; })(); }
   }
 
@@ -2645,7 +2808,7 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='<div class="adm-frow"><label>Apuesta m\u00ednima (pts)</label><input type="number" min="1" id="admBetMin" class="adm-num" value="'+_bMin+'"></div>';
     h+='<div class="adm-frow"><label>Apuesta m\u00e1xima (pts)</label><input type="number" min="1" id="admBetMax" class="adm-num" value="'+_bMax+'"></div>';
     h+='<div class="adm-hint" style="margin-top:6px">\uD83C\uDFB0 Las tiradas de ruleta ya no son diarias: cada cliente gana <b>1, 2 o 3 tiradas al azar</b> cada vez que juega a los rodillos.</div>';
-    h+='<div class="adm-hint" style="margin-top:6px">Ajusta abajo las probabilidades de cada casilla de la ruleta. El cliente nunca pierde puntos: como mínimo conserva lo que apuesta.</div>';    h+='<div class="adm-sec" style="margin-top:16px;font-size:15px">🎡 Probabilidades y colores de la ruleta</div>';
+    h+='<div class="adm-hint" style="margin-top:6px">Ajusta abajo las probabilidades de cada casilla. El servidor bloquea configuraciones cuyo retorno medio supere x1 para evitar crear puntos sin control.</div>';    h+='<div class="adm-sec" style="margin-top:16px;font-size:15px">🎡 Probabilidades y colores de la ruleta</div>';
     h+='<div class="adm-hint">Cada fila es una casilla de la ruleta. Ajusta el <b>multiplicador</b>, su <b>peso</b> (a más peso, más probable) y su <b>color</b>. El porcentaje se calcula solo. Los cambios se aplican al Publicar.</div>';
     h+='<div id="admSegList" style="margin-top:10px">';
     (function(){ var _bsegs=(DRAFT.bet&&Array.isArray(DRAFT.bet.segments)&&DRAFT.bet.segments.length)?DRAFT.bet.segments:BET_DEFAULT.segments; var _bcm=(DRAFT.bet&&DRAFT.bet.colors&&typeof DRAFT.bet.colors==="object")?DRAFT.bet.colors:{}; var _mults=_bsegs.map(function(sg){ return sg.mult; }); var _cols=assignBetColors(_mults, _bcm); _bsegs.forEach(function(sg,ix){ h+=segRowHtml(sg, _cols[ix]); }); })();
@@ -2669,17 +2832,21 @@ body.login-mode .login-card{margin:0 auto!important}
     h+='</div></div>';
     h+='<div class="adm-card" id="sec-recaudacion"><div class="adm-sec">Recaudación de máquinas → puntos</div>';
     h+='<div class="adm-hint">Registra la recaudación de cada bar. Los puntos se calculan con la tasa de abajo y se abonan solos en la app del bar al abrirla.</div>';
-    var _p100=parseFloat(DRAFT.pointsPer100)||30;
+    var _p100=parseFloat(DRAFT.pointsPer100)||300;
+    var _grw=(typeof DRAFT.growthPerEur==="number")?DRAFT.growthPerEur:15;
     h+='<div class="adm-frow"><label>Puntos por cada 100 € recaudados</label><input type="number" min="0" step="1" id="admRate" class="adm-num" value="'+esc(String(_p100))+'"></div>';
     h+='<div class="adm-hint" style="margin-top:-4px">Equivale a '+esc(String((_p100/100)))+' pts por € · ej. 100 € → +'+fmt(_p100)+' pts, 250 € → +'+fmt(Math.round(250/100*_p100))+' pts.</div>';
+    h+='<div class="adm-frow"><label>Bonus de crecimiento (pts por € de mejora)</label><input type="number" min="0" step="1" id="admGrowth" class="adm-num" value="'+esc(String(_grw))+'"></div>';
+    h+='<div class="adm-hint" style="margin-top:-4px">Se paga solo por los euros que superen la media diaria de los últimos 90 días de ese bar. Por encima de <b>17 pts</b> deja de ser rentable en bares con reparto bajo.</div>';
     h+='<div class="adm-crform">';
     h+='<select id="admCrBar"><option value="">Elige un bar…</option>'+barOpts+'</select>';
     h+='<input type="number" min="0" step="0.01" id="admCrEur" class="adm-num" placeholder="Recaudación €">';
+    h+='<input type="number" min="1" step="1" id="admCrDias" class="adm-num" placeholder="Días del periodo">';
     h+='<input type="text" id="admCrConcept" class="adm-name" placeholder="Concepto (ej. Junio 2026)">';
     h+='<button class="adm-add2" id="admAddCredit">+ Registrar recaudación</button>';
     h+='</div>';
     var _cr=(DRAFT.credits||[]);
-    if(_cr.length){ h+='<div class="adm-crlist">'; _cr.slice().reverse().forEach(function(c){ var bn=(USERS[c.u]&&USERS[c.u].bar)||c.u; h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(bn)+'</b> · '+esc(c.concept||"—")+'<span class="adm-crmeta">'+fmt(c.eur)+' € → +'+fmt(c.pts)+' pts · '+esc(c.date||"")+'</span></div><button class="adm-crdel" data-id="'+esc(c.id)+'">Eliminar</button></div>'; }); h+='</div>'; }
+    if(_cr.length){ h+='<div class="adm-crlist">'; _cr.slice().reverse().forEach(function(c){ var bn=(USERS[c.u]&&USERS[c.u].bar)||c.u; h+='<div class="adm-crrow"><div class="adm-crinfo"><b>'+esc(bn)+'</b> · '+esc(c.concept||"—")+'<span class="adm-crmeta">'+fmt(c.eur)+' €'+((+c.dias>0)?(' en '+fmt(c.dias)+' días'):'')+' → +'+fmt(c.pts)+' pts'+((+c.bonus>0)?(' <span style="color:#8ff7ff">(base '+fmt(c.base)+' + crecimiento '+fmt(c.bonus)+')</span>'):'')+' · '+esc(c.date||"")+'</span></div><button class="adm-crdel" data-id="'+esc(c.id)+'">Eliminar</button></div>'; }); h+='</div>'; }
     else { h+='<div class="adm-hint" style="margin-top:10px">Aún no has registrado ninguna recaudación.</div>'; }
     h+='</div>';
     h+='<div class="adm-actions">';
@@ -2735,8 +2902,8 @@ body.login-mode .login-card{margin:0 auto!important}
     (function(){ var _nb=g("admNotifBtn"); if(_nb) _nb.onclick=function(){ requestNotif().then(function(){ ensureNotifBtn(); subscribeAdminPush(); }); }; try{ ensureNotifBtn(); }catch(e){} try{ subscribeAdminPush(); }catch(e){} })();
     (function(){ var _pa=g("pushAll"), _pl=g("pushTgts"); function _sp(){ if(!_pl) return; var on=_pa&&_pa.checked; Array.prototype.forEach.call(_pl.querySelectorAll(".push-tgt"),function(c){ c.disabled=on; }); _pl.style.opacity=on?"0.45":"1"; } if(_pa) _pa.onchange=_sp; _sp(); var _ps=g("pushSendBtn"); if(_ps) _ps.onclick=adminSendPush; })();
     (function(){ var _sr=g("admStatsRefresh"); if(_sr) _sr.onclick=function(){ loadAdminStats(); }; })();
-    var _ac=g("admAddCredit"); if(_ac) _ac.onclick=function(){ collect(); var u=g("admCrBar").value; var eur=parseFloat(g("admCrEur").value)||0; var concept=(g("admCrConcept").value||"").trim(); if(!u){ toast("Elige un bar"); return; } if(eur<=0){ toast("Introduce una recaudación válida"); return; } var per100=parseFloat(g("admRate")&&g("admRate").value)||30; var pts=Math.round(eur/100*per100); DRAFT.credits=DRAFT.credits||[]; DRAFT.credits.push({ id:"rev-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), u:u, eur:eur, pts:pts, concept:concept, date:todayStr() }); saveDraft(); renderAdmin(); toast("Recaudación registrada: +"+pts+" pts para "+((USERS[u]&&USERS[u].bar)||u)); };
-    var _au=g("admAddUser"); if(_au) _au.onclick=function(){ collect(); var u=(g("admUUser").value||"").toLowerCase().trim().replace(/[^a-z0-9_.\-]/g,""); var pass=(g("admUPass").value||"").trim(); var nombre=(g("admUNombre").value||"").trim(); var bar=(g("admUBar").value||"").trim(); if(!u){ toast("Escribe un nombre de usuario"); return; } if(!pass){ toast("Escribe una contraseña"); return; } DRAFT.users=DRAFT.users||[]; if(DRAFT.users.some(function(x){return x.u===u;})||(u in BUILTIN_USERS)){ toast("Ese usuario ya existe"); return; } DRAFT.users.push({ u:u, pass:pass, nombre:nombre||u, bar:bar||nombre||u }); saveDraft(); applyCfgUsers(DRAFT); g("admUUser").value=""; g("admUPass").value=""; g("admUNombre").value=""; g("admUBar").value=""; renderAdmin(); var _lbl=(bar||nombre||u); if(SB_SECURE && _admPin){ toast("Guardando "+_lbl+" en el servidor…"); sbRpc("app_admin_upsert_user",{ p_pin:_admPin, p_username:u, p_password:pass, p_nombre:nombre||u, p_bar:bar||nombre||u }).then(function(res){ if(res && res.ok){ toast("✔ Cliente añadido y activado: "+_lbl); } else { toast("⚠ Añadido en local, pero el servidor lo rechazó ("+((res&&res.error)||"error")+"). Revisa el PIN o vuelve a ejecutar el secure-setup.sql."); } }).catch(function(){ toast("⚠ Añadido en local, pero no se pudo contactar con el servidor. Ejecuta el secure-setup.sql más reciente."); }); } else { toast("Cliente añadido (solo local): "+_lbl); } };
+    var _ac=g("admAddCredit"); if(_ac) _ac.onclick=function(){ collect(); var u=g("admCrBar").value; var eur=parseFloat(g("admCrEur").value)||0; var concept=(g("admCrConcept").value||"").trim(); if(!u){ toast("Elige un bar"); return; } if(eur<=0){ toast("Introduce una recaudación válida"); return; } var dias=parseInt(g("admCrDias")&&g("admCrDias").value,10)||0; if(dias<=0){ toast("Indica los días del periodo"); return; } var per100=parseFloat(g("admRate")&&g("admRate").value)||300; var _r=calcCreditPoints(u,eur,dias,DRAFT.credits||[],DRAFT,per100); DRAFT.credits=DRAFT.credits||[]; DRAFT.credits.push({ id:"rev-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), u:u, eur:eur, dias:dias, pts:_r.pts, base:_r.base, bonus:_r.bonus, ref:_r.ref, concept:concept, date:todayStr() }); saveDraft(); renderAdmin(); toast("Recaudación registrada: +"+_r.pts+" pts"+(_r.bonus>0?(" (incluye +"+_r.bonus+" de crecimiento)"):(_r.ref===null?" (primera, sin referencia aún)":" (sin mejora sobre su media)"))+" para "+((USERS[u]&&USERS[u].bar)||u)); };
+    var _au=g("admAddUser"); if(_au) _au.onclick=function(){ collect(); var u=(g("admUUser").value||"").toLowerCase().trim().replace(/[^a-z0-9_.\-]/g,""); var pass=(g("admUPass").value||"").trim(); var nombre=(g("admUNombre").value||"").trim(); var bar=(g("admUBar").value||"").trim(); if(!u){ toast("Escribe un nombre de usuario"); return; } if(pass.length<8){ toast("La contraseña debe tener al menos 8 caracteres"); return; } DRAFT.users=DRAFT.users||[]; if(DRAFT.users.some(function(x){return x.u===u;})||(u in BUILTIN_USERS)){ toast("Ese usuario ya existe"); return; } DRAFT.users.push({ u:u, pass:pass, nombre:nombre||u, bar:bar||nombre||u }); saveDraft(); applyCfgUsers(DRAFT); g("admUUser").value=""; g("admUPass").value=""; g("admUNombre").value=""; g("admUBar").value=""; renderAdmin(); var _lbl=(bar||nombre||u); if(SB_SECURE && _admPin){ toast("Guardando "+_lbl+" en el servidor…"); sbRpc("app_admin_upsert_user",{ p_pin:_admPin, p_username:u, p_password:pass, p_nombre:nombre||u, p_bar:bar||nombre||u }).then(function(res){ if(res && res.ok){ toast("✔ Cliente añadido y activado: "+_lbl); } else { toast("⚠ Añadido en local, pero el servidor lo rechazó ("+((res&&res.error)||"error")+"). Revisa el PIN o vuelve a ejecutar el secure-setup.sql."); } }).catch(function(){ toast("⚠ Añadido en local, pero no se pudo contactar con el servidor. Ejecuta el secure-setup.sql más reciente."); }); } else { toast("Cliente añadido (solo local): "+_lbl); } };
     each(".adm-upwd", function(b){ b.onclick=function(){ openAdminPwdModal2(b.getAttribute("data-u")); }; });
     each(".adm-uedit", function(b){ b.onclick=function(){ openAdminEditModal(b.getAttribute("data-u")); }; });
     try{ loadAdminUsers(); }catch(e){}
@@ -2749,7 +2916,7 @@ body.login-mode .login-card{margin:0 auto!important}
     each(".adm-rw-desc",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} toast("Detalles del premio actualizados"); }; });
     each(".adm-rw-img",function(inp){ inp.onchange=function(){ var i=+inp.getAttribute("data-i"); readRewardImg(inp,function(d){ collect(); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=d; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen del premio actualizada"); }); }; });
     each(".adm-rw-imgdel",function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=null; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen quitada"); }; });
-    try{ if(window.Notification && Notification.permission==="default"){ Notification.requestPermission(); } }catch(e){}
+    /* Los avisos se solicitan solo tras una acción explícita del usuario. */
     if(!_canjeFilter) _canjeFilter="pending";
     each(".adm-ct", function(b){ b.classList.toggle("active", b.getAttribute("data-f")===_canjeFilter); b.onclick=function(){ _canjeFilter=b.getAttribute("data-f"); each(".adm-ct",function(x){ x.classList.toggle("active", x.getAttribute("data-f")===_canjeFilter); }); renderCanjeList(); }; });
     var _crf=g("canjeRefresh"); if(_crf) _crf.onclick=function(){ loadCanjes(true); toast("Actualizando canjes…"); };
@@ -2784,6 +2951,18 @@ body.login-mode .login-card{margin:0 auto!important}
   })();
   checkAdminHash();
 </script>
+<style id="countdown-lock">
+/* ===== Rodillos bloqueados con la cuenta atras encima =====
+   El filtro gris va en los rodillos y en la linea de premio, nunca en el
+   contenedor, para que el cartel no salga tambien descolorido. */
+.reels.locked .reel,.reels.locked .payline{filter:grayscale(1) brightness(.42) contrast(.9)!important;transition:filter .45s ease}
+.cd-lock{display:none}
+.reels.locked .cd-lock{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;text-align:center;border-radius:16px;background:radial-gradient(ellipse at 50% 45%,rgba(12,3,28,.74),rgba(6,1,16,.88));pointer-events:none}
+.cd-lock-lab{font:800 11px/1 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#d6c6ff;text-shadow:0 2px 4px #000}
+.cd-lock-time{font:900 clamp(30px,9.5vw,46px)/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:.02em;color:#ffe277;text-shadow:0 3px 0 #7d146f,0 0 20px rgba(255,226,119,.5)}
+.cd-lock-sub{font:700 12px/1.25 system-ui,sans-serif;color:#fff;opacity:.9;text-shadow:0 2px 3px #000}
+@media(max-width:430px){.cd-lock-lab{font-size:10px}.cd-lock-sub{font-size:11px}}
+</style>
 <style id="bet-css">
 .bet-panel{margin-top:6px}
 .bet-card.game-cabinet{border:0!important;border-radius:25px;padding:22px 18px 20px;background:linear-gradient(160deg,#24104a 0%,#11102a 40%,#070712 100%);box-shadow:inset 0 0 0 4px #ff4bc2,inset 0 0 0 8px #5c1ba0,0 0 30px rgba(255,36,179,.5)}
@@ -2812,7 +2991,7 @@ body.login-mode .login-card{margin:0 auto!important}
 @media(max-width:800px){#appCard{padding-bottom:82px!important}}
 @keyframes tabFade{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
 .bet-card{background:linear-gradient(160deg,#1b0836,#0d0420);border:2px solid #ffcf45;border-radius:18px;padding:18px 16px;text-align:center;position:relative;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 0 22px rgba(255,120,220,.08)}
-.bet-sub{color:#e7d9ff;font-size:13.5px;line-height:1.5;margin-bottom:14px}.bet-sub b{color:#ffe277}
+.bet-sub{color:#e7d9ff;font-size:13.5px;line-height:1.5;margin-bottom:14px}.bet-sub b{color:#ffe277}.golden-round{margin:8px auto 10px;padding:9px 12px;max-width:420px;border:1px solid rgba(255,221,118,.78);border-radius:12px;background:linear-gradient(135deg,rgba(255,203,64,.25),rgba(177,97,15,.28));box-shadow:0 0 18px rgba(255,193,50,.2);color:#fff3aa;font-size:12px;font-weight:900}
 .bet-wheel-wrap{position:relative;width:230px;height:230px;margin:6px auto 4px}
 .bet-wheel{width:100%;height:100%;border-radius:50%;border:6px solid #ffcf45;box-shadow:0 0 0 4px #a41574,inset 0 0 22px rgba(0,0,0,.5);position:relative;transform:rotate(0deg)}
 .bet-seg-label{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
@@ -2836,6 +3015,15 @@ body.login-mode .login-card{margin:0 auto!important}
 .bb-win{color:#7CFFB2}.bb-even{color:#9fd0ff}.bb-lose{color:#ff8f8f}
 @media(max-width:800px){.bet-big .bb-mult{font-size:76px}.bet-big .bb-msg{font-size:18px}}
 @media(max-width:800px){.bet-wheel-wrap{width:200px;height:200px}.bet-go{width:86%}}
+
+/* Premium weekly golden round */
+.golden-cabinet{position:relative!important;overflow:hidden!important;background:radial-gradient(circle at 50% 0,rgba(255,234,153,.24),transparent 33%),linear-gradient(160deg,#2e1a06,#120a03 70%,#070407)!important;box-shadow:inset 0 0 0 2px #fff3ae,inset 0 0 0 6px #b97913,0 0 34px rgba(255,194,45,.68)!important}.golden-cabinet:before,.golden-cabinet:after{content:"";position:absolute;inset:-45%;pointer-events:none;background:conic-gradient(from 0deg,transparent,rgba(255,244,181,.18),transparent 22%);animation:goldSweep 5s linear infinite}.golden-cabinet:after{animation-delay:-2.5s;opacity:.6}.golden-cabinet>*{position:relative;z-index:1}.golden-cabinet .bet-marquee{color:#fff6c7;text-shadow:0 2px 0 #7b4306,0 5px 0 #3d1d02,0 0 22px #ffd45e}.golden-cabinet .bet-wheel{border-color:#fff2a2!important;box-shadow:0 0 0 5px #b36d0c,0 0 28px rgba(255,210,75,.8),inset 0 0 24px rgba(0,0,0,.55)!important}.golden-cabinet .bet-hub{background:radial-gradient(circle,#fff8ca 0 10%,#ffd054 28%,#b06b0b 70%)!important;color:#3a1a00!important}.golden-cabinet .bet-pointer{border-top-color:#fff6c2!important;filter:drop-shadow(0 0 7px #ffd557)!important}.golden-round{display:flex;align-items:center;justify-content:center;gap:11px;margin:8px auto 13px;padding:10px 14px;max-width:420px;border:1px solid #ffe58b;border-radius:12px;background:linear-gradient(110deg,rgba(255,226,117,.27),rgba(144,74,5,.52),rgba(255,226,117,.27));box-shadow:inset 0 1px rgba(255,255,255,.45),0 0 20px rgba(255,196,41,.33);color:#fff6cb;text-align:left}.golden-round b{display:block;font-size:13px;letter-spacing:.13em}.golden-round small{display:block;margin-top:2px;color:#ffe9a0;font-size:11px;font-weight:800}.gr-crown{font-size:30px;color:#fff0a0;text-shadow:0 0 12px #ffc238}.gr-stars{color:#ffe781;letter-spacing:3px;animation:goldPulse 1.5s ease-in-out infinite}@keyframes goldSweep{to{transform:rotate(360deg)}}@keyframes goldPulse{50%{opacity:.35;transform:scale(.85)}}
+
+/* Golden round: an entirely distinct black-and-gold casino table. */
+.golden-cabinet{background:radial-gradient(circle at 50% 42%,rgba(255,218,97,.18),transparent 24%),repeating-linear-gradient(135deg,#100b04 0 7px,#1f1405 7px 14px)!important;border-radius:4px!important;box-shadow:inset 0 0 0 2px #fff2a4,inset 0 0 0 10px #6f4208,inset 0 0 0 14px #e2ac35,0 0 45px rgba(255,190,43,.75)!important}.golden-cabinet .bet-wheel{background:conic-gradient(#171104 0deg 36deg,#d59b21 36deg 72deg,#171104 72deg 108deg,#b86e10 108deg 144deg,#171104 144deg 180deg,#d59b21 180deg 216deg,#171104 216deg 252deg,#b86e10 252deg 288deg,#171104 288deg 324deg,#d59b21 324deg 360deg)!important;border:9px solid #f7d875!important;box-shadow:0 0 0 5px #472807,0 0 0 9px #e7ad27,0 0 35px rgba(255,202,56,.95),inset 0 0 40px rgba(0,0,0,.7)!important}.golden-cabinet .bet-wheel:after{content:"";position:absolute;inset:12px;border-radius:50%;border:1px dashed rgba(255,244,180,.7);pointer-events:none}.golden-cabinet .bet-seg-label span{color:#fff8d6!important;font-size:18px!important;text-shadow:0 2px 0 #2a1602,0 0 7px #000!important}.golden-cabinet .bet-wheel-wrap{padding:14px;border-radius:50%;background:radial-gradient(circle,transparent 60%,rgba(255,223,120,.17) 62%,transparent 70%);filter:drop-shadow(0 12px 22px rgba(0,0,0,.6))}.golden-cabinet .bet-go{background:linear-gradient(180deg,#fff2a4,#d79a1d 48%,#824408)!important;border:2px solid #fff4b8!important;color:#2c1702!important;text-shadow:0 1px rgba(255,255,255,.5);box-shadow:0 7px 0 #573008,0 12px 25px rgba(0,0,0,.5)!important}.golden-cabinet .bet-controls,.golden-cabinet .bet-result,.golden-cabinet .bet-foot{background:rgba(0,0,0,.58)!important;border-color:rgba(255,219,108,.6)!important;color:#fff1b5!important}.golden-cabinet .bet-step,.golden-cabinet .bet-stake{background:#1a1004!important;border-color:#dba52e!important;color:#fff0ac!important}.golden-cabinet .game-switch-btn{background:#161007!important;color:#ffeaa2!important;border:1px solid #c98d1c!important;box-shadow:none!important}.golden-cabinet .bet-sub{color:#fff0bb!important}.golden-cabinet .bet-hub{border:4px solid #fff4b3!important;box-shadow:0 0 0 4px #7b4909,0 0 20px #ffd354!important}.golden-cabinet .bet-pointer{border-top-color:#fff6c6!important;filter:drop-shadow(0 0 9px #ffd150)!important}
+
+/* Feedback v85: regreso visible desde la ruleta. */
+.game-back-prominent{position:sticky;top:8px;z-index:8;min-height:44px;border:2px solid #fff0a3!important;background:linear-gradient(180deg,#fff0a3,#d79a1d)!important;color:#2c1702!important;box-shadow:0 4px 0 #704008,0 9px 18px rgba(0,0,0,.42)!important}.game-back-prominent span{font-size:22px!important;font-weight:1000}@media(prefers-reduced-motion:reduce){.golden-cabinet:before,.golden-cabinet:after,.gr-stars{animation:none!important}}
 </style>
 <script id="user-nav">(function(){var current="jugar";function apply(name){var panels=document.querySelectorAll(".tab-panel");for(var i=0;i<panels.length;i++){panels[i].hidden=(panels[i].getAttribute("data-panel")!==name);}var btns=document.querySelectorAll(".unav-i");for(var j=0;j<btns.length;j++){btns[j].classList.toggle("active",btns[j].getAttribute("data-nav")===name);}current=name;try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}try{if(name==="ranking"&&window.tkLoadRanking)window.tkLoadRanking();}catch(e){}}function go(name){if(name===current)return;apply(name);try{history.pushState({tk:"tk-tab",name:name},"");}catch(e){}}window.__tkNav={go:go,apply:apply,current:function(){return current;}};function initUserNav(){var btns=document.querySelectorAll(".unav-i");if(!btns.length)return;for(var k=0;k<btns.length;k++){(function(b){b.addEventListener("click",function(){go(b.getAttribute("data-nav"));});})(btns[k]);}}if(document.readyState!=="loading")initUserNav();else document.addEventListener("DOMContentLoaded",initUserNav);})();</script>
 <script id="tropical-layout">document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("login-mode");var s=document.querySelector(".slot"),b=document.querySelector(".balance-wrap");if(s&&b)s.insertBefore(b,s.firstChild);});</script><script id="pwa-boot">

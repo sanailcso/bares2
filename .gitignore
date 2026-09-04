@@ -1,0 +1,15 @@
+# Claves y secretos
+*.keystore
+*.jks
+*.p12
+*.pem
+.env
+.env.*
+!.env.example
+supabase/functions/.env
+
+# Salidas locales
+build/
+build-twa/
+node_modules/
+

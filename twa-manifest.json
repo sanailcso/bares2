@@ -1,0 +1,41 @@
+{
+  "packageId": "io.github.sanailcso.tikitaka",
+  "host": "sanailcso.github.io",
+  "name": "Tiki Taka",
+  "launcherName": "Tiki Taka",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#0c0708",
+  "themeColorDark": "#0c0708",
+  "navigationColor": "#0c0708",
+  "navigationColorDark": "#0c0708",
+  "navigationDividerColor": "#0c0708",
+  "navigationDividerColorDark": "#0c0708",
+  "backgroundColor": "#0c0708",
+  "enableNotifications": true,
+  "startUrl": "/bares2/index.html",
+  "iconUrl": "https://sanailcso.github.io/bares2/icons/icon-512.png",
+  "maskableIconUrl": "https://sanailcso.github.io/bares2/icons/icon-maskable-512.png",
+  "monochromeIconUrl": "https://sanailcso.github.io/bares2/icons/badge-96.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "tikitaka"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://sanailcso.github.io/bares2/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://sanailcso.github.io/bares2/",
+  "minSdkVersion": 23,
+  "appVersion": "1.0.0"
+}
