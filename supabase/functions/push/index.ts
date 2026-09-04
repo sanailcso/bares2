@@ -9,20 +9,60 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const legacyServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const secretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
 const SERVICE_KEY = secretKeys ? (JSON.parse(secretKeys).default ?? legacyServiceKey) : legacyServiceKey;
-const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC") ?? "";
-const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE") ?? "";
-const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "https://sanailcso.github.io";
-const PUSH_SECRET = Deno.env.get("PUSH_SECRET") ?? "";
+const ENV_VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC") ?? "";
+const ENV_VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE") ?? "";
+const ENV_VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "";
+const ENV_PUSH_SECRET = Deno.env.get("PUSH_SECRET") ?? "";
 const ALLOWED_ORIGIN = "https://sanailcso.github.io";
 
-if (!SUPABASE_URL || !SERVICE_KEY || !VAPID_PUBLIC || !VAPID_PRIVATE || !PUSH_SECRET) {
-  throw new Error("Faltan secretos obligatorios de la función push");
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  throw new Error("Falta la configuración interna de Supabase");
 }
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+
+type PushRuntimeConfig = {
+  vapidPublic: string;
+  vapidPrivate: string;
+  vapidSubject: string;
+  pushSecret: string;
+};
+
+let runtimeConfigPromise: Promise<PushRuntimeConfig> | null = null;
+
+async function getPushConfig(): Promise<PushRuntimeConfig> {
+  if (!runtimeConfigPromise) {
+    runtimeConfigPromise = (async () => {
+      let raw: Record<string, unknown> = {
+        vapid_public: ENV_VAPID_PUBLIC,
+        vapid_private: ENV_VAPID_PRIVATE,
+        vapid_subject: ENV_VAPID_SUBJECT,
+        push_secret: ENV_PUSH_SECRET,
+      };
+
+      if (!ENV_VAPID_PUBLIC || !ENV_VAPID_PRIVATE || !ENV_PUSH_SECRET) {
+        const { data, error } = await supabase.rpc("app_push_runtime_config");
+        if (error) throw error;
+        raw = (data ?? {}) as Record<string, unknown>;
+      }
+
+      const config = {
+        vapidPublic: String(raw.vapid_public ?? ""),
+        vapidPrivate: String(raw.vapid_private ?? ""),
+        vapidSubject: String(raw.vapid_subject ?? "https://sanailcso.github.io"),
+        pushSecret: String(raw.push_secret ?? ""),
+      };
+      if (!config.vapidPublic || !config.vapidPrivate || !config.pushSecret) {
+        throw new Error("Falta la configuración segura de Web Push");
+      }
+      webpush.setVapidDetails(config.vapidSubject, config.vapidPublic, config.vapidPrivate);
+      return config;
+    })();
+  }
+  return runtimeConfigPromise;
+}
 
 function cors(req: Request) {
   const origin = req.headers.get("origin");
@@ -93,6 +133,11 @@ Deno.serve(async (req) => {
   if (!action && body.table === "redemptions" && body.type === "INSERT") action = "canje";
 
   try {
+    const runtime = await getPushConfig();
+    if (action === "healthcheck") {
+      return json(req, { ok: true, config: true });
+    }
+
     if (action === "admin_send") {
       const pin = String(body.pin ?? "");
       const title = String(body.title ?? "Tiki Taka").trim().slice(0, 80);
@@ -109,7 +154,7 @@ Deno.serve(async (req) => {
     }
 
     const suppliedSecret = req.headers.get("x-push-secret") ?? "";
-    if (!sameSecret(suppliedSecret, PUSH_SECRET)) {
+    if (!sameSecret(suppliedSecret, runtime.pushSecret)) {
       return json(req, { ok: false, error: "unauthorized" }, 401);
     }
 
