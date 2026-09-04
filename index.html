@@ -1116,12 +1116,25 @@ body.login-mode .login-card{margin:0 auto!important}
   function _vapidReady(){ return !!(VAPID_PUBLIC && VAPID_PUBLIC.indexOf("REEMPLAZA")<0); }
   function pushSupported(){ return (typeof navigator!=="undefined" && "serviceWorker" in navigator && "PushManager" in window); }
   function urlB64ToUint8(base64){ try{ var pad="=".repeat((4-base64.length%4)%4); var b64=(base64+pad).replace(/-/g,"+").replace(/_/g,"/"); var raw=atob(b64); var arr=new Uint8Array(raw.length); for(var i=0;i<raw.length;i++){ arr[i]=raw.charCodeAt(i); } return arr; }catch(e){ return new Uint8Array(); } }
+  function _samePushKey(current, wanted){
+    try{
+      var a=new Uint8Array(current||[]), b=new Uint8Array(wanted||[]);
+      if(!a.length || a.length!==b.length) return false;
+      for(var i=0;i<a.length;i++){ if(a[i]!==b[i]) return false; }
+      return true;
+    }catch(e){ return false; }
+  }
   function _getPushSub(){
     if(!pushSupported() || !_vapidReady() || !notifSupported() || Notification.permission!=="granted") return Promise.resolve(null);
     return navigator.serviceWorker.ready.then(function(reg){
+      var wanted=urlB64ToUint8(VAPID_PUBLIC);
+      function create(){ return reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:wanted }); }
       return reg.pushManager.getSubscription().then(function(sub){
-        if(sub) return sub;
-        return reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+        if(!sub) return create();
+        var current=null;
+        try{ current=sub.options && sub.options.applicationServerKey; }catch(e){}
+        if(!current || _samePushKey(current,wanted)) return sub;
+        return sub.unsubscribe().catch(function(){ return false; }).then(create);
       });
     }).catch(function(){ return null; });
   }
