@@ -1,169 +1,110 @@
 <!DOCTYPE html>
-<!-- despliegue: 2026-09-03-security-hardening -->
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tiki Taka App</title>
-<meta name="theme-color" content="#0c0708" />
-<link rel="manifest" href="manifest.webmanifest" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Tiki Taka" />
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f4ee">
+  <meta name="description" content="Tiki Taka, el club de tu bar. Juega, suma puntos y elige tu próximo premio.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tiki Taka">
+  <title>Tiki Taka · El club de tu bar</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="stylesheet" href="./assets/app.css?v=2">
+  <link rel="stylesheet" href="./assets/club.css?v=2">
 </head>
-<body>
+<body class="club-ui login-mode">
   <div id="bgLayer"></div>
   <div id="adminScreen" class="admin-screen" hidden></div>
-  <canvas id="confetti"></canvas>
-  <div id="flash"></div>
-  <div class="prize-pop" id="prizePop" aria-hidden="true">
-    <div class="pop-sub" id="popSub"></div>
-    <div class="pop-emoji" id="popEmoji"></div>
-    <div class="pop-name" id="popName"></div>
-  </div>
+  <canvas id="confetti"></canvas><div id="flash"></div>
+  <div class="prize-pop" id="prizePop" aria-hidden="true"><div class="pop-sub" id="popSub"></div><div class="pop-emoji" id="popEmoji"></div><div class="pop-name" id="popName"></div></div>
   <div class="prize-modal" id="prizeModal" aria-hidden="true"></div>
-  <div class="box-pop" id="boxPop" aria-hidden="true">
-    <div class="box-pop-title" id="boxTitle">🎉 ¡7 días de racha!</div>
-    <div class="box-pop-sub" id="boxSub">Elige una caja para descubrir tu premio sorpresa</div>
-    <div class="box-row" id="boxRow"></div>
-  </div>
+  <div class="box-pop" id="boxPop" aria-hidden="true"><div class="box-pop-title" id="boxTitle">¡7 días de racha!</div><div class="box-pop-sub" id="boxSub">Elige una caja y descubre tu premio sorpresa</div><div class="box-row" id="boxRow"></div></div>
 
-  <div class="card login-card" id="loginCard">
-    <img class="brand-img" src="./img/brand-login.png" alt="tiki taka" />
-    <p class="subtitle">Programa de fidelización</p>
-    <div class="field">
-      <label for="userInput">Usuario</label>
-      <input id="userInput" placeholder="tu usuario" autocomplete="username" spellcheck="false" />
-    </div>
-    <div class="field">
-      <label for="passInput">Contraseña</label>
-      <input id="passInput" type="password" placeholder="••••••" autocomplete="current-password" />
-    </div>
-    <button class="primary-btn" id="loginBtn">Entrar</button>
+  <main class="card login-card" id="loginCard">
+    <div class="club-login-brand"><img class="brand-img" src="./img/brand-login.png" alt="Tiki Taka"></div>
+    <div class="club-eyebrow">EL CLUB DE TU BAR</div>
+    <h1>Tu bar suma.<br><span>Tú eliges el premio.</span></h1>
+    <p class="subtitle">Entra y disfruta de tu momento Tiki Taka.</p>
+    <div class="field"><label for="userInput">Usuario</label><input id="userInput" placeholder="Tu usuario" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+    <div class="field"><label for="passInput">Contraseña</label><input id="passInput" type="password" placeholder="Tu contraseña" autocomplete="current-password"></div>
+    <button class="primary-btn" id="loginBtn">Entrar al club <span aria-hidden="true">→</span></button>
     <div class="login-msg" id="loginMsg" role="status" aria-live="polite"></div>
-  </div>
+    <div class="club-login-foot">Cada día, un poco más cerca.</div>
+  </main>
 
-  <div class="card app-card" id="appCard" style="display:none">
-    <div class="app-head">
-      <div class="brand-mini"><img id="brandLogo" class="brand-logo" alt="tiki taka" src=""/></div>
-      <button class="logout-btn" id="logoutBtn">Salir</button>
-    </div>
-    <div class="hello" id="hello"></div>
+  <main class="card app-card club-app" id="appCard" style="display:none">
+    <header class="app-head">
+      <a href="#" class="brand-mini club-brand" aria-label="Tiki Taka, inicio" id="clubBrandHome"><img id="brandLogo" class="brand-logo" alt="Tiki Taka" src="./img/logo.png"></a>
+      <div class="club-brand-copy"><b>El club de tu bar</b><span id="clubHeaderBar">Tiki Taka</span></div>
+      <button type="button" class="club-avatar" id="clubProfile" aria-label="Ver mi bar y mi cuenta">TT</button>
+    </header>
+    <div class="hello" id="hello" hidden></div>
 
-    <nav class="user-nav" id="userNav">
-      <button type="button" class="unav-i active" data-nav="jugar"><span class="unav-ic">🎰</span><span class="unav-tx">Jugar</span></button>
-      <button type="button" class="unav-i" data-nav="premios"><span class="unav-ic">🎁</span><span class="unav-tx">Premios</span></button>
-      <button type="button" class="unav-i" data-nav="canjes"><span class="unav-ic">✅</span><span class="unav-tx">Canjes</span></button>
-      <button type="button" class="unav-i" data-nav="historial"><span class="unav-ic">🕒</span><span class="unav-tx">Historial</span></button>
-      <button type="button" class="unav-i" data-nav="ranking"><span class="unav-ic">🏆</span><span class="unav-tx">Ranking</span></button>
-    </nav>
+    <section class="tab-panel" id="tab-inicio" data-panel="inicio" aria-label="Inicio">
+      <div class="club-intro"><div class="club-eyebrow" id="clubBarName">TU BAR</div><h1 id="clubGreeting">Hola.<br>Hoy también suma.</h1></div>
+      <section class="club-wallet" aria-label="Tu saldo"><div><div class="club-eyebrow">TUS PUNTOS</div><div class="club-wallet-number"><strong id="clubHomeBalance">0</strong><span>pts</span></div></div><button class="club-text-action" type="button" data-club-nav="premios">Ver premios <span aria-hidden="true">↗</span></button></section>
+      <section class="club-goal" id="clubGoal" aria-label="Tu próximo premio"><div class="club-goal-content"><div class="club-eyebrow">TU PRÓXIMO PREMIO</div><h2 id="clubGoalName">Tu próxima alegría</h2><p id="clubGoalDistance">Cada punto te acerca.</p></div><div class="club-goal-art" id="clubGoalArt" aria-hidden="true"></div><div class="club-goal-progress"><div class="club-track" id="clubGoalTrack" role="progressbar" aria-label="Progreso hacia tu premio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="clubGoalFill"></span></div><div class="club-progress-labels"><span id="clubGoalNumbers">0 puntos</span><b id="clubGoalPercent">0 %</b></div></div><button type="button" class="club-text-action" data-club-nav="premios" id="clubGoalAction">Explorar el catálogo <span aria-hidden="true">→</span></button></section>
+      <div id="clubHomeGame"></div>
+      <section class="club-week" aria-label="Tu racha de siete días"><div class="club-week-heading"><div><h2 id="clubWeekTitle">Tu racha empieza hoy</h2><p id="clubWeekHint">Un giro cada día. Un premio más cerca.</p></div><button type="button" class="club-small-action" data-club-nav="jugar" aria-label="Ver detalle de mi racha">→</button></div><div id="clubWeekDays" class="club-week-days"></div></section>
+    </section>
 
-    <div class="tab-panel" id="tab-jugar" data-panel="jugar">
-
-    <div class="balance-wrap">
-      <div class="balance-label">Tus puntos</div>
-      <div class="balance" id="balance">0</div>
-      <div class="balance-pts">puntos acumulados</div>
-      <div class="streak" id="streak"></div>
-    </div>
-
-        <div class="slot">
-        <div class="marquee">
-          <div class="bulbs" id="bulbsTop"></div>
-          <div class="marquee-title">🍒 TIKI TAKA 🍒</div>
-          <div class="bulbs" id="bulbsBot"></div>
-        </div>
-        <div class="reels-wrap">
-          <div class="reels">
-            <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
-            <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
-            <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
-            <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
-            <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
-            <div class="payline"></div>
-            <div class="cd-lock" id="cdLock" aria-live="polite">
-              <span class="cd-lock-lab">Próxima tirada en</span>
-              <span class="cd-lock-time" id="cdTime">--:--:--</span>
-              <span class="cd-lock-sub">Vuelve mañana y sigue tu racha 🔥</span>
-            </div>
+    <section class="tab-panel" id="tab-jugar" data-panel="jugar" hidden aria-label="Jugar">
+      <div class="club-page-heading"><div class="club-eyebrow">TU MOMENTO TIKI TAKA</div><h1>Juega y suma.</h1><p>Tus rodillos, tu ruleta y un poco de suerte.</p></div>
+      <div id="clubPlayGame">
+        <section id="clubGame" class="club-game" aria-label="Rodillos y ruleta">
+          <div class="club-game-heading"><h2 id="clubGameTitle">Tu giro de hoy</h2><span id="clubGameBadge">1 tirada gratis</span></div>
+          <div class="balance-wrap"><div class="balance-label">Tus puntos</div><div class="balance" id="balance">0</div><div class="balance-pts">puntos acumulados</div><div class="streak" id="streak"></div></div>
+          <div class="slot">
+            <div class="marquee"><div class="bulbs" id="bulbsTop"></div><div class="marquee-title">TIKI TAKA</div><div class="bulbs" id="bulbsBot"></div></div>
+            <div class="reels-wrap"><div class="reels">
+              <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
+              <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
+              <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
+              <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
+              <div class="reel"><div class="strip"></div><div class="reel-glass"></div></div>
+              <div class="payline"></div>
+              <div class="cd-lock" id="cdLock" aria-live="polite"><span class="cd-lock-lab">Próxima tirada en</span><span class="cd-lock-time" id="cdTime">--:--:--</span><span class="cd-lock-sub">Vuelve mañana y sigue tu racha</span></div>
+            </div><div class="ruleta-cta" id="ruletaCta"></div></div>
+            <button class="spin-btn" id="spinBtn" aria-label="Girar los rodillos">GIRAR</button>
+            <div class="lever" id="lever" aria-label="Tirar de la palanca"><div class="lever-rod"></div><div class="lever-knob"></div></div>
+            <div class="spin-note" id="spinNote"></div><div class="win-banner" id="winBanner"></div>
+            <div class="streak-info"><div class="si-title">Racha diaria · ciclo de 7 días</div><div class="si-sub" id="siSub">Entra cada día y suma puntos. En el día 7 eliges una caja sorpresa y la racha se reinicia.</div><div class="si-milestones" id="siMilestones"></div></div>
+            <div id="betPanel" class="bet-panel"></div>
           </div>
-          <div class="ruleta-cta" id="ruletaCta"></div>
-        </div>
-        <button class="spin-btn" id="spinBtn" aria-label="Girar la máquina">GIRAR</button>
-        <div class="lever" id="lever" aria-label="Tirar de la palanca"><div class="lever-rod"></div><div class="lever-knob"></div></div>
-      <div class="spin-note" id="spinNote"></div>
-      <div class="win-banner" id="winBanner"></div>
-      <div class="streak-info">
-        <div class="si-title">🔥 Racha diaria · ciclo de 7 días</div>
-        <div class="si-sub" id="siSub">Entra cada día y suma puntos. En el día 7 eliges 1 de 3 cajas sorpresa y la racha se reinicia.</div>
-        <div class="si-milestones" id="siMilestones"></div>
+        </section>
       </div>
-      <div id="betPanel" class="bet-panel"></div>
-    </div>
+      <div class="streak-hero" id="streakHero"></div><div id="onboarding"></div>
+    </section>
 
-    <div class="streak-hero" id="streakHero"></div>
-    <div id="onboarding"></div>
-    </div>
+    <section class="tab-panel" id="tab-premios" data-panel="premios" hidden aria-label="Premios">
+      <div class="club-page-heading"><div class="club-eyebrow">TU ESFUERZO, TU PREMIO</div><h1>Elige tu próxima alegría.</h1><p>Descubre el catálogo o consulta tus canjes.</p></div>
+      <div class="club-segments" role="group" aria-label="Ver premios o mis canjes"><button type="button" class="selected" data-club-rewards="catalog" aria-pressed="true">Catálogo</button><button type="button" data-club-rewards="canjes" aria-pressed="false">Mis canjes <span id="clubCanjeCount"></span></button></div>
+      <div id="clubCatalogPanel"><div id="clubGoalPicker" class="club-goal-picker"><span>¿Qué premio te hace ilusión?</span><label class="club-sr-only" for="clubGoalSelect">Elegir mi objetivo</label><select id="clubGoalSelect"></select></div><div id="catalog"></div><p class="club-catalog-note">Imágenes ilustrativas. Consulta las características de cada premio.</p></div>
+      <div id="tab-canjes" hidden><div class="section-title" id="myCanjesTitle" style="display:none">Mis premios reclamados</div><div id="myCanjes"></div><div id="clubCanjesEmpty" class="club-empty" hidden><span aria-hidden="true">✦</span><h2>Tus próximas alegrías van aquí.</h2><p>Cuando canjees un premio, podrás consultarlo en este espacio.</p><button type="button" class="club-button" data-club-rewards="catalog">Explorar premios</button></div></div>
+    </section>
 
-    <div class="tab-panel" id="tab-premios" data-panel="premios" hidden>
-    <div class="section-title">Catálogo de premios</div>
-    <div id="catalog"></div>
-    </div>
+    <section class="tab-panel" id="tab-mibar" data-panel="mibar" hidden aria-label="Mi bar">
+      <div class="club-page-heading"><div class="club-eyebrow" id="clubAccountBar">EL CLUB DE TU BAR</div><h1>Todo en su sitio.</h1><p>Tu actividad, tu progreso y tu cuenta.</p></div>
+      <div class="club-account-tabs" role="group" aria-label="Contenido de mi bar"><button type="button" class="selected" data-club-account="historial" aria-pressed="true">Actividad</button><button type="button" data-club-account="ranking" aria-pressed="false">Ranking</button><button type="button" data-club-account="cuenta" aria-pressed="false">Mi cuenta</button></div>
+      <section id="tab-historial"><h2 class="club-section-heading">Así vas sumando</h2><div class="history" id="history"></div></section>
+      <section id="tab-ranking" hidden><h2 class="club-section-heading">Ranking de bares</h2><div id="rankingWrap"></div></section>
+      <section id="clubAccount" class="club-account" hidden><div class="club-account-profile"><div class="club-avatar" id="clubAccountAvatar">TT</div><div><h2 id="clubAccountName">Tu cuenta</h2><p id="clubAccountUsername"></p></div></div><button type="button" id="pwdBtn" class="club-account-row"><span>Cambiar mi contraseña</span><span aria-hidden="true">→</span></button><button type="button" id="clubNotifications" class="club-account-row"><span>Activar mis avisos</span><span aria-hidden="true">→</span></button><button type="button" id="logoutBtn" class="logout-btn club-account-row"><span>Cerrar sesión</span><span aria-hidden="true">↗</span></button></section>
+      <div class="demo-bar" id="demoBar" style="display:none"><div class="demo-title">Modo demo · solo para pruebas</div><div class="demo-btns"><button class="demo-btn" id="demoDay">Simular día siguiente</button><button class="demo-btn" id="demoPts">Añadir puntos de prueba</button><button class="demo-btn" id="demoStreak">+1 día de racha</button><button class="demo-btn" id="demoBox">Abrir caja semanal</button><button class="demo-btn" id="demoGolden">Activar ronda dorada</button><button class="demo-btn" id="demoRuleta">+3 tiradas de ruleta</button><button class="demo-btn" id="demoJackpot">Ver jackpot</button><button class="demo-btn" id="demoSpecial">Ver premio especial</button><button class="demo-btn" id="demoReset">Reiniciar demo</button></div></div>
+    </section>
 
-    <div class="tab-panel" id="tab-canjes" data-panel="canjes" hidden>
-    <div class="section-title" id="myCanjesTitle" style="display:none">🎁 Mis premios reclamados</div>
-    <div id="myCanjes"></div>
-    </div>
-
-    <div class="tab-panel" id="tab-historial" data-panel="historial" hidden>
-    <div class="section-title">Actividad reciente</div>
-    <div class="history" id="history"></div>
-
-    <div style="text-align:center;margin:14px 0 4px"><button type="button" id="pwdBtn" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:#cbb8e6;border-radius:999px;padding:8px 16px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">🔑 Cambiar mi contraseña</button></div>
-
-    <div class="demo-bar" id="demoBar" style="display:none">
-      <div class="demo-title">🧪 Modo demo (solo para pruebas)</div>
-      <div class="demo-btns">
-        <button class="demo-btn" id="demoDay">⏩ Simular día siguiente</button>
-        <button class="demo-btn" id="demoPts">➕ +20000 puntos</button>
-        <button class="demo-btn" id="demoStreak">🔥 +1 día de racha</button>
-        <button class="demo-btn" id="demoBox">🎁 Abrir caja semanal</button>
-        <button class="demo-btn" id="demoGolden">⭐ Activar Ronda Dorada</button>
-        <button class="demo-btn" id="demoRuleta">🎡 +3 tiradas de ruleta</button>
-        <button class="demo-btn" id="demoJackpot">🍒 Ver JACKPOT</button>
-        <button class="demo-btn" id="demoSpecial">�� Ver premio (300)</button>
-        <button class="demo-btn" id="demoReset">♻️ Reiniciar cuenta</button>
-      </div>
-    </div>
-    </div>
-    <div class="tab-panel" id="tab-ranking" data-panel="ranking" hidden>
-    <div class="section-title">🏆 Ranking de bares</div>
-    <div id="rankingWrap"></div>
-    </div>
-    <nav class="user-nav-bottom" id="userNavBottom" aria-label="Menú inferior">
-      <button type="button" class="unav-i" data-nav="jugar"><span class="unav-ic">🎰</span><span class="unav-tx">Jugar</span></button>
-      <button type="button" class="unav-i" data-nav="premios"><span class="unav-ic">🎁</span><span class="unav-tx">Premios</span></button>
-      <button type="button" class="unav-i" data-nav="canjes"><span class="unav-ic">✅</span><span class="unav-tx">Canjes</span></button>
-      <button type="button" class="unav-i" data-nav="historial"><span class="unav-ic">🕒</span><span class="unav-tx">Historial</span></button>
-      <button type="button" class="unav-i" data-nav="ranking"><span class="unav-ic">🏆</span><span class="unav-tx">Ranking</span></button>
+    <nav class="user-nav-bottom club-nav" id="userNavBottom" aria-label="Navegación principal">
+      <button type="button" class="unav-i active" data-nav="inicio" aria-current="page"><span class="club-nav-icon club-icon-home" aria-hidden="true"></span><span>Inicio</span></button>
+      <button type="button" class="unav-i" data-nav="jugar"><span class="club-nav-icon club-icon-play" aria-hidden="true"></span><span>Jugar</span></button>
+      <button type="button" class="unav-i" data-nav="premios"><span class="club-nav-icon club-icon-gift" aria-hidden="true"></span><span>Premios</span></button>
+      <button type="button" class="unav-i" data-nav="mibar"><span class="club-nav-icon club-icon-store" aria-hidden="true"></span><span>Mi bar</span></button>
     </nav>
-  </div>
-
-  <form name="canjes" hidden>
-    <input type="text" name="bot-field" />
-    <input type="text" name="usuario" />
-    <input type="text" name="bar" />
-    <input type="text" name="premio" />
-    <input type="text" name="puntos" />
-    <input type="text" name="fecha" />
-    <input type="text" name="id" />
-  </form>
-
+  </main>
+  <form name="canjes" hidden><input type="text" name="bot-field"><input type="text" name="usuario"><input type="text" name="bar"><input type="text" name="premio"><input type="text" name="puntos"><input type="text" name="fecha"><input type="text" name="id"></form>
   <script src="./assets/app.js?v=2"></script>
+  <script src="./assets/club.js?v=2"></script>
 </body>
 </html>
