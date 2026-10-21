@@ -1,6 +1,6 @@
 /* Tiki Taka PWA service worker */
-var CACHE = "tikitaka-club-v94";
-var SHELL = ["./", "./index.html", "./assets/app.css?v=2", "./assets/reward-images.js?v=1", "./assets/app.js?v=4", "./assets/club.css?v=2", "./assets/club.js?v=3", "./img/club-keyring.webp", "./img/club-cap.webp", "./img/club-glasses.webp", "./img/club-rewards-sheet.jpg", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/badge-96.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png", "./img/bg-default.png", "./img/bg-halloween.png", "./img/bg-navidad.png", "./img/brand-login.png", "./img/logo.png", "./img/sym-filler-1.webp", "./img/sym-filler-2.webp", "./img/sym-filler-3.webp", "./img/sym-filler-4.webp", "./img/sym-filler-5.webp", "./img/sym-jackpot.webp", "./img/sym-prize.webp"];
+var CACHE = "tikitaka-club-v95";
+var SHELL = ["./", "./index.html", "./assets/app.css?v=2", "./assets/reward-images.js?v=1", "./assets/app.js?v=4", "./assets/club.css?v=3", "./assets/club.js?v=4", "./img/club-keyring.webp", "./img/club-cap.webp", "./img/club-glasses.webp", "./img/club-rewards-sheet.jpg", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/badge-96.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png", "./img/bg-default.png", "./img/bg-halloween.png", "./img/bg-navidad.png", "./img/brand-login.png", "./img/logo.png", "./img/sym-filler-1.webp", "./img/sym-filler-2.webp", "./img/sym-filler-3.webp", "./img/sym-filler-4.webp", "./img/sym-filler-5.webp", "./img/sym-jackpot.webp", "./img/sym-prize.webp"];
 self.addEventListener("install", function(e){
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(SHELL).catch(function(){}); }));

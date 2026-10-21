@@ -67,7 +67,7 @@
     var left = betSpinsLeft();
     put('clubGameBadge', _game === 'bet' ? left + (left === 1 ? ' tirada disponible' : ' tiradas disponibles') : spunToday() ? 'Completado por hoy' : '1 tirada gratis');
     var footValues = document.querySelectorAll('#betPanel .bet-foot b');
-    if (footValues.length > 1) footValues[footValues.length - 1].textContent = fmt(state.points);
+    if (footValues.length > 1) footValues[footValues.length - 1].textContent = byId('balance').textContent || fmt(state.points);
     syncGoal(); syncWeek();
     var mine = localRedemptions().filter(function (r) { return r.username === currentUser && !r.cancelled && !r.delivered; });
     put('clubCanjeCount', mine.length ? '(' + mine.length + ')' : '');
@@ -75,6 +75,18 @@
     document.body.classList.toggle('club-home', route === 'inicio');
   }
   function queueSync() { if (ready && !scheduled) { scheduled = true; requestAnimationFrame(sync); } }
+  // Reuse the game's real balance animation. Display only the confirmed change.
+  var originalCountUp = window.countUp, gainTimer;
+  window.countUp = function (element, from, to, duration) {
+    if (element === byId('balance')) {
+      var gain = byId('clubGameGain'), wallet = element.closest('.balance-wrap');
+      clearTimeout(gainTimer);
+      if (gain) gain.textContent = to > from ? '+' + fmt(to - from) + ' puntos' : '';
+      if (wallet) wallet.classList.toggle('is-gaining', to > from);
+      gainTimer = setTimeout(function () { if (gain) gain.textContent = ''; if (wallet) wallet.classList.remove('is-gaining'); }, Math.max(3200, duration || 0));
+    }
+    return originalCountUp.apply(this, arguments);
+  };
   window.tkClubNavigation = function (name) {
     route = name;
     if (!ready) return;
