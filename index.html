@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="stylesheet" href="./assets/app.css?v=2">
-  <link rel="stylesheet" href="./assets/club.css?v=2">
+  <link rel="stylesheet" href="./assets/club.css?v=3">
 </head>
 <body class="club-ui login-mode">
   <div id="bgLayer"></div>
@@ -57,7 +57,7 @@
       <div id="clubPlayGame">
         <section id="clubGame" class="club-game" aria-label="Rodillos y ruleta">
           <div class="club-game-heading"><h2 id="clubGameTitle">Tu giro de hoy</h2><span id="clubGameBadge">1 tirada gratis</span></div>
-          <div class="balance-wrap"><div class="balance-label">Tus puntos</div><div class="balance" id="balance">0</div><div class="balance-pts">puntos acumulados</div><div class="streak" id="streak"></div></div>
+          <div class="balance-wrap"><div class="balance-label">Tus puntos<span id="clubGameGain" class="club-game-gain" role="status" aria-live="polite" aria-atomic="true"></span></div><div class="balance" id="balance">0</div><div class="balance-pts">puntos acumulados</div><div class="streak" id="streak"></div></div>
           <div class="slot">
             <div class="marquee"><div class="bulbs" id="bulbsTop"></div><div class="marquee-title">TIKI TAKA</div><div class="bulbs" id="bulbsBot"></div></div>
             <div class="reels-wrap"><div class="reels">
@@ -106,6 +106,6 @@
   <form name="canjes" hidden><input type="text" name="bot-field"><input type="text" name="usuario"><input type="text" name="bar"><input type="text" name="premio"><input type="text" name="puntos"><input type="text" name="fecha"><input type="text" name="id"></form>
   <script src="./assets/reward-images.js?v=1"></script>
   <script src="./assets/app.js?v=4"></script>
-  <script src="./assets/club.js?v=3"></script>
+  <script src="./assets/club.js?v=4"></script>
 </body>
 </html>
