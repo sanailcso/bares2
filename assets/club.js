@@ -73,6 +73,7 @@
     put('clubCanjeCount', mine.length ? '(' + mine.length + ')' : '');
     byId('clubCanjesEmpty').hidden = mine.length > 0;
     document.body.classList.toggle('club-home', route === 'inicio');
+    document.body.classList.toggle('club-playing', route === 'inicio' || route === 'jugar');
   }
   function queueSync() { if (ready && !scheduled) { scheduled = true; requestAnimationFrame(sync); } }
   // Reuse the game's real balance animation. Display only the confirmed change.
@@ -120,10 +121,16 @@
   }
   function init() {
     ready = true;
-    // app.js moves this HUD into .slot on DOMContentLoaded. Retain the HUD but
-    // present it above the same game, so switching rodillos/ruleta keeps the balance.
+    // Keep the real animated balance in the game, docked above the mobile nav.
     byId('clubGame').insertBefore(document.querySelector('.balance-wrap'), document.querySelector('.slot'));
     byId('clubHomeGame').appendChild(byId('clubGame'));
+    var nav = byId('userNavBottom');
+    function measureNav() {
+      var height = nav.getBoundingClientRect().height;
+      if (height > 0) document.documentElement.style.setProperty('--club-nav-height', height + 'px');
+    }
+    new ResizeObserver(measureNav).observe(nav);
+    measureNav();
     window.__tkNav.apply('inicio');
     document.addEventListener('click', function (event) {
       var nav = event.target.closest('[data-club-nav]'); if (nav) { go(nav.dataset.clubNav); if (nav.dataset.clubNav === 'premios') { rewardsTab('catalog'); if (state) { state.onboardingCatalog = true; saveState(); renderOnboarding(); } } }
