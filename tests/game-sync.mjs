@@ -49,7 +49,7 @@ assert.equal(saving.ACTIVE_CFG.rev,12);
 let checkpoint;
 const classes={add(){},remove(){}};
 const animation={state:{lastSpin:'2026-10-20'},spinning:false,spunToday:()=>false,ensureAudio(){},refreshSymbols(){},spinBtn:{},winBanner:{classList:classes},document:{getElementById:()=>({classList:classes})},setTimeout(){},whir(){},secureSpin:async()=>null,todayStr:()=> '2026-10-21',saveState(){checkpoint=JSON.parse(JSON.stringify(animation.state));},rollTier:()=>20,targetFor:()=>[0,1,2,3,0],reels:Array.from({length:5},()=>({classList:classes,querySelector:()=>({style:{},children:[{getBoundingClientRect:()=>({height:50})}]})})),buildStrip:()=>20};
-animation.SB_ON=false;
+animation.SB_ON=false; animation._demoBusy=false;
 vm.createContext(animation);vm.runInContext(fn('spin','settle'),animation);animation.spin();await new Promise(resolve=>setImmediate(resolve));
 assert.equal(checkpoint.lastSpin,'2026-10-21','Consume the spin before any animation callback, so an immediate reload stays blocked');
 assert.equal(checkpoint._spinPreviousDate,'2026-10-20','Preserve yesterday for streak calculation');

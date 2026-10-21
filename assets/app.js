@@ -504,7 +504,7 @@
         if(localState && localState.onboardingRoulette) state.onboardingRoulette=true;
         _sbLoggedLen[u] = (state.history || []).length;
         render(true);
-        try{ var _db=document.getElementById("demoBar"); if(_db){ _db.style.display = (currentUser==="demo" && !SB_ON) ? "" : "none"; } }catch(e){}
+        try{ var _db=document.getElementById("demoBar"); if(_db){ _db.style.display = currentUser==="demo" ? "" : "none"; } }catch(e){}
         claimRevenueCredits().then(function(_rev){
           if(_rev > 0){ renderHistory(); celebrateRevenue(_rev); }
           try{ if(SB_SECURE) refreshPlayer(); }catch(e){}
@@ -773,7 +773,7 @@
   }
 
   function spin(){
-    if (!state || spinning || spunToday() || (SB_ON && !_playerStateReady)) return;
+    if (!state || _demoBusy || spinning || spunToday() || (SB_ON && !_playerStateReady)) return;
     spinning = true; ensureAudio(); refreshSymbols();
     spinBtn.disabled = true; winBanner.classList.remove("show");
     document.getElementById("lever").classList.add("pulled");
@@ -944,7 +944,7 @@
     if(left<=0){ document.getElementById("betGo").disabled=true; document.getElementById("betResult").textContent="No tienes tiradas de ruleta. \u00a1Gana m\u00e1s girando los rodillos! \uD83C\uDFB0"; }
   }
   function placeBet(stake){
-    if(_betBusy || !_configReady) return;
+    if(_betBusy || _demoBusy || !_configReady) return;
     var bc=activeBetCfg(); if(betConfigError(bc)) return;
     var resEl=document.getElementById("betResult"), goEl=document.getElementById("betGo");
     if(!state){ return; }
@@ -995,10 +995,10 @@
     }).catch(function(){ _betBusy=false; goEl.disabled=false; resEl.textContent="⚠️ Sin conexión con el servidor. Inténtalo de nuevo."; });
   }
   function refreshPlayer(){
-    if(!SB_SECURE || !_CRED.t || !state || _betBusy || spinning) return;
-    var syncToken=_CRED.t, syncUser=currentUser;
+    if(!SB_SECURE || !_CRED.t || !state || _betBusy || spinning || _demoBusy) return;
+    var syncToken=_CRED.t, syncUser=currentUser, demoRevision=_demoRevision;
     sbRpc("app_state",{ p_token:syncToken }).then(function(r){
-      if(!r || r.ok!==true || !state || spinning || _betBusy || syncToken!==_CRED.t || syncUser!==currentUser) return;
+      if(!r || r.ok!==true || !state || spinning || _betBusy || _demoBusy || demoRevision!==_demoRevision || syncToken!==_CRED.t || syncUser!==currentUser) return;
       _playerStateReady=true;
       var prev=state.points, changed=false;
       if(typeof r.points==="number" && r.points!==state.points){ state.points=r.points; changed=true; }
@@ -1491,34 +1491,45 @@
   spinBtn.addEventListener("click", spin);
   document.getElementById("lever").addEventListener("click", spin);
 
-  document.getElementById("demoDay").addEventListener("click", function(){ state.dayOffset += 1; saveState(); render(true); });
-  document.getElementById("demoPts").addEventListener("click", function(){
+  var _demoBusy = false, _demoRevision = 0;
+  function demoAction(action) {
+    if (currentUser !== "demo" || !state || _demoBusy || spinning || _betBusy) return Promise.resolve(false);
+    _demoBusy = true; _demoRevision++;
+    var demoToken=_CRED.t;
+    document.querySelectorAll("#demoBar button").forEach(function(b){ b.disabled=true; });
     var prev=state.points;
-    var applyPts=function(np){ state.points=np; saveState(); renderCatalog(); countUp(balance, prev, state.points, 700); };
-    if(SB_SECURE && _CRED.u){
-      sbRpc("app_demo_credit",{ p_amount:20000 }).then(function(r){ applyPts((r && r.ok && typeof r.points==="number") ? r.points : (prev+20000)); }).catch(function(){ applyPts(prev+20000); });
-    } else { applyPts(prev+2000); }
-  });
-  document.getElementById("demoStreak").addEventListener("click", function(){ demoAddStreak(); });
-  document.getElementById("demoBox").addEventListener("click", function(){ if(currentUser!=="demo") return; state.pendingBox=true; saveState(); openBoxPicker(); });
-  document.getElementById("demoGolden").addEventListener("click", function(){ if(currentUser!=="demo") return; state.goldenRound=true; state.betSpins=(state.betSpins||0)+1; state.history.unshift({type:"bet",date:todayStr(),label:"⭐ Ronda dorada de prueba",delta:0}); saveState(); renderBet(); toast("Ronda Dorada activada · entra a la ruleta ⭐"); setGame("bet"); });
-  document.getElementById("demoRuleta").addEventListener("click", function(){ if(currentUser!=="demo") return; state.betSpins=(state.betSpins||0)+3; state.history.unshift({type:"bet",date:todayStr(),label:"🎡 +3 tiradas de ruleta de prueba",delta:0}); saveState(); renderBet(); toast("+3 tiradas añadidas"); setGame("bet"); });
-  function demoAddStreak(){
-    var prevStreak = state.streak || 0;
-    state.streak = (prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
-    var prev = state.points; var stepBonus = 0;
-    if (state.streak === 3 || state.streak === 6){ stepBonus = STREAK_STEP_BONUS; state.points += stepBonus; state.history.unshift({ type:"spin", date:todayStr(), label:"🔥 Bonus de racha (" + state.streak + " días seguidos)", delta:stepBonus }); }
-    var boxDay = (state.streak === 7);
-    if (boxDay){ state.pendingBox = true; }
-    saveState();
-    renderStreak(); renderMilestones(); renderOnboarding(); renderCatalog(); renderHistory(); try{ renderBet(); }catch(e){}
-    if (stepBonus){ countUp(balance, prev, state.points, 700); showPop("🔥", "+" + stepBonus + " pts", "¡Bonus de racha! " + state.streak + " días seguidos", "pop-30"); launchConfetti(120, PAL_RED); }
-    else if (boxDay){ openBoxPicker(); }
-    else { toast("Racha demo: día " + state.streak); }
+    var request;
+    if (SB_ON) {
+      request = !SB_SECURE || !_CRED.t ? Promise.reject(new Error("auth")) : sbRpc("app_demo_action", {p_token:_CRED.t,p_action:action});
+    } else {
+      if(action==="day") state.lastSpin=shiftStr(todayStr(),-1);
+      if(action==="points") state.points+=20000;
+      if(action==="streak") { state.streak=state.streak>=7?1:(state.streak||0)+1; state.lastSpin=todayStr(); if(state.streak===3||state.streak===6) state.points+=STREAK_STEP_BONUS; if(state.streak===7) state.pendingBox=true; }
+      if(action==="box") state.pendingBox=true;
+      if(action==="golden") { state.goldenRound=true; state.betSpins=(state.betSpins||0)+1; }
+      if(action==="roulette") state.betSpins=(state.betSpins||0)+3;
+      if(action==="reset") state=defaultState();
+      request=Promise.resolve({ok:true,state:state});
+    }
+    return request.then(function(r){
+      if(!r || !r.ok || !r.state) throw new Error((r&&r.error)||"server");
+      if(currentUser!=="demo" || !state || demoToken!==_CRED.t) return false;
+      state=Object.assign(action==="reset"?defaultState():state,r.state,{dayOffset:0});
+      _serverSpins=state.betSpins; _serverBets=state.bets||null; _playerStateReady=true;
+      saveState(); render(true);
+      if(state.points>prev) countUp(balance,prev,state.points,700);
+      if(action==="golden" || action==="roulette") setGame("bet");
+      if(action==="day" || action==="reset") setGame("slot");
+      toast(action==="day"?"Tirada de hoy disponible en demo":action==="reset"?"Progreso demo reiniciado":"Prueba demo aplicada");
+      return true;
+    }).catch(function(){ toast("No se pudo aplicar la prueba. Comprueba la conexión y la actualización del modo demo en Supabase."); return false;
+    }).finally(function(){ _demoBusy=false; document.querySelectorAll("#demoBar button").forEach(function(b){ b.disabled=false; }); });
   }
-  document.getElementById("demoReset").addEventListener("click", function(){ state = defaultState(); saveState(); render(true); });
-  document.getElementById("demoJackpot").addEventListener("click", function(){ previewSpin(50); });
-  document.getElementById("demoSpecial").addEventListener("click", function(){ previewSpin(30); });
+  [["demoDay","day"],["demoPts","points"],["demoStreak","streak"],["demoBox","box"],["demoGolden","golden"],["demoRuleta","roulette"],["demoReset","reset"]].forEach(function(pair){
+    document.getElementById(pair[0]).addEventListener("click",function(){ demoAction(pair[1]); });
+  });
+  document.getElementById("demoJackpot").addEventListener("click",function(){ if(currentUser==="demo" && !spinning && !_betBusy && !_demoBusy) previewSpin(50); });
+  document.getElementById("demoSpecial").addEventListener("click",function(){ if(currentUser==="demo" && !spinning && !_betBusy && !_demoBusy) previewSpin(30); });
 
   /* ===== FONDOS POR TEMPORADA ===== */
   var BG_THEMES = { "default": "./img/bg-default.png", "halloween": "./img/bg-halloween.png", "navidad": "./img/bg-navidad.png" };
