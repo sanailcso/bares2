@@ -18,8 +18,13 @@ jobs:
         with:
           node-version: '20'
       - name: Validar JavaScript
-        run: node --check assets/app.js
+        run: |
+          node --check assets/app.js
+          node --check assets/club.js
+          node --check assets/reward-images.js
       - name: Validar estructura y reglas críticas
         run: node tests/quality.mjs
       - name: Comprobar diferencias
         run: git diff --check
+      - name: Validar imágenes del catálogo y control desde el admin
+        run: node tests/reward-images.mjs
