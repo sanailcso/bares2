@@ -44,7 +44,7 @@ for each row execute function private.validate_app_config();
 -- The lock is per account, shared by every session and device.
 create or replace function private.app_spin(p_token uuid)
 returns jsonb language plpgsql security definer set search_path = ''
-as $
+as $$
 declare
   v_username text; v_player private.players%rowtype; v_today date:=private.today_madrid();
   v_tier int; v_bonus int:=0; v_award int; v_before bigint; v_after bigint; v_roll double precision;
@@ -76,7 +76,7 @@ begin
     v_tier+v_bonus,jsonb_build_object('game','rodillos','result',v_tier,'bonus',v_bonus,'before',v_before,'after',v_after,'symbols',v_symbols,'box',v_player.streak=7,'folio',v_folio));
   return jsonb_build_object('ok',true,'tier',v_tier,'symbols',v_symbols,'points',v_after,
     'lastSpin',v_today,'streak',v_player.streak,'pendingBox',v_player.streak=7,'betSpins',v_player.bet_spins,'betSpinsAward',v_award);
-end $;
+end $$;
 
 create or replace function private.app_bet(p_token uuid, p_stake bigint)
 returns jsonb language plpgsql security definer set search_path=''
