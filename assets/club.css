@@ -1,0 +1,232 @@
+/* Club diario. Scoped to the customer app; the existing backoffice keeps its own theme. */
+:root{--club-bg:#f6f4ee;--club-paper:#fff;--club-ink:#252328;--club-muted:#746f69;--club-line:#e5e1d9;--club-red:#d70c39;--club-soft:#eee8de;--club-green:#39745b}
+body.club-ui{display:block!important;margin:0!important;padding:0!important;background:var(--club-bg)!important;color:var(--club-ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100dvh}
+body.club-ui:before,body.club-ui #bgLayer{display:none!important}
+.club-ui [hidden]{display:none!important}
+.club-ui button,.club-ui input,.club-ui select{font:inherit}
+.club-ui button{touch-action:manipulation}
+.club-ui button:focus-visible,.club-ui a:focus-visible,.club-ui select:focus-visible,.club-ui input:focus-visible{outline:3px solid #d70c3955;outline-offset:4px}
+.club-ui .card:before,.club-ui .card:after{display:none!important}
+.club-ui .club-app{width:100%!important;max-width:560px!important;min-height:100dvh;margin:0 auto!important;padding:0 22px calc(112px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:var(--club-bg)!important;box-shadow:none!important;backdrop-filter:none!important;color:var(--club-ink)}
+.club-ui .app-head{position:relative!important;display:flex!important;align-items:center;gap:12px;margin:0!important;padding:20px 0!important;min-height:87px!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.club-ui .club-brand{display:flex!important;align-items:center;justify-content:center;width:66px!important;min-width:66px!important;height:47px!important;background:#242328!important;border-radius:12px;text-decoration:none;padding:6px!important;box-shadow:none!important;filter:none!important}
+.club-ui .club-brand:before{display:none!important}
+.club-ui .brand-logo{display:block!important;max-width:100%!important;width:auto!important;height:33px!important;object-fit:contain}
+.club-brand-copy{flex:1;min-width:0;font-size:12px;line-height:1.45}
+.club-brand-copy b{font-weight:650;display:block}
+.club-brand-copy span{display:block;font-size:11px;color:var(--club-muted);overflow-wrap:anywhere}
+.club-avatar{width:43px;height:43px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--club-line);background:var(--club-paper);color:var(--club-ink);font-size:12px!important;font-weight:700!important;cursor:pointer}
+.club-eyebrow{font-size:10px;font-weight:750;letter-spacing:1.4px;color:var(--club-muted);text-transform:uppercase;line-height:1.5}
+.club-intro{margin:10px 0 21px}
+.club-ui .club-intro h1,.club-ui .club-page-heading h1{margin:5px 0 0;font-size:clamp(27px,7.5vw,36px);font-weight:750;line-height:1.13;letter-spacing:-1.1px;color:var(--club-ink)!important;background:none!important;background-clip:border-box!important;-webkit-text-fill-color:var(--club-ink)!important;text-shadow:none!important}
+.club-page-heading{padding:12px 0 24px}
+.club-page-heading h1{font-size:31px;max-width:400px}
+.club-page-heading p{font-size:13px;line-height:1.6;color:var(--club-muted);margin:9px 0 0}
+.club-wallet{background:var(--club-paper);border:1px solid #efebe4;border-radius:20px;padding:17px 19px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+.club-wallet-number{display:flex;align-items:baseline;gap:7px;margin-top:3px}
+.club-wallet-number strong{font-size:35px;font-weight:750;letter-spacing:-1.5px;line-height:1.1;font-variant-numeric:tabular-nums}
+.club-wallet-number>span{font-size:12px;color:var(--club-muted)}
+.club-text-action{border:0;background:none;display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;min-height:44px;padding:0;font-size:12px!important;font-weight:700!important;color:var(--club-red);cursor:pointer;text-align:left}
+.club-text-action>span{font-size:21px;font-weight:400}
+.club-goal{position:relative;overflow:hidden;background:#eee7db;border-radius:22px;padding:20px 20px 10px;margin-bottom:18px;min-height:211px;isolation:isolate}
+.club-goal-content{position:relative;z-index:2;width:62%;max-width:270px;overflow-wrap:anywhere}
+.club-goal h2{font-size:25px;letter-spacing:-.8px;font-weight:730;line-height:1.1;color:#2e2721;margin:8px 0}
+.club-goal p{font-size:12px;line-height:1.5;color:#756754;margin:0}
+.club-goal .club-eyebrow{color:#80715c;font-size:9px}
+.club-goal-art{position:absolute;right:-27px;top:-10px;width:57%;height:192px;z-index:0;mask-image:linear-gradient(to right,transparent,#000 23%);mix-blend-mode:multiply;display:flex;align-items:center;justify-content:center}
+.club-goal-art img{width:100%;height:100%;object-fit:cover;display:block}
+.club-product-photo{display:block;width:100%!important;height:100%!important;max-width:none!important;flex:1;overflow:hidden;fill:none;stroke:none}
+.club-ui #catalog .r-emoji:has(.club-product-photo){background:#eee7dc}
+.club-ui #catalog .r-emoji .club-product-photo{transition:transform .35s ease}
+@media(hover:hover){.club-ui #catalog .reward:hover .club-product-photo{transform:scale(1.035)}}
+.club-goal-symbol{font-size:95px;color:#ba9872;line-height:1;opacity:.65}
+.club-goal-progress{position:relative;z-index:2;margin-top:24px}
+.club-track{height:5px;background:#d9cfbe;border-radius:9px;overflow:hidden}
+.club-track span{height:100%;background:var(--club-red);display:block;border-radius:inherit;transition:width .5s ease}
+.club-progress-labels{display:flex;justify-content:space-between;gap:10px;color:#766957;font-size:11px;margin-top:8px;font-variant-numeric:tabular-nums}
+.club-goal .club-text-action{position:relative;z-index:2;font-size:11px!important;margin-top:4px;color:#942d43}
+.club-goal.ready .club-track span{background:var(--club-green)}
+.club-game{background:#29272d;border:1px solid #333035;border-radius:22px;padding:18px 15px 14px;color:#fff;margin:0 0 18px;box-shadow:0 7px 18px #24212909;min-width:0}
+.club-game-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 1px 12px}
+.club-game-heading h2{font-size:18px;font-weight:700;letter-spacing:-.4px;margin:0;color:#fff}
+.club-game-heading>span{font-size:10px;color:#dbd3c7;text-align:right}
+.club-ui #clubGame>.balance-wrap{position:static!important;inset:auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:0 1px 10px!important;margin:0!important;background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important;min-height:0!important;width:100%!important;text-shadow:none!important;color:#e9e4db!important;filter:none!important}
+.club-ui #clubGame>.balance-wrap:before,.club-ui #clubGame>.balance-wrap:after{display:none!important}
+.club-ui #clubGame .balance-label{color:#c8c0b5!important;font-size:11px!important;text-shadow:none!important;margin:0!important;letter-spacing:0!important}
+.club-ui #clubGame .balance{font-size:19px!important;line-height:1!important;color:#fff!important;text-shadow:none!important;font-weight:750!important;margin:0!important;letter-spacing:-.5px!important;text-align:right!important}
+.club-ui #clubGame .balance-pts,.club-ui #clubGame #streak{display:none!important}
+.club-home #clubGame>.balance-wrap{display:none!important}
+.club-ui #appCard #clubGame .slot{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:10px!important;position:relative!important;min-height:0!important;height:auto!important;width:100%!important;max-width:none!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;background-image:none!important;overflow:visible!important}
+.club-ui #clubGame .slot:before,.club-ui #clubGame .slot:after,.club-ui #clubGame .marquee{display:none!important}
+.club-ui #clubGame .reels-wrap{position:relative!important;inset:auto!important;display:flex!important;flex-direction:column!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;order:1;--cellH:clamp(47px,14vw,65px)}
+.club-ui #clubGame .reels{position:relative!important;display:flex!important;flex:0 0 auto!important;gap:4px!important;padding:6px!important;width:100%!important;max-width:100%!important;margin:0!important;background:#171719!important;border:1px solid #635855!important;border-radius:13px!important;box-shadow:0 4px 12px #0002!important;overflow:hidden!important;min-height:0!important}
+.club-ui #clubGame .reels:before,.club-ui #clubGame .reels:after{display:none!important}
+.club-ui #clubGame .reel{position:relative!important;flex:1 1 0!important;width:auto!important;min-width:0!important;height:calc(var(--cellH)*3)!important;border-radius:7px!important;background:#f4eddc!important;border:0!important;overflow:hidden!important;margin:0!important;box-shadow:inset 0 5px 8px #33221220!important}
+.club-ui #clubGame .cell{height:var(--cellH)!important;min-height:var(--cellH)!important;padding:2px!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:clamp(26px,8vw,43px)!important}
+.club-ui #clubGame .symbol-img{width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain;transform:none!important;filter:drop-shadow(0 2px 2px #0002)!important}
+.club-ui #clubGame .symbol-emoji{transform:none!important;filter:none!important}
+.club-ui #clubGame .payline{left:5px!important;right:5px!important;border-color:#b28b5360!important;box-shadow:none!important}
+.club-ui #clubGame .spin-btn{position:static!important;inset:auto!important;transform:none!important;order:2;width:100%!important;min-height:53px!important;height:auto!important;margin:1px 0 0!important;padding:12px 14px!important;border:0!important;border-radius:13px!important;background:var(--club-red)!important;box-shadow:0 3px 0 #940b2b!important;color:#fff!important;text-shadow:none!important;font-size:16px!important;font-weight:800!important;letter-spacing:.04em!important;line-height:1.4!important}
+.club-ui #clubGame .spin-btn:before,.club-ui #clubGame .spin-btn:after{display:none!important}
+.club-ui #clubGame .spin-btn:active{transform:translateY(1px)!important}
+.club-ui #clubGame .spin-btn:disabled{background:#49434a!important;color:#e6dfdf!important;filter:none!important;box-shadow:none!important;opacity:.85!important}
+.club-ui #clubGame .lever{display:none!important}
+.club-ui #clubGame .spin-note{position:static!important;inset:auto!important;order:3;margin:0!important;min-height:0!important;padding:0!important;font-size:11px!important;line-height:1.5!important;text-align:center!important;color:#c5bdc8!important;text-shadow:none!important}
+.club-ui #clubGame .win-banner{position:static!important;inset:auto!important;order:4;display:none!important;min-height:0!important;padding:10px 12px!important;margin:0!important;border-radius:12px!important;background:#373b30!important;border:1px solid #5a6546!important;box-shadow:none!important;color:#fff!important}
+.club-ui #clubGame .win-banner.show{display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;min-height:0!important}
+.club-ui #clubGame .win-symbol{width:42px!important;height:42px!important;flex:0 0 42px!important}
+.club-ui #clubGame .win-copy{font-size:12px!important;color:#f7f0de!important}
+.club-ui #clubGame .win-copy b{font-size:11px!important;color:#d2e1a4!important;letter-spacing:.06em}
+.club-ui #clubGame .win-copy strong{font-size:14px!important;color:#fff!important}
+.club-ui #clubGame .streak-info{display:none!important}
+.club-ui #clubGame .cd-lock{border-radius:9px!important}
+.club-ui #clubGame .cd-lock-time{font-size:clamp(25px,8vw,36px)!important;color:#fff0c7!important;text-shadow:none!important}
+.club-ui #clubGame .cd-lock-lab{font-size:9px!important;color:#ece3d3!important}
+.club-ui #clubGame .cd-lock-sub{font-size:10px!important}
+/* Roulette uses its original wheel, labels, result, audio and event handlers. */
+.club-ui #clubGame .slot #ruletaCta{position:static!important;inset:auto!important;display:none!important;padding:0!important;border-radius:0!important;background:none!important;margin:10px 0 0!important}
+.club-ui #clubGame .slot.show-rc #ruletaCta{display:block!important}
+.club-ui #clubGame .rc-inner{display:flex!important;flex-wrap:wrap!important;gap:10px!important;align-items:center!important;padding:12px!important;background:#37333a!important;border:1px solid #5a505d!important;border-radius:13px!important;box-shadow:none!important}
+.club-ui #clubGame .rc-emoji{display:none!important}
+.club-ui #clubGame .rc-txt{flex:1!important;min-width:130px!important}
+.club-ui #clubGame .rc-title{font-size:12px!important;color:#fff!important;text-shadow:none!important}
+.club-ui #clubGame .rc-sub{font-size:10px!important;color:#d0c6d4!important}
+.club-ui #clubGame .rc-btn{width:auto!important;min-height:42px!important;padding:9px 12px!important;font-size:11px!important;border:0!important;border-radius:9px!important;background:#f0e7d5!important;color:#30262d!important;box-shadow:none!important;white-space:normal!important}
+.club-ui #clubGame .slot.game-bet .reels-wrap,.club-ui #clubGame .slot.game-bet .spin-btn,.club-ui #clubGame .slot.game-bet .spin-note,.club-ui #clubGame .slot.game-bet .win-banner{display:none!important}
+.club-ui #clubGame .bet-panel{width:100%!important;order:1;margin:0!important}
+.club-ui #clubGame .bet-card.game-cabinet{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;overflow:hidden!important}
+.club-ui #clubGame .bet-marquee{font-family:inherit!important;font-size:22px!important;letter-spacing:-.6px!important;font-weight:750!important;text-shadow:none!important;transform:none!important;color:#fff!important;margin:4px 0 15px!important}
+.club-ui #clubGame .bet-sub{font-size:12px!important;line-height:1.6!important;color:#d1c8d4!important}
+.club-ui #clubGame .game-switch-btn{font-size:11px!important;min-height:44px!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0 auto 15px!important;border-radius:11px!important;background:#f0e7d5!important;color:#332730!important;box-shadow:none!important}
+.club-ui #clubGame .bet-wheel-wrap{width:218px!important;height:218px!important;margin:10px auto!important}
+.club-ui #clubGame .bet-wheel{border:5px solid #ebdcb9!important;box-shadow:0 0 0 3px #665545,inset 0 0 20px #0003!important}
+.club-ui #clubGame .bet-hub{box-shadow:0 0 0 3px #665545!important;background:#f3dfac!important}
+.club-ui #clubGame .bet-result{font-size:13px!important;min-height:26px!important}
+.club-ui #clubGame .bet-stake{background:#38323b!important;border:1px solid #756678!important;border-radius:11px!important;font-size:18px!important;color:#fff!important;height:44px!important}
+.club-ui #clubGame .bet-step{width:44px!important;height:44px!important;background:#38323b!important;border:1px solid #756678!important;border-radius:11px!important;font-size:20px!important;color:#fff!important}
+.club-ui #clubGame .bet-go{width:100%!important;max-width:none!important;min-height:51px!important;height:auto!important;margin:10px 0 0!important;background:var(--club-red)!important;color:#fff!important;border-radius:13px!important;box-shadow:0 3px 0 #940b2b!important;font-size:16px!important;letter-spacing:.04em!important;line-height:1.4!important;padding:12px!important}
+.club-ui #clubGame .bet-foot{font-size:11px!important;color:#c7becb!important;line-height:1.6!important}
+.club-ui #clubGame .bet-foot b{color:#f3e5bf!important}
+.club-ui #clubGame .golden-cabinet{background:linear-gradient(140deg,#3a2a0c,#181208)!important;padding:16px!important;border-radius:16px!important;box-shadow:inset 0 0 0 1px #ab8742!important}
+.club-ui #clubGame .golden-cabinet .bet-wheel-wrap{padding:0!important}
+.club-ui #clubGame .golden-cabinet .bet-go{background:linear-gradient(#f6e4a8,#d8b15b)!important;color:#37230c!important;box-shadow:0 3px 0 #8e6931!important}
+.club-week{background:var(--club-paper);padding:18px 17px;border:1px solid #eeeae2;border-radius:19px;margin-bottom:16px}
+.club-week-heading{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.club-week h2{font-size:14px;font-weight:700;letter-spacing:-.2px;margin:0;color:var(--club-ink)}
+.club-week p{font-size:11px;color:var(--club-muted);line-height:1.5;margin:5px 0 0}
+.club-small-action{border:0;background:#f5f0e8;color:#675448;width:44px;height:44px;flex-shrink:0;border-radius:50%;font-size:20px!important;cursor:pointer}
+.club-week-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:17px}
+.club-day{display:flex;flex-direction:column;align-items:center;gap:6px;color:#9b9285}
+.club-day>span{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#f1ede6;font-size:11px;font-weight:600}
+.club-day small{font-size:9px}
+.club-day.done>span{background:var(--club-red);color:white}
+.club-day.next>span{box-shadow:0 0 0 2px #ead0d5}
+.club-ui .club-nav{position:fixed!important;bottom:0!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:min(100%,560px)!important;z-index:60!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;padding:9px 15px calc(10px + env(safe-area-inset-bottom))!important;min-height:78px!important;background:#fffaf5f5!important;border-top:1px solid #e7e0d5!important;box-shadow:0 -4px 18px #3c281007!important;backdrop-filter:blur(12px)!important}
+.club-ui .club-nav .unav-i{display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:5px!important;font-size:10px!important;font-weight:600!important;color:#8d8378!important;padding:7px 4px!important;min-height:53px!important;background:none!important;border:0!important;border-radius:13px!important;box-shadow:none!important}
+.club-ui .club-nav .unav-i.active{background:#f7e9e9!important;color:var(--club-red)!important}
+.club-nav-icon{position:relative;display:block;width:20px;height:19px;background:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:contain}
+.club-icon-home{mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m3 10 9-7 9 7v10H3zM9 20v-7h6v7' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.club-icon-play{mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='none' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='8' cy='8' r='1.5'/%3E%3Ccircle cx='16' cy='8' r='1.5'/%3E%3Ccircle cx='12' cy='12' r='1.5'/%3E%3Ccircle cx='8' cy='16' r='1.5'/%3E%3Ccircle cx='16' cy='16' r='1.5'/%3E%3C/svg%3E")}
+.club-icon-gift{mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 10h16v11H4zM3 6h18v4H3zM12 6v15M12 6C4 8 4 0 8 2c2 0 4 4 4 4s2-4 4-4c4-2 4 6-4 4' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.club-icon-store{mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 10v11h16V10M3 10l2-7h14l2 7M3 10q2 4 4 0 2 4 5 0 3 4 5 0 2 4 4 0M9 21v-7h6v7' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.club-segments,.club-account-tabs{display:flex;gap:5px;border-radius:13px;padding:4px;background:#eae6dd;margin-bottom:21px}
+.club-segments button,.club-account-tabs button{flex:1;min-height:43px;border:0;border-radius:10px;background:none;color:#82796d;font-size:12px;font-weight:600;cursor:pointer;padding:9px}
+.club-segments button.selected,.club-account-tabs button.selected{background:#fff;color:var(--club-ink);box-shadow:0 2px 6px #39241608}
+.club-goal-picker{font-size:12px;color:var(--club-muted);display:grid;gap:8px;margin-bottom:22px}
+.club-catalog-note{font-size:11px;line-height:1.6;color:var(--club-muted);margin:8px 0 20px}
+.club-goal-picker select{border:1px solid var(--club-line);background:white;border-radius:12px;padding:12px;color:var(--club-ink);font-size:14px;min-height:47px;width:100%;max-width:100%}
+.club-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.club-ui #catalog .next-prize{display:none}
+.club-ui .section-title,.club-ui .tier-name{color:var(--club-ink)!important;font-size:15px!important;text-shadow:none!important;letter-spacing:0!important}
+.club-ui .tier{margin-bottom:26px}
+.club-ui .tier-name{display:flex;align-items:center;justify-content:space-between;margin:0 0 13px!important;font-weight:700!important}
+.club-ui .tier-badge{background:#ece7de!important;border:0!important;color:#8a7d6a!important;box-shadow:none!important;font-size:9px!important;padding:5px 8px!important}
+.club-ui .rewards{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+.club-ui #catalog .reward{border:1px solid #e9e4db!important;background:white!important;box-shadow:none!important;border-radius:17px!important;padding:0 12px 14px!important;overflow:hidden!important;transform:none!important;color:var(--club-ink)!important;opacity:1!important;min-width:0}
+.club-ui #catalog .r-shine{display:none}
+.club-ui #catalog .r-emoji{display:flex;align-items:center;justify-content:center;background:#f1ece2;font-size:47px!important;height:132px!important;margin:0 -12px 14px!important;overflow:hidden;color:#ac9070!important}
+.club-ui #catalog .r-emoji .r-img{width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;border-radius:0!important;filter:none!important;mix-blend-mode:multiply}
+.club-ui #catalog .r-name{font-size:13px!important;line-height:1.4!important;min-height:37px;color:var(--club-ink)!important;font-weight:650!important;overflow-wrap:anywhere}
+.club-ui #catalog .r-cost{font-size:13px!important;color:var(--club-ink)!important;letter-spacing:-.2px!important;margin:6px 0 10px!important}
+.club-ui #catalog .r-btn{min-height:43px!important;width:100%!important;border:0!important;border-radius:10px!important;background:var(--club-red)!important;color:#fff!important;font-size:12px!important;padding:10px!important;box-shadow:none!important}
+.club-ui #catalog .r-prog{background:#ede6da!important;border-radius:7px!important;height:4px!important;margin:12px 0 8px!important;border:0!important}
+.club-ui #catalog .r-prog-fill{background:var(--club-red)!important}
+.club-ui #catalog .r-need{font-size:10px!important;color:#817366!important;line-height:1.5!important;min-height:30px}
+.club-section-heading{font-size:17px;margin:0 0 15px;font-weight:700;letter-spacing:-.4px}
+.club-ui #history{background:white!important;border:1px solid var(--club-line)!important;border-radius:17px!important;padding:5px 15px!important;box-shadow:none!important}
+.club-ui .h-item{border-bottom:1px solid #eee9e1!important;padding:14px 0!important;gap:10px!important}
+.club-ui .h-item:last-child{border:0!important}
+.club-ui .h-label{font-size:12px!important;color:var(--club-ink)!important;line-height:1.5!important}
+.club-ui .h-date{font-size:10px!important;color:#8f8579!important}
+.club-ui .h-ic{background:#f5ecdf!important;border:0!important;color:#9a7754!important;min-width:29px!important;width:29px!important;height:32px!important;font-size:12px!important}
+.club-ui .h-delta{font-size:12px!important;font-weight:700!important;color:var(--club-green)!important}
+.club-ui .h-delta.neg{color:#9c4e55!important}
+.club-ui .h-empty,.club-ui .rk-empty{font-size:12px!important;color:var(--club-muted)!important;padding:24px 10px!important;line-height:1.7!important}
+.club-account{background:white;border:1px solid var(--club-line);border-radius:18px;padding:19px}
+.club-account-profile{display:flex;align-items:center;gap:13px;margin-bottom:17px}
+.club-account-profile h2{font-size:17px;margin:0 0 3px;font-weight:700}
+.club-account-profile p{font-size:12px;color:var(--club-muted);margin:0}
+.club-ui .club-account-row{position:static!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;min-height:55px!important;width:100%!important;border:0!important;border-top:1px solid #eee7de!important;background:none!important;padding:13px 0!important;margin:0!important;color:var(--club-ink)!important;box-shadow:none!important;border-radius:0!important;font-size:13px!important;font-weight:500!important;text-shadow:none!important;cursor:pointer}
+.club-ui #logoutBtn{color:var(--club-red)!important}
+.club-empty{background:white;border:1px solid var(--club-line);padding:35px 22px;text-align:center;border-radius:18px}
+.club-empty>span{font-size:30px;color:#c4a576;display:block;margin-bottom:14px}
+.club-empty h2{font-size:20px;line-height:1.2;margin:0;letter-spacing:-.5px}
+.club-empty p{font-size:12px;color:var(--club-muted);line-height:1.7;margin:12px 0 20px}
+.club-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:11px 16px;border:0;border-radius:11px;color:white;background:var(--club-red);font-size:12px!important;font-weight:650!important;cursor:pointer}
+.club-ui #myCanjes>div{background:white!important;color:var(--club-ink)!important;border-color:var(--club-line)!important;flex-wrap:wrap}
+.club-ui #myCanjes .mycanje-cancel{color:#a7394d!important;border-color:#d6acb4!important;background:#fff6f7!important}
+.club-ui .rk-pills{gap:6px!important}
+.club-ui .rk-pill{min-height:42px!important;background:#eae4da!important;color:#786c5d!important;border:0!important;font-size:11px!important;box-shadow:none!important}
+.club-ui .rk-pill.on{background:#d70c39!important;color:white!important}
+.club-ui .rk-hero{background:#eee6d8!important;border-color:#ded3c0!important;color:#3f3528!important}
+.club-ui .rk-hero-lab,.club-ui .rk-hero-rank,.club-ui .rk-hero-of,.club-ui .rk-hero-gap{color:#514432!important}
+.club-ui .rk-row{background:white!important;border-color:var(--club-line)!important;color:var(--club-ink)!important}
+.club-ui .rk-row.me{background:#fbefef!important;border-color:#ebc9ce!important}
+.club-ui .rk-name,.club-ui .rk-pos,.club-ui .rk-pts{color:var(--club-ink)!important}
+.club-ui .rk-foot{color:#8a7e70!important;font-size:11px!important;line-height:1.6!important}
+.club-ui #streakHero{background:white!important;border:1px solid var(--club-line)!important;border-radius:19px!important;box-shadow:none!important;padding:20px!important;color:var(--club-ink)!important}
+.club-ui .sh-headline{color:var(--club-ink)!important;text-shadow:none!important;font-size:17px!important}
+.club-ui .sh-sub,.club-ui .sh-sub b{color:var(--club-muted)!important;font-size:12px!important}
+.club-ui #onboarding>div{background:#f0ede4!important;color:var(--club-ink)!important;border-color:#ddd4c5!important;font-size:12px!important;box-shadow:none!important}
+.club-ui .demo-bar{background:#fff8e9!important;border:1px dashed #dbbf7d!important;color:#7e6230!important;box-shadow:none!important;border-radius:16px!important;margin-top:24px!important;padding:15px!important}
+.club-ui .demo-title{color:#7e6230!important;font-size:12px!important}
+.club-ui .demo-btn{background:white!important;border:1px solid #e4cf9e!important;color:#7b5f28!important;font-size:11px!important;min-height:43px!important;border-radius:9px!important;box-shadow:none!important;white-space:normal}
+.club-ui .login-card{display:block;max-width:390px!important;width:calc(100% - 36px)!important;position:relative;margin:clamp(28px,8vh,90px) auto!important;padding:26px!important;background:white!important;border:1px solid var(--club-line)!important;border-radius:25px!important;box-shadow:0 16px 50px #4a39200b!important;backdrop-filter:none!important;color:var(--club-ink)!important}
+.club-ui.login-mode{display:block!important;padding:1px 0 30px!important;background:var(--club-bg)!important}
+.club-login-brand{display:inline-flex;align-items:center;justify-content:center;width:84px;height:59px;background:#242328;border-radius:13px;padding:8px 11px;margin-bottom:26px}
+.club-ui .login-card .brand-img{width:100%!important;height:100%!important;object-fit:contain!important;margin:0!important;filter:none!important}
+.club-ui .login-card h1{font-size:29px;line-height:1.12;letter-spacing:-1px;margin:8px 0 12px;font-weight:750;color:var(--club-ink)!important;background:none!important;-webkit-text-fill-color:var(--club-ink)!important;text-shadow:none!important}
+.club-ui .login-card h1 span{color:var(--club-red);-webkit-text-fill-color:var(--club-red)}
+.club-ui .login-card .subtitle{font-size:12px!important;text-align:left!important;line-height:1.6!important;color:var(--club-muted)!important;margin:0 0 25px!important}
+.club-ui .login-card .field{margin-bottom:17px!important}
+.club-ui .login-card .field label{font-size:11px!important;color:#6c645a!important;font-weight:650!important;margin-bottom:7px!important;letter-spacing:0!important;text-transform:none!important}
+.club-ui .login-card .field input{min-height:49px!important;padding:12px 14px!important;border:1px solid #e1dbd1!important;background:#faf8f4!important;color:var(--club-ink)!important;border-radius:12px!important;font-size:16px!important;box-shadow:none!important}
+.club-ui .login-card .field input::placeholder{color:#a49b8e!important;font-size:13px}
+.club-ui .login-card .primary-btn{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:51px!important;background:var(--club-red)!important;border:0!important;border-radius:12px!important;padding:13px 17px!important;font-size:14px!important;color:white!important;font-weight:700!important;letter-spacing:0!important;box-shadow:0 4px 10px #d70c3915!important}
+.club-ui .login-card .primary-btn:after{display:none!important}
+.club-ui .login-msg{font-size:12px!important;color:#8f6c42!important;line-height:1.5!important;min-height:16px!important;margin-top:13px!important}
+.club-ui .login-msg.err{color:#b82743!important}
+.club-login-foot{margin-top:9px;color:#a49989;font-size:10px;text-align:center}
+.club-ui .prize-modal{background:#27201d80!important;backdrop-filter:blur(4px)}
+.club-ui .pm-card{background:#fffaf2!important;border:1px solid #e9dfcd!important;box-shadow:0 20px 70px #241c1833!important;border-radius:24px!important;color:var(--club-ink)!important;padding:26px!important;width:calc(100% - 32px)!important;max-width:400px!important}
+.club-ui .pm-name,.club-ui .pm-cost{color:var(--club-ink)!important;text-shadow:none!important}
+.club-ui .pm-desc,.club-ui .pm-need{color:var(--club-muted)!important}
+.club-ui .pm-badge{background:#eee5d5!important;color:#877051!important;border:0!important}
+.club-ui .pm-btn.ok{background:var(--club-red)!important;box-shadow:none!important;color:white!important;border-radius:12px!important;min-height:48px}
+.club-ui .pm-btn.no{background:#eee8df!important;color:#8b8073!important;border:0!important;border-radius:12px!important}
+.club-ui .pm-x{background:#eee5d8!important;color:#776852!important}
+.club-ui .pm-icon{background:#f1e9dc!important;border-radius:18px!important;overflow:hidden!important}
+.club-ui .pm-icon img{width:100%!important;height:100%!important;object-fit:cover!important;mix-blend-mode:multiply}
+.club-ui .pm-icon .club-product-photo{min-height:170px}
+.club-ui #notifPrompt{background:#27201d80!important;backdrop-filter:blur(4px)}
+.club-ui #notifPrompt .np-card{background:#fffaf2!important;border:1px solid #e9dfcd!important;box-shadow:0 20px 70px #241c1833!important;color:var(--club-ink)!important;border-radius:23px!important;padding:24px!important;font-size:13px!important;line-height:1.6!important}
+.club-ui #notifPrompt .np-card b{font-size:16px!important;line-height:1.3!important;letter-spacing:-.4px}
+.club-ui #notifAllow{background:var(--club-red)!important;color:#fff!important;border-radius:11px!important;min-height:48px!important;font-size:13px!important}
+.club-ui #notifLater{color:var(--club-muted)!important;font-size:12px!important}
+.club-ui .adm-toast{background:#29242a!important;color:#fff!important;border:1px solid #665b63!important;border-radius:12px!important;max-width:calc(100% - 32px)!important;bottom:calc(95px + env(safe-area-inset-bottom))!important;font-size:12px!important}
+.club-ui #pwaInstallBtn{bottom:calc(94px + env(safe-area-inset-bottom))!important;font-size:12px!important;background:#2c272b!important;border-color:#66585d!important}
+/* Keep backoffice typography and colors independent of the light customer shell. */
+.club-ui .admin-screen{color:#f4f4f6}
+@media(min-width:700px){.club-ui .club-app{margin:20px auto!important;min-height:calc(100dvh - 40px);border:1px solid #e6dfd4!important;border-radius:27px!important;padding-left:27px!important;padding-right:27px!important;box-shadow:0 16px 60px #34281508!important}.club-ui .club-nav{bottom:0!important;border-radius:20px 20px 0 0!important}.club-ui #clubGame .reels-wrap{--cellH:65px}}
+@media(max-width:360px){.club-ui .club-app{padding-left:15px!important;padding-right:15px!important}.club-ui .app-head{gap:9px}.club-brand-copy{font-size:11px}.club-brand-copy span{font-size:10px}.club-intro h1{font-size:29px}.club-wallet{padding:16px}.club-wallet-number strong{font-size:30px}.club-goal{padding:18px 17px 8px}.club-goal h2{font-size:23px}.club-goal-content{width:62%}.club-goal-art{right:-28px;width:60%}.club-game{padding:16px 11px 12px}.club-game-heading h2{font-size:16px}.club-game-heading>span{font-size:9px}.club-ui #clubGame .reels-wrap{--cellH:45px}.club-week{padding:16px 13px}.club-day>span{width:27px;height:27px}.club-week-days{gap:4px}.club-ui #catalog .r-emoji{height:108px!important}.club-ui #catalog .r-name{font-size:12px!important}.club-ui .rewards{gap:9px!important}.club-ui #clubGame .bet-wheel-wrap{width:210px!important;height:210px!important}.club-ui .login-card{padding:23px!important}}
+@media(prefers-reduced-motion:reduce){.club-track span{transition:none}}
