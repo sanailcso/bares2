@@ -32,6 +32,8 @@ jobs:
         run: node tests/game-sync.mjs
       - name: Validar lista de clientes del admin
         run: node tests/admin-users.mjs
+      - name: Validar controles demo
+        run: node tests/demo-controls.mjs
 
   database-checks:
     runs-on: ubuntu-latest
@@ -64,3 +66,5 @@ jobs:
         run: node tests/multidevice.mjs
       - name: Probar desactivación de clientes sin pérdida de historial
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/admin_users.sql
+      - name: Probar controles demo y aislamiento de clientes
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/demo_controls.sql

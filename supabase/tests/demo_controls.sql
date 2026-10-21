@@ -1,0 +1,38 @@
+begin;
+do $$
+declare t uuid; other_token uuid; r jsonb; i int;
+begin
+  insert into private.sessions(username) values('demo') returning token into t;
+  insert into private.app_users(username,pass_hash,nombre,bar) values('demo_guard_fixture','fixture','Fixture','Fixture');
+  insert into private.players(username,points) values('demo_guard_fixture',123);
+  insert into private.sessions(username) values('demo_guard_fixture') returning token into other_token;
+  if public.app_demo_action(extensions.gen_random_uuid(),'reset')->>'error'<>'auth' then raise exception 'Invalid token accepted'; end if;
+  if public.app_demo_action(other_token,'reset')->>'error'<>'demo_only' then raise exception 'Customer can use demo tools'; end if;
+  if public.app_demo_action(t,'unknown')->>'error'<>'action' then raise exception 'Unknown action accepted'; end if;
+  r:=public.app_demo_action(t,'reset');
+  if (r#>>'{state,points}')::bigint<>0 then raise exception 'Reset failed'; end if;
+  r:=public.app_demo_action(t,'points');
+  if (r#>>'{state,points}')::bigint<>20000 then raise exception 'Credit failed'; end if;
+  for i in 1..7 loop r:=public.app_demo_action(t,'streak'); end loop;
+  if (r#>>'{state,streak}')::int<>7 or not (r#>>'{state,pendingBox}')::boolean or (r#>>'{state,points}')::bigint<>20070 then raise exception 'Streak or bonuses failed'; end if;
+  r:=public.app_demo_action(t,'golden');
+  if not (r#>>'{state,goldenRound}')::boolean then raise exception 'Golden round failed'; end if;
+  r:=public.app_demo_action(t,'roulette');
+  if (r#>>'{state,betSpins}')::int<>4 then raise exception 'Roulette credits failed'; end if;
+  r:=public.app_demo_action(t,'day');
+  if (r#>>'{state,lastSpin}')::date<>private.today_madrid()-1 then raise exception 'Day reset failed'; end if;
+  r:=public.app_spin(t);
+  if not (r->>'ok')::boolean then raise exception 'Reset did not unlock spin'; end if;
+  if public.app_spin(t)->>'error'<>'already' then raise exception 'Demo spins need explicit reset'; end if;
+  update private.app_config set data=jsonb_set(data,'{bet,perDay}','1'::jsonb) where singleton;
+  for i in 1..3 loop
+    r:=public.app_bet(t,100);
+    if not (r->>'ok')::boolean then raise exception 'Demo quota blocks testing: %',r; end if;
+  end loop;
+  r:=public.app_demo_action(t,'box');
+  if not (r#>>'{state,pendingBox}')::boolean then raise exception 'Box failed'; end if;
+  if not exists(select 1 from private.players where username='demo_guard_fixture' and points=123) then raise exception 'Customer state changed'; end if;
+  if not has_function_privilege('anon','public.app_demo_action(uuid,text)','EXECUTE') then raise exception 'Browser cannot use demo RPC'; end if;
+  if has_function_privilege('authenticated','public.app_demo_action(uuid,text)','EXECUTE') then raise exception 'Unexpected grant'; end if;
+end $$;
+rollback;
