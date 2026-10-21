@@ -8,3 +8,4 @@ create schema extensions;
 \ir ../migrations/20260903150000_harden_rpc_surface.sql
 \ir ../migrations/20260903152000_validate_game_config.sql
 \ir ../migrations/20261021090000_daily_spin_and_roulette_config.sql
+\ir ../migrations/20261021110000_deactivate_clients_safely.sql

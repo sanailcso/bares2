@@ -1622,19 +1622,13 @@
     fetch(SB_URL+"/rest/v1/rpc/app_admin_users",{ method:"POST", headers:sbHeaders(), body:JSON.stringify({ p_pin:_admPin }) })
       .then(function(r){ return r.ok?r.json():null; })
       .then(function(list){
-        if(!(list && list.forEach)){ loadAdminPoints(); return; }
-        DRAFT.users=DRAFT.users||[];
-        var have={}; DRAFT.users.forEach(function(x){ have[String(x.u).toLowerCase().trim()]=x; });
-        var bk={}; try{ Object.keys(BUILTIN_USERS).forEach(function(k){ bk[String(k).toLowerCase()]=1; }); }catch(e){}
-        var changed=false;
-        list.forEach(function(su){
-          var un=String(su.username||"").toLowerCase().trim();
-          if(!un || bk[un] || su.is_builtin) return;
-          if(have[un]) return;
-          DRAFT.users.push({ u:un, pass:"", nombre:su.nombre||un, bar:su.bar||su.nombre||un, _srv:true });
-          changed=true;
-        });
-        if(changed){ renderAdmin(); } else { loadAdminPoints(); }
+        if(!Array.isArray(list)){ loadAdminPoints(); return; }
+        if(!DRAFT) return;
+        var previous=JSON.stringify(DRAFT.users||[]), builtins=Object.keys(BUILTIN_USERS);
+        DRAFT.users=list.filter(function(user){return user && user.active!==false && builtins.indexOf(String(user.username||'').toLowerCase().trim())<0;}).map(function(user){var name=String(user.username).toLowerCase().trim();return {u:name,nombre:user.nombre||name,bar:user.bar||user.nombre||name,_srv:true};});
+        try{ localStorage.setItem('tikitaka_admin_cfg',JSON.stringify(configWithoutSecrets(DRAFT))); }catch(e){}
+        applyCfgUsers(DRAFT);
+        if(previous!==JSON.stringify(DRAFT.users)){ renderAdmin(); } else { loadAdminPoints(); }
       }).catch(function(){ try{ loadAdminPoints(); }catch(e){} });
   }
 
@@ -2129,7 +2123,7 @@
     each(".adm-upwd", function(b){ b.onclick=function(){ openAdminPwdModal2(b.getAttribute("data-u")); }; });
     each(".adm-uedit", function(b){ b.onclick=function(){ openAdminEditModal(b.getAttribute("data-u")); }; });
     try{ loadAdminUsers(); }catch(e){}
-    each(".adm-udel", function(b){ b.onclick=function(){ collect(); var u=b.getAttribute("data-u"); if(!confirm("¿Eliminar al cliente \""+u+"\"? Sus recaudaciones registradas seguirán apareciendo pero ese usuario ya no podrá iniciar sesión.")) return; var uname=String(u).toLowerCase().trim(); function _delLocal(){ DRAFT.users=(DRAFT.users||[]).filter(function(x){ return x.u!==u; }); saveDraft(); applyCfgUsers(DRAFT); renderAdmin(); } if(SB_ON && _admPin){ b.disabled=true; var _ot=b.textContent; b.textContent="Eliminando\u2026"; sbRpc("app_admin_delete_user",{ p_pin:_admPin, p_username:uname }).then(function(res){ if(res && res.ok){ _delLocal(); toast("Cliente eliminado del servidor: "+u); } else { b.disabled=false; b.textContent=_ot; var er=(res&&res.error)||""; toast(er==="builtin"?"No se puede eliminar un usuario integrado (demo).":(er==="pin"?"PIN de administrador no v\u00e1lido.":"No se pudo eliminar en el servidor.")); } }).catch(function(){ b.disabled=false; b.textContent=_ot; toast("No se pudo eliminar: ejecuta app_delete_user.sql en Supabase y vuelve a intentarlo."); }); } else { _delLocal(); toast("Cliente eliminado: "+u); } }; });
+    each(".adm-udel", function(b){ b.onclick=function(){ collect(); var u=b.getAttribute("data-u"); if(!confirm("¿Eliminar al cliente \""+u+"\"? Sus recaudaciones registradas seguirán apareciendo pero ese usuario ya no podrá iniciar sesión.")) return; var uname=String(u).toLowerCase().trim(); function _delLocal(){ DRAFT.users=(DRAFT.users||[]).filter(function(x){ return x.u!==u; }); saveDraft(); applyCfgUsers(DRAFT); renderAdmin(); } if(SB_ON && _admPin){ b.disabled=true; var _ot=b.textContent; b.textContent="Eliminando\u2026"; sbRpc("app_admin_delete_user",{ p_pin:_admPin, p_username:uname }).then(function(res){ if(res && (res.ok || res.error==='nouser')){ _delLocal(); toast("Cliente eliminado del servidor: "+u); } else { b.disabled=false; b.textContent=_ot; var er=(res&&res.error)||""; toast(er==="builtin"?"No se puede eliminar un usuario integrado (demo).":(er==="pin"?"PIN de administrador no v\u00e1lido.":"No se pudo eliminar en el servidor.")); } }).catch(function(){ b.disabled=false; b.textContent=_ot; toast("No se pudo desactivar el cliente. Revisa la conexión y vuelve a intentarlo."); }); } else { _delLocal(); toast("Cliente eliminado: "+u); } }; });
     each(".adm-crdel:not(.adm-udel):not(.adm-upwd):not(.adm-uedit)", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); b.disabled=true; sbRpc("app_admin_delete_revenue",{p_pin:_admPin,p_id:id}).then(function(res){ if(!(res&&res.ok)) throw new Error((res&&res.error)||"claimed"); DRAFT.credits=(DRAFT.credits||[]).filter(function(c){ return c.id!==id; }); saveDraft(); renderAdmin(); toast("Recaudación eliminada"); }).catch(function(){ b.disabled=false; toast("No se puede eliminar: puede que el cliente ya haya recibido esos puntos."); }); }; });
     each(".adm-rw-add",function(b){ b.onclick=function(){ collect(); DRAFT.rewards.push({name:"Nuevo premio",emoji:"🎁",cost:1000,tier:"Regalos"}); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Nuevo premio añadido"); }; });
     each(".adm-rw-del",function(b){ b.onclick=function(){ collect(); DRAFT.rewards.splice(+b.getAttribute("data-i"),1); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Premio eliminado"); }; });
