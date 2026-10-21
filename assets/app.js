@@ -114,6 +114,7 @@
   /* [SEGURIDAD] Acceso REST directo eliminado: todo pasa por RPC con RLS estricto. */
   /* ===== Seguridad en servidor (RPC) con modo compatibilidad ===== */
   var SB_SECURE = false;      // true si las funciones RPC de Supabase existen
+  var _playerStateReady = false;
   var _admPin = null;         // PIN validado durante la sesion admin
   var _serverSpin = null;     // resultado autoritativo de la tirada
   var _CRED = { u:null, t:null }; // sesion: usuario + token (solo en memoria)
@@ -121,7 +122,7 @@
   function sbRpc(fn, args){
     if(!SB_ON) return Promise.reject(new Error("nosb"));
     return fetch(SB_URL+"/rest/v1/rpc/"+fn, { method:"POST", headers:sbHeaders(), body:JSON.stringify(args||{}) })
-      .then(function(r){ if(!r.ok) throw new Error("rpc "+r.status); return r.json(); });
+      .then(function(r){ return r.json().then(function(data){ if(!r.ok) throw new Error((data&&data.message)||"rpc "+r.status); return data; }); });
   }
   function secureAuthLogin(u,p){
     return sbRpc("app_login",{ p_username:u, p_password:p }).then(function(res){
@@ -130,7 +131,7 @@
     });
   }
   function secureSpin(){
-    if(currentUser==="demo") return Promise.resolve(null); /* demo: tirada local */
+    if(!SB_ON && currentUser==="demo") return Promise.resolve(null); /* Solo la vista previa sin servidor usa resultados locales. */
     if(!SB_SECURE || !_CRED.t) return Promise.resolve({ ok:false, error:"offline" });
     return sbRpc("app_spin",{ p_token:_CRED.t }).then(function(res){ return res; }).catch(function(){ return { ok:false, error:"offline" }; });
   }
@@ -265,8 +266,37 @@
   function startCanjePoll(){ stopCanjePoll(); _canjePoll=setInterval(function(){ var scr=document.getElementById("adminScreen"); if(scr && !scr.hidden){ loadCanjes(true); } else { stopCanjePoll(); } }, 40000); }
   function stopCanjePoll(){ if(_canjePoll){ clearInterval(_canjePoll); _canjePoll=null; } }
 
+  function betConfigError(bet){
+    if(!bet || !Array.isArray(bet.segments) || bet.segments.length<2 || bet.segments.length>20) return "Configura entre 2 y 20 casillas de ruleta.";
+    var total=0;
+    for(var i=0;i<bet.segments.length;i++){
+      var s=bet.segments[i], m=Number(s.mult), w=Number(s.w);
+      if(s.mult==null || !Number.isFinite(m) || m<1 || m>20) return "Los multiplicadores deben estar entre x1 y x20.";
+      if(s.w==null || !Number.isFinite(w) || w<0 || w>1000000) return "Los pesos deben estar entre 0 y 1000000.";
+      total+=w;
+    }
+    return total>0 ? "" : "Al menos una casilla debe tener un peso mayor que cero.";
+  }
+  function configSaveError(error){
+    var message=String(error && error.message || "");
+    if(message.indexOf("roulette_return_above_one")>=0) return "No se ha publicado: falta aplicar la actualización de ruleta en Supabase.";
+    return "No se ha publicado. "+(message.indexOf("casilla")>=0 || message.indexOf("multiplicador")>=0 || message.indexOf("peso")>=0 ? message : "Revisa la conexión y vuelve a guardar.");
+  }
+  function refreshPublicConfig(initial){
+    var admin=document.getElementById("adminScreen");
+    if(!SB_ON || _configLoading || spinning || _betBusy || (!initial && admin && !admin.hidden)) return Promise.resolve();
+    var request=++_configRequest; _configLoading=true;
+    return sbLoadConfig().then(function(cfg){
+      if(request!==_configRequest || spinning || _betBusy || !cfg || !cfg.themes || !cfg.themes.length) return;
+      cfg=normalizeCfg(cfg);
+      var changed=!_configReady || JSON.stringify(ACTIVE_CFG)!==JSON.stringify(cfg);
+      ACTIVE_CFG=normalizeCfg(cfg); _configReady=true;
+      if(initial) checkForceRefresh(cfg);
+      if(changed){ applyActive(); if(currentUser && state){ renderCatalog(); renderBet(); } }
+    }).finally(function(){ _configLoading=false; });
+  }
   function sbLoadConfig(){ return sbRpc("app_public_config",{}).then(function(d){ if(d){ SB_SECURE=true; return d; } return null; }).catch(function(){ return null; /* [SEGURIDAD] sin via legacy */ }); }
-  var _sbCfgTimer=null, _sbCfgVersion=0;
+  var _sbCfgTimer=null, _sbCfgVersion=0, _configRequest=0, _configLoading=false, _configReady=!SB_ON, _configSaveQueue=Promise.resolve();
   function configWithoutSecrets(cfg){
     var clean=clone(cfg||{});
     (clean.users||[]).forEach(function(u){ if(u && Object.prototype.hasOwnProperty.call(u,"pass")) delete u.pass; });
@@ -278,8 +308,13 @@
   }
   function sbSaveConfigNow(cfg){
     if(!(SB_ON && SB_SECURE && _admPin)) return Promise.reject(new Error("admin_session_required"));
-    return sbRpc("app_admin_save_config",{ p_pin:_admPin, p_data:configWithoutSecrets(cfg) }).then(function(r){
+    var snapshot=normalizeCfg(configWithoutSecrets(cfg)), issue=betConfigError(snapshot.bet);
+    if(issue) return Promise.reject(new Error(issue));
+    ++_configRequest;
+    return _configSaveQueue=_configSaveQueue.catch(function(){}).then(function(){ return sbRpc("app_admin_save_config",{ p_pin:_admPin, p_data:snapshot }); }).then(function(r){
       if(!(r && r.ok)) throw new Error((r&&r.error)||"save_failed");
+      ++_configRequest; ACTIVE_CFG=snapshot; ACTIVE_CFG.rev=r.rev;
+      try{ localStorage.setItem("tikitaka_cfg_rev",String(r.rev)); }catch(e){}
       return r;
     });
   }
@@ -292,7 +327,7 @@
       _sbCfgTimer=null;
       setAdminSaveState("Guardando…",false);
       sbSaveConfigNow(snapshot).then(function(){ if(version===_sbCfgVersion) setAdminSaveState("✓ Guardado en Supabase",false); })
-        .catch(function(){ if(version===_sbCfgVersion) setAdminSaveState("⚠ No se pudo sincronizar",true); });
+        .catch(function(e){ if(version===_sbCfgVersion) setAdminSaveState(configSaveError(e),true); });
     },800);
   }
   function checkForceRefresh(cfg){
@@ -390,7 +425,7 @@
 
   function pad(n){ return String(n).padStart(2, "0"); }
   function ymd(ts){ const d = new Date(ts); return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
-  function baseNow(){ return Date.now() + (state ? state.dayOffset : 0) * 86400000; }
+  function baseNow(){ return Date.now() + (!SB_ON && state ? state.dayOffset : 0) * 86400000; }
   /* El servidor decide el dia con (now() at time zone 'Europe/Madrid')::date,
      asi que el cliente debe usar el mismo huso o no coincidiran. Si el
      navegador no soporta Intl con zona, se cae a la hora del dispositivo. */
@@ -398,7 +433,7 @@
   try{ _fmtMadridYmd = new Intl.DateTimeFormat("en-CA", { timeZone:"Europe/Madrid", year:"numeric", month:"2-digit", day:"2-digit" }); }catch(e){ _fmtMadridYmd = null; }
   function ymdMadrid(ts){
     if(!_fmtMadridYmd) return ymd(ts);
-    try{ return _fmtMadridYmd.format(new Date(ts)).replace(/\//g, "-"); }catch(e){ return ymd(ts); }
+    try{ var parts=_fmtMadridYmd.formatToParts(new Date(ts)), date={}; parts.forEach(function(p){ date[p.type]=p.value; }); return date.year+"-"+date.month+"-"+date.day; }catch(e){ return ymd(ts); }
   }
   function todayStr(){ return ymdMadrid(baseNow()); }
   function shiftStr(str, delta){ const p = str.split("-").map(Number); const d = new Date(p[0], p[1]-1, p[2]+delta); return ymd(d.getTime()); }
@@ -462,11 +497,14 @@
       var applyLoaded=function(st){
         var localState = loadState(u);
         state = st;
+        _playerStateReady=!SB_ON || !!(serverState && Object.prototype.hasOwnProperty.call(serverState,"lastSpin"));
+        _serverSpins = SB_ON && typeof state.betSpins==="number" ? state.betSpins : null;
+        _serverBets = state.bets || null;
         /* El progreso de bienvenida no puede desaparecer al renovar sesión o cambiar contraseña. */
         if(localState && localState.onboardingRoulette) state.onboardingRoulette=true;
         _sbLoggedLen[u] = (state.history || []).length;
         render(true);
-        try{ var _db=document.getElementById("demoBar"); if(_db){ _db.style.display = (currentUser==="demo") ? "" : "none"; } }catch(e){}
+        try{ var _db=document.getElementById("demoBar"); if(_db){ _db.style.display = (currentUser==="demo" && !SB_ON) ? "" : "none"; } }catch(e){}
         claimRevenueCredits().then(function(_rev){
           if(_rev > 0){ renderHistory(); celebrateRevenue(_rev); }
           try{ if(SB_SECURE) refreshPlayer(); }catch(e){}
@@ -484,7 +522,7 @@
     if(!_sess || !_sess.u || currentUser) return;
     if(_sess.t){
       sbRpc("app_resume",{ p_token:_sess.t }).then(function(res){
-        if(res && res.ok){ SB_SECURE=true; _CRED.u=_sess.u; _CRED.t=_sess.t; finishLogin(_sess.u, { nombre:(res.nombre||_sess.u), bar:(res.bar||"") }, (res.state||{})); }
+        if(res && res.ok){ SB_SECURE=true; _CRED.u=_sess.u; _CRED.t=_sess.t; finishLogin(_sess.u, { nombre:(res.nombre||_sess.u), bar:(res.bar||"") }, (res.state||{}), _sess.t); }
         else if(res && (res.error==="auth" || res.error==="expired")){ try{ localStorage.removeItem("tikitaka_session"); }catch(e){} }
       }).catch(function(){ try{ finishLogin(_sess.u,{nombre:_sess.nombre||_sess.u,bar:_sess.bar||""},null); }catch(e){} });
     }
@@ -662,7 +700,8 @@
   function pararCuenta(){ if(_cdTimer){ clearInterval(_cdTimer); _cdTimer = null; } }
   function ticCuenta(){
     /* Al pasar la medianoche, todayStr() cambia y spunToday() pasa a false solo. */
-    if(!state || !spunToday()){
+    if(!state){ pararCuenta(); return; }
+    if(!spunToday()){
       pararCuenta();
       renderSpinState();
       try{ toast("🎰 ¡Ya tienes una nueva tirada disponible!"); }catch(e){}
@@ -681,6 +720,7 @@
 
   function renderSpinState(){
     refreshSymbols();
+    if(SB_ON && !_playerStateReady){ spinBtn.disabled=true; spinBtn.textContent="CONECTANDO…"; spinNote.textContent="Comprobando tu tirada diaria."; return; }
     if (spunToday()){
       spinBtn.disabled = true;
       spinBtn.textContent = "✓ YA JUGADO";
@@ -733,15 +773,18 @@
   }
 
   function spin(){
-    if (!state || spinning || spunToday()) return;
+    if (!state || spinning || spunToday() || (SB_ON && !_playerStateReady)) return;
     spinning = true; ensureAudio(); refreshSymbols();
     spinBtn.disabled = true; winBanner.classList.remove("show");
     document.getElementById("lever").classList.add("pulled");
     setTimeout(function(){ document.getElementById("lever").classList.remove("pulled"); }, 480);
     whir();
     secureSpin().then(function(_sr){
-    if(_sr && _sr.ok===false){ spinning=false; if(_sr.error==="already"){ state.lastSpin=todayStr(); } else if(_sr.error==="auth"){ forceLogout(); } else if(_sr.error==="offline"){ try{ toast("⚠️ Sin conexión con el servidor. Inténtalo de nuevo."); }catch(e){} } _serverSpin=null; renderSpinState(); return; }
+    if(_sr && _sr.ok===false){ spinning=false; if(_sr.error==="already"){ state.lastSpin=_sr.lastSpin||todayStr(); saveState(); } else if(_sr.error==="auth"){ forceLogout(); } else if(_sr.error==="offline"){ try{ toast("⚠️ Sin conexión con el servidor. Inténtalo de nuevo."); }catch(e){} } _serverSpin=null; renderSpinState(); return; }
     _serverSpin = (_sr && _sr.ok) ? _sr : null;
+    /* Consume antes de animar: recargar durante la animación tampoco concede otra tirada. */
+    var spinDate=(_serverSpin && _serverSpin.lastSpin)||todayStr(); if(!_serverSpin) state._spinPreviousDate=state.lastSpin;
+    state.lastSpin=spinDate; saveState();
     const tier = _serverSpin ? _serverSpin.tier : rollTier();
     const target = (_serverSpin && _serverSpin.symbols) ? (symsFromCodes(_serverSpin.symbols) || targetFor(tier)) : targetFor(tier);
     const durs = [1750, 2050, 2350, 2650, 3000];
@@ -768,10 +811,11 @@
 
   function settle(tier, target){
     spinning = false;
-    const today = todayStr();
+    const today = (_serverSpin && _serverSpin.lastSpin)||todayStr();
     const yest = shiftStr(today, -1);
     var prevStreak = state.streak || 0;
-    state.streak = (state.lastSpin === yest && prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
+    var previousDate=Object.prototype.hasOwnProperty.call(state,"_spinPreviousDate") ? state._spinPreviousDate : state.lastSpin; delete state._spinPreviousDate;
+    state.streak = (previousDate === yest && prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
     state.lastSpin = today; state.lastSymbols = target; state.lastWin = tier;
     const prev = state.points; state.points += tier;
     const label = tier===TIER_TOP ? "¡JACKPOT! Tirada diaria" : (tier===TIER_MID ? "¡Triple! Tirada diaria" : "Tirada diaria");
@@ -829,15 +873,15 @@
   }
 
   /* ===== Ruleta de apuestas (multiplicadores) · logica en servidor (app_bet) con fallback ===== */
-  var BET_DEFAULT = { enabled:true, min:100, max:1000, perDay:3, segments:[{mult:0,w:15},{mult:0.5,w:45},{mult:1,w:110},{mult:1.5,w:18},{mult:2,w:8},{mult:3,w:3},{mult:5,w:1}] };
+  var BET_DEFAULT = { enabled:true, min:100, max:1000, perDay:3, segments:[{mult:1,w:180},{mult:1.5,w:12},{mult:2,w:5},{mult:3,w:2},{mult:5,w:1}] };
   var BET_COLORS = ["#7a1f3d","#2b6cb0","#2f855a","#b7791f","#c05621","#9b2c2c","#553c9a","#0f766e"];
   var BET_MULT_COLORS = { "0.5":"#9b2c2c", "1":"#2b6cb0", "1.5":"#2f855a", "2":"#b7791f", "3":"#c05621", "5":"#553c9a" };
   function betColor(m,i){ return BET_MULT_COLORS[String(m)] || BET_COLORS[i%BET_COLORS.length]; }
   function assignBetColors(layout, custom){ var used={}, map={}, pi=0; custom=custom||{}; (layout||[]).forEach(function(m){ var k=String(m); if(!(k in map)){ var cc=custom[k]; if(cc && /^#[0-9a-fA-F]{3,8}$/.test(cc)){ map[k]=cc; used[String(cc).toLowerCase()]=1; } } }); (layout||[]).forEach(function(m){ var k=String(m); if(k in map) return; var fc=BET_MULT_COLORS[k]; if(fc && !used[fc.toLowerCase()]){ map[k]=fc; used[fc.toLowerCase()]=1; } }); (layout||[]).forEach(function(m){ var k=String(m); if(k in map) return; var c=null; for(var t=0;t<BET_COLORS.length;t++){ var cand=BET_COLORS[(pi+t)%BET_COLORS.length]; if(!used[cand.toLowerCase()]){ c=cand; pi=(pi+t+1)%BET_COLORS.length; break; } } if(!c){ c=BET_COLORS[pi%BET_COLORS.length]; pi++; } map[k]=c; used[c.toLowerCase()]=1; }); return (layout||[]).map(function(m){ return map[String(m)]; }); }
   /* Reparto VISUAL de la rueda: mismas probabilidades, pero x1 y x0.5 repartidas y nunca juntas (un premio entre medias) */
-  function segRowHtml(seg, color){ var m=(seg&&seg.mult!=null)?seg.mult:1; var w=(seg&&seg.w!=null)?seg.w:1; var col=(color&&/^#[0-9a-fA-F]{3,8}$/.test(color))?color:(BET_MULT_COLORS[String(m)]||"#2b6cb0"); return '<div class="adm-seg-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;background:rgba(255,255,255,.05);padding:10px;border-radius:10px">'+'<span style="display:flex;align-items:center;gap:4px;font-weight:700">x<input type="number" class="adm-seg-mult adm-num" step="0.1" min="0" value="'+esc(String(m))+'" style="width:72px"></span>'+'<span style="display:flex;align-items:center;gap:4px;font-size:14px">peso <input type="number" class="adm-seg-w adm-num" step="1" min="0" value="'+esc(String(w))+'" style="width:72px"></span>'+'<span class="adm-seg-pct" style="min-width:56px;opacity:.85;font-size:13px;font-weight:700">–</span>'+'<input type="color" class="adm-seg-color" value="'+esc(col)+'" title="Color en la ruleta" style="width:44px;height:30px;border:none;background:none;cursor:pointer;padding:0">'+'<button type="button" class="adm-seg-del" title="Eliminar" style="margin-left:auto;background:rgba(155,44,44,.35);border:none;color:#ffc0c0;border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:700">✕</button>'+'</div>'; }
-  function recalcSegPct(){ var rows=document.querySelectorAll(".adm-seg-row"); var tot=0, er=0, arr=[]; Array.prototype.forEach.call(rows,function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); var m=parseFloat(mi&&mi.value); var w=parseFloat(wi&&wi.value); if(isNaN(w)||w<0) w=0; if(isNaN(m)) m=0; tot+=w; er+=w*m; arr.push([row,w]); }); arr.forEach(function(d){ var sp=d[0].querySelector(".adm-seg-pct"); if(sp){ var pc=tot>0?(d[1]/tot*100):0; sp.textContent=(Math.round(pc*10)/10)+"%"; } }); var ret=document.getElementById("admSegRet"); if(ret){ var avg=tot>0?(er/tot):0; ret.textContent="Retorno medio: x"+(Math.round(avg*100)/100); ret.style.color=(avg>1)?"#ff8a8a":"#7fe0a8"; } }
-  function wheelLayout(segs){ var mults=(segs||[]).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,1,2,1,3,1,5]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
+  function segRowHtml(seg, color){ var m=(seg&&seg.mult!=null)?seg.mult:1; var w=(seg&&seg.w!=null)?seg.w:1; var col=(color&&/^#[0-9a-fA-F]{3,8}$/.test(color))?color:(BET_MULT_COLORS[String(m)]||"#2b6cb0"); return '<div class="adm-seg-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;background:rgba(255,255,255,.05);padding:10px;border-radius:10px">'+'<span style="display:flex;align-items:center;gap:4px;font-weight:700">x<input type="number" class="adm-seg-mult adm-num" step="0.1" min="1" max="20" value="'+esc(String(m))+'" style="width:72px"></span>'+'<span style="display:flex;align-items:center;gap:4px;font-size:14px">peso <input type="number" class="adm-seg-w adm-num" step="1" min="0" value="'+esc(String(w))+'" style="width:72px"></span>'+'<span class="adm-seg-pct" style="min-width:56px;opacity:.85;font-size:13px;font-weight:700">–</span>'+'<input type="color" class="adm-seg-color" value="'+esc(col)+'" title="Color en la ruleta" style="width:44px;height:30px;border:none;background:none;cursor:pointer;padding:0">'+'<button type="button" class="adm-seg-del" title="Eliminar" style="margin-left:auto;background:rgba(155,44,44,.35);border:none;color:#ffc0c0;border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:700">✕</button>'+'</div>'; }
+  function recalcSegPct(){ var rows=document.querySelectorAll(".adm-seg-row"); var tot=0, er=0, arr=[]; Array.prototype.forEach.call(rows,function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); var m=parseFloat(mi&&mi.value); var w=parseFloat(wi&&wi.value); if(isNaN(w)||w<0) w=0; if(isNaN(m)) m=0; tot+=w; er+=w*m; arr.push([row,w]); }); arr.forEach(function(d){ var sp=d[0].querySelector(".adm-seg-pct"); if(sp){ var pc=tot>0?(d[1]/tot*100):0; sp.textContent=(Math.round(pc*10)/10)+"%"; } }); var ret=document.getElementById("admSegRet"); if(ret){ var avg=tot>0?(er/tot):0; ret.textContent="Retorno medio: x"+(Math.round(avg*100)/100); ret.style.color="#7fe0a8"; } }
+  function wheelLayout(segs){ var mults=(segs||[]).filter(function(s){ return Number(s.w)>0; }).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,1,2,1,3,1,5]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
   var _betBusy = false, _betRot = 0, _serverBets = null, _serverSpins = null;
   function activeBetCfg(){
     var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null);
@@ -848,14 +892,15 @@
       segments:segs.map(function(x){ return { mult:parseFloat(x.mult)||0, w:Math.max(0,parseFloat(x.w)||0) }; }), colors:(b.colors && typeof b.colors==="object")?b.colors:{} };
   }
   function betHouseEdge(segs){ var t=0,e=0; segs.forEach(function(x){ t+=x.w; e+=x.w*x.mult; }); return t>0?(e/t):0; }
-  function betsUsedToday(){ var t=todayStr(); if(SB_SECURE && _serverBets && _serverBets.date===t && currentUser!=="demo"){ return _serverBets.count||0; } if(!state) return 0; if(!state.bets||state.bets.date!==t){ return 0; } return state.bets.count||0; }
+  function betsUsedToday(){ var t=todayStr(); if(SB_SECURE && _serverBets && _serverBets.date===t){ return _serverBets.count||0; } if(!state) return 0; if(!state.bets||state.bets.date!==t){ return 0; } return state.bets.count||0; }
   function betsBumpLocal(){ var t=todayStr(); if(!state.bets||state.bets.date!==t){ state.bets={date:t,count:0}; } state.bets.count=(state.bets.count||0)+1; }
-  function betSpinsLeft(){ if(SB_SECURE && _serverSpins!=null && currentUser!=="demo") return _serverSpins; return (state&&typeof state.betSpins==="number")?state.betSpins:0; }
+  function betSpinsLeft(){ if(SB_SECURE && _serverSpins!=null) return _serverSpins; return (state&&typeof state.betSpins==="number")?state.betSpins:0; }
   function localBetPick(segs){ var total=0; segs.forEach(function(x){ total+=x.w; }); if(total<=0) return segs[0]?segs[0].mult:0; var r=Math.random()*total, acc=0, m=0; for(var i=0;i<segs.length;i++){ acc+=segs[i].w; if(r<acc){ m=segs[i].mult; break; } } return m; }
-  function secureBet(stake){ if(SB_SECURE && _CRED.t && currentUser!=="demo"){ return sbRpc("app_bet",{ p_token:_CRED.t, p_stake:stake }).catch(function(){ return { ok:false, error:"offline" }; }); } return Promise.resolve(null); }
+  function secureBet(stake){ if(!SB_ON && currentUser==="demo") return Promise.resolve(null); if(SB_SECURE && _CRED.t){ return sbRpc("app_bet",{ p_token:_CRED.t, p_stake:stake }).catch(function(){ return { ok:false, error:"offline" }; }); } return Promise.resolve({ ok:false, error:"offline" }); }
   function renderBet(){
     var host=document.getElementById("betPanel"); if(!host) return;
     var bc=activeBetCfg();
+    if(!_configReady || betConfigError(bc)){ host.innerHTML='<div class="bet-card"><p>'+(!_configReady?"Cargando la ruleta…":"La ruleta no está disponible en este momento.")+'</p><button type="button" class="game-switch-btn" id="betBack">Volver a rodillos</button></div>'; document.getElementById("betBack").onclick=function(){setGame("slot");}; return; }
     if(!bc.enabled){ host.innerHTML=""; try{ applyGameVisibility(); }catch(e){} return; }
     try{ applyGameVisibility(); }catch(e){}
     var layout=wheelLayout(bc.segments), n=layout.length, step=360/n, grad=[], labels="", _bcolors=assignBetColors(layout, (bc&&bc.colors)||{});
@@ -899,8 +944,8 @@
     if(left<=0){ document.getElementById("betGo").disabled=true; document.getElementById("betResult").textContent="No tienes tiradas de ruleta. \u00a1Gana m\u00e1s girando los rodillos! \uD83C\uDFB0"; }
   }
   function placeBet(stake){
-    if(_betBusy) return;
-    var bc=activeBetCfg();
+    if(_betBusy || !_configReady) return;
+    var bc=activeBetCfg(); if(betConfigError(bc)) return;
     var resEl=document.getElementById("betResult"), goEl=document.getElementById("betGo");
     if(!state){ return; }
     if(betSpinsLeft()<=0){ if(resEl) resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; return; }
@@ -950,9 +995,11 @@
     }).catch(function(){ _betBusy=false; goEl.disabled=false; resEl.textContent="⚠️ Sin conexión con el servidor. Inténtalo de nuevo."; });
   }
   function refreshPlayer(){
-    if(!SB_SECURE || !_CRED.t || !state || _betBusy || currentUser==="demo") return;
-    sbRpc("app_state",{ p_token:_CRED.t }).then(function(r){
-      if(!r || r.ok!==true) return;
+    if(!SB_SECURE || !_CRED.t || !state || _betBusy || spinning) return;
+    var syncToken=_CRED.t, syncUser=currentUser;
+    sbRpc("app_state",{ p_token:syncToken }).then(function(r){
+      if(!r || r.ok!==true || !state || spinning || _betBusy || syncToken!==_CRED.t || syncUser!==currentUser) return;
+      _playerStateReady=true;
       var prev=state.points, changed=false;
       if(typeof r.points==="number" && r.points!==state.points){ state.points=r.points; changed=true; }
       if(typeof r.betsToday==="number"){ _serverBets={date:todayStr(), count:r.betsToday}; }
@@ -966,7 +1013,7 @@
     }).catch(function(){});
   }
   var _playerPoll=null;
-  function startPlayerSync(){ try{ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ refreshPlayer(); try{ if(_cdTimer) ticCuenta(); }catch(e){} } else { try{ maybeStreakReminder(); }catch(e){} } }); }catch(e){} if(_playerPoll) clearInterval(_playerPoll); _playerPoll=setInterval(function(){ if(!document.hidden) refreshPlayer(); }, 25000); }
+  function startPlayerSync(){ try{ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ refreshPlayer(); refreshPublicConfig(); try{ if(_cdTimer) ticCuenta(); }catch(e){} } else { try{ maybeStreakReminder(); }catch(e){} } }); }catch(e){} if(_playerPoll) clearInterval(_playerPoll); _playerPoll=setInterval(function(){ if(!document.hidden){ refreshPlayer(); refreshPublicConfig(); } }, 25000); }
   try{ startPlayerSync(); }catch(e){}
   function renderCatalog(){
     const wrap = document.getElementById("catalog");
@@ -1298,7 +1345,7 @@
       renderCatalog(); renderHistory();
       setTimeout(function(){ bp.classList.remove("show"); try{ if(betSpinsLeft()>0) setGame("bet"); }catch(e){} }, 2800);
     };
-    if(currentUser==="demo"){ _reveal(_boxVals[i]); return; } /* demo: caja local */
+    if(!SB_ON && currentUser==="demo"){ _reveal(_boxVals[i]); return; } /* demo: caja local */
     if(!(SB_SECURE && _CRED.t)){ toast("⚠️ Necesitas conexión para abrir la caja."); try{ bp.classList.remove("show"); }catch(e){} return; } /* [SEGURIDAD] fallo cerrado */
     sbRpc("app_pick_box",{ p_token:_CRED.t }).then(function(res){
         if(res && res.ok){ _reveal(res.value, res.points); }
@@ -1493,7 +1540,7 @@
   function applyLogo(cfg){ var img=document.getElementById("brandLogo"); if(!img) return; var src=(cfg&&cfg.logo)||DEFAULT_LOGO; var bm=img.parentNode; if(src){ img.src=src; img.style.display="block"; if(bm&&bm.classList) bm.classList.add("has-logo"); } else { img.removeAttribute("src"); img.style.display="none"; if(bm&&bm.classList) bm.classList.remove("has-logo"); } }
   try{ applyLogo(ACTIVE_CFG); }catch(e){}
   applyActive();
-  try { sbLoadConfig().then(function(cfg){ if(cfg){ checkForceRefresh(cfg); } if(cfg && cfg.themes && cfg.themes.length){ ACTIVE_CFG=cfg; applyActive(); if(currentUser){ claimRevenueCredits().then(function(_r){ if(_r>0){ renderHistory(); celebrateRevenue(_r); } }); } } }).catch(function(){}); } catch(e){}
+  refreshPublicConfig(true);
 
   /* ===== BACKOFFICE (solo administrador) ===== */
   var DRAFT=null;
@@ -1520,7 +1567,7 @@
     ++_sbCfgVersion;
     setAdminSaveState("Guardando…",false);
     return sbSaveConfigNow(DRAFT).then(function(r){ setAdminSaveState("✓ Guardado en Supabase",false); return r; })
-      .catch(function(e){ setAdminSaveState("⚠ No se pudo sincronizar",true); throw e; });
+      .catch(function(e){ setAdminSaveState(configSaveError(e),true); throw e; });
   }
   function slug(s){ s=(s||"fondo").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+/,"").replace(/-+$/,""); return s||"fondo"; }
   function uid(base){ var m=themeMap(DRAFT); var id=slug(base), i=2; while(m[id]){ id=slug(base)+"-"+i; i++; } return id; }
@@ -1738,7 +1785,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; var _d=row.querySelector(".adm-rw-desc"); if(_d) r.desc=(_d.value||"").trim(); });
     var rt=document.getElementById("admRate"); if(rt) DRAFT.pointsPer100=parseFloat(rt.value)||300;
     var gr=document.getElementById("admGrowth"); if(gr){ var _g=parseFloat(gr.value); DRAFT.growthPerEur=isNaN(_g)?15:_g; }
-    var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); DRAFT.bet.segments=(function(){ var out=[]; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); if(!mi||!wi) return; var mult=parseFloat(mi.value), w=parseFloat(wi.value); if(isNaN(mult)||mult<0) return; if(isNaN(w)||w<0) w=0; out.push({ mult:mult, w:w }); }); return out.length?out:BET_DEFAULT.segments.map(function(x){ return { mult:x.mult, w:x.w }; }); })(); DRAFT.bet.colors=(function(){ var c={}; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), ci=row.querySelector(".adm-seg-color"); if(mi&&ci&&/^#[0-9a-fA-F]{3,8}$/.test(ci.value)){ c[String(parseFloat(mi.value))]=ci.value; } }); return c; })(); }
+    var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); DRAFT.bet.segments=(function(){ var out=[]; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); if(!mi||!wi) return; var mult=parseFloat(mi.value), w=parseFloat(wi.value); if(!Number.isFinite(mult)||mult<1||mult>20) { out.push({mult:mult,w:w}); return; } if(isNaN(w)||w<0) w=0; out.push({ mult:mult, w:w }); }); return out.length?out:BET_DEFAULT.segments.map(function(x){ return { mult:x.mult, w:x.w }; }); })(); DRAFT.bet.colors=(function(){ var c={}; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), ci=row.querySelector(".adm-seg-color"); if(mi&&ci&&/^#[0-9a-fA-F]{3,8}$/.test(ci.value)){ c[String(parseFloat(mi.value))]=ci.value; } }); return c; })(); }
   }
 
   function rewardEditorHtml(){
@@ -1966,13 +2013,13 @@
     h+='<div class="adm-frow"><label>Apuesta m\u00ednima (pts)</label><input type="number" min="1" id="admBetMin" class="adm-num" value="'+_bMin+'"></div>';
     h+='<div class="adm-frow"><label>Apuesta m\u00e1xima (pts)</label><input type="number" min="1" id="admBetMax" class="adm-num" value="'+_bMax+'"></div>';
     h+='<div class="adm-hint" style="margin-top:6px">\uD83C\uDFB0 Las tiradas de ruleta ya no son diarias: cada cliente gana <b>1, 2 o 3 tiradas al azar</b> cada vez que juega a los rodillos.</div>';
-    h+='<div class="adm-hint" style="margin-top:6px">Ajusta abajo las probabilidades de cada casilla. El servidor bloquea configuraciones cuyo retorno medio supere x1 para evitar crear puntos sin control.</div>';    h+='<div class="adm-sec" style="margin-top:16px;font-size:15px">🎡 Probabilidades y colores de la ruleta</div>';
+    h+='<div class="adm-hint" style="margin-top:6px">Configura multiplicadores entre x1 y x20. Los puntos del nivel elegido no se descuentan del saldo.</div>';    h+='<div class="adm-sec" style="margin-top:16px;font-size:15px">🎡 Probabilidades y colores de la ruleta</div>';
     h+='<div class="adm-hint">Cada fila es una casilla de la ruleta. Ajusta el <b>multiplicador</b>, su <b>peso</b> (a más peso, más probable) y su <b>color</b>. El porcentaje se calcula solo. Los cambios se aplican al Publicar.</div>';
     h+='<div id="admSegList" style="margin-top:10px">';
     (function(){ var _bsegs=(DRAFT.bet&&Array.isArray(DRAFT.bet.segments)&&DRAFT.bet.segments.length)?DRAFT.bet.segments:BET_DEFAULT.segments; var _bcm=(DRAFT.bet&&DRAFT.bet.colors&&typeof DRAFT.bet.colors==="object")?DRAFT.bet.colors:{}; var _mults=_bsegs.map(function(sg){ return sg.mult; }); var _cols=assignBetColors(_mults, _bcm); _bsegs.forEach(function(sg,ix){ h+=segRowHtml(sg, _cols[ix]); }); })();
     h+='</div>';
     h+='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px"><button type="button" class="adm-btn" id="admSegAdd">➕ Añadir casilla</button><button type="button" class="adm-btn" id="admSegReset">↺ Restaurar por defecto</button><span id="admSegRet" style="font-weight:700"></span></div>';
-    h+='<div class="adm-hint" style="margin-top:6px">💡 El <b>retorno medio</b> indica cuánto recupera de media el cliente por cada punto apostado. Si es mayor que x1 (rojo) los clientes ganan puntos a la larga; si es x1 o menos (verde) la casa mantiene el margen.</div>';
+    h+='<div class="adm-hint" style="margin-top:6px">El <b>retorno medio</b> indica el premio medio por punto del nivel elegido. Los pesos y colores se guardan automáticamente; comprueba el estado de guardado antes de salir.</div>';
     h+='</div>';
     h+=historialCardHtml();
     h+=jugadasCardHtml();
@@ -2023,17 +2070,33 @@
     var g=function(id){ return document.getElementById(id); };
     g("admClose").onclick=closeAdmin;
     var _menu=document.querySelector(".adm-menu"); if(_menu){ _menu.addEventListener("click", function(e){ var b=e.target.closest?e.target.closest(".adm-menu-i"):null; if(!b) return; var t=document.getElementById(b.getAttribute("data-t")); if(t){ t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.add("adm-flash"); setTimeout(function(){ t.classList.remove("adm-flash"); },1300); } if(b.getAttribute("data-t")==="sec-analiticas"){ try{ loadAdminStats(); }catch(e){} } if(b.getAttribute("data-t")==="sec-historial"){ try{ loadCanjes(false); }catch(e){} } if(b.getAttribute("data-t")==="sec-jugadas"){ try{ loadAdminJugadas(); }catch(e){} } }); }
-    var _segList=document.getElementById("admSegList"); if(_segList){ _segList.addEventListener("input", function(e){ var t=e.target; if(t&&t.classList&&(t.classList.contains("adm-seg-mult")||t.classList.contains("adm-seg-w"))) recalcSegPct(); }); _segList.addEventListener("click", function(e){ var db=(e.target&&e.target.closest)?e.target.closest(".adm-seg-del"):null; if(db){ var row=db.closest(".adm-seg-row"); if(row&&row.parentNode){ row.parentNode.removeChild(row); recalcSegPct(); } } }); var _sa=document.getElementById("admSegAdd"); if(_sa) _sa.onclick=function(){ _segList.insertAdjacentHTML("beforeend", segRowHtml({mult:2,w:5}, null)); recalcSegPct(); }; var _srb=document.getElementById("admSegReset"); if(_srb) _srb.onclick=function(){ var mm=BET_DEFAULT.segments.map(function(sg){ return sg.mult; }); var cc=assignBetColors(mm,{}); var html=""; BET_DEFAULT.segments.forEach(function(sg,ix){ html+=segRowHtml(sg, cc[ix]); }); _segList.innerHTML=html; recalcSegPct(); toast("Ruleta restaurada"); }; recalcSegPct(); }
+    function saveBetEditor(){ collect(); recalcSegPct(); saveDraft(); }
+    var _segList=g("admSegList");
+    if(_segList){
+      _segList.addEventListener("input",recalcSegPct);
+      _segList.addEventListener("change",saveBetEditor);
+      _segList.addEventListener("click",function(e){ var button=e.target.closest(".adm-seg-del"); if(button){ button.closest(".adm-seg-row").remove(); saveBetEditor(); } });
+      g("admSegAdd").onclick=function(){ _segList.insertAdjacentHTML("beforeend",segRowHtml({mult:2,w:5},null)); saveBetEditor(); };
+      g("admSegReset").onclick=function(){ var colors=assignBetColors(BET_DEFAULT.segments.map(function(s){return s.mult;}),{}); _segList.innerHTML=BET_DEFAULT.segments.map(function(s,i){return segRowHtml(s,colors[i]);}).join(""); saveBetEditor(); };
+      ["admBetOn","admBetMin","admBetMax"].forEach(function(id){ var input=g(id); if(input) input.onchange=saveBetEditor; });
+      recalcSegPct();
+    }
     var _hrf=document.getElementById("admHistRefresh"); if(_hrf){ _hrf.onclick=function(){ _hrf.disabled=true; loadCanjes(false); setTimeout(function(){ _hrf.disabled=false; },1200); }; }
     var _jrf=document.getElementById("admJugRefresh"); if(_jrf){ _jrf.onclick=function(){ _jrf.disabled=true; loadAdminJugadas(); setTimeout(function(){ _jrf.disabled=false; },1000); }; }
     var _jcl=document.getElementById("admJugCliente"); if(_jcl){ _jcl.onchange=function(){ loadAdminJugadas(); }; }
     g("admPreview").onclick=function(){ collect(); paintTheme(DRAFT, resolveTheme(DRAFT)); toast("Vista previa aplicada"); };
-    g("admSave").onclick=function(){ var b=g("admSave"); collect(); b.disabled=true; publishDraft().then(function(){ toast("Borrador guardado en Supabase"); }).catch(function(){ toast("No se pudo guardar en Supabase. Revisa la conexión y vuelve a intentarlo."); }).then(function(){ b.disabled=false; }); };
+    g("admSave").onclick=function(){ var b=g("admSave"); collect(); b.disabled=true; publishDraft().then(function(){ toast("Borrador guardado en Supabase"); }).catch(function(error){ toast(configSaveError(error)); }).then(function(){ b.disabled=false; }); };
     g("admDiscard").onclick=function(){ localStorage.removeItem("tikitaka_admin_cfg"); DRAFT=clone(ACTIVE_CFG); renderAdmin(); toast("Cambios descartados"); };
     var _lg=g("admLogo"); if(_lg) _lg.onchange=function(){ readImg(_lg,function(d){ collect(); DRAFT.logo=d; saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Logo actualizado"); }); };
     var _lr=g("admLogoReset"); if(_lr) _lr.onclick=function(){ collect(); DRAFT.logo=null; saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Logo restablecido"); };
     g("admView").onclick=function(){ collect(); saveDraft(); previewSite(); };
-    var _fu=g("admForceUpdate"); if(_fu) _fu.onclick=function(){ collect(); DRAFT.rev=Date.now(); saveDraft(); try{ localStorage.setItem("tikitaka_cfg_rev", String(DRAFT.rev)); }catch(e){} var nn=g("admForceNote"); if(nn){ nn.textContent="✓ Publicado. Los clientes verán la actualización al abrir la app."; } toast("Actualización publicada y forzada ✓"); };
+    var _fu=g("admForceUpdate"); if(_fu) _fu.onclick=function(){
+      collect(); DRAFT.rev=Date.now(); _fu.disabled=true;
+      var note=g("admForceNote"); if(note) note.textContent="Publicando…";
+      publishDraft().then(function(){ if(note) note.textContent="Publicado. Los clientes recibirán los cambios al abrir la app o durante su actualización automática."; toast("Actualización publicada"); })
+        .catch(function(error){ if(note) note.textContent=configSaveError(error); toast(configSaveError(error)); })
+        .finally(function(){ _fu.disabled=false; });
+    };
     g("admAddRule").onclick=function(){ collect(); var t=(DRAFT.themes[0]||{}).id; DRAFT.schedule.push({themeId:t,from:{m:1,d:1},to:{m:1,d:31}}); renderAdmin(); };
     g("admFallback").onchange=function(){ collect(); };
     g("admOverride").onchange=function(){ collect(); paintTheme(DRAFT, resolveTheme(DRAFT)); };
