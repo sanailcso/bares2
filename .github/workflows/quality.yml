@@ -28,3 +28,35 @@ jobs:
         run: git diff --check
       - name: Validar imágenes del catálogo y control desde el admin
         run: node tests/reward-images.mjs
+      - name: Validar tiradas diarias y configuración de ruleta
+        run: node tests/game-sync.mjs
+
+  database-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      TIKITAKA_DB_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Preparar base de datos desechable
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
+      - name: Probar límite diario y publicación de ruleta
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/game_rules.sql
+      - name: Probar dos dispositivos simultáneos para la misma cuenta
+        run: node tests/multidevice.mjs
