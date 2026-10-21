@@ -13,7 +13,7 @@
   var DEFAULT_SYM = { jackpot:"🍒", prize:"💎", fillers:["⚽","👟","🥅","���"] };
   function graphemes(str){ str=(str==null?"":String(str)).trim(); if(!str) return []; var arr=null; try{ if(typeof Intl!=="undefined"&&Intl.Segmenter){ arr=Array.from(new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(str),function(s){ return s.segment; }); } }catch(e){} if(!arr) arr=Array.from(str); return arr.filter(function(x){ return x&&x.trim(); }); }
   function oneSym(v, fb){ var g=graphemes(v); return g.length?g[0]:(fb||""); }
-  function normalizeCfg(cfg){ if(!cfg||!cfg.themes) return cfg; var bm={}; try{ (BUILTIN.themes||[]).forEach(function(t){ bm[t.id]=t; }); }catch(e){} cfg.themes.forEach(function(t){ var b=bm[t.id]; var d=(b&&b.sym)?b.sym:DEFAULT_SYM; t.sym=t.sym||{}; if(b){ if(b.img && typeof t.img==="string" && t.img.indexOf("data:")===0) t.img=b.img; if(b.sym && b.sym.imageJackpot && typeof t.sym.imageJackpot==="string" && t.sym.imageJackpot.indexOf("data:")===0){ t.sym.imageJackpot=b.sym.imageJackpot; t.sym.imagePrize=b.sym.imagePrize; t.sym.imageFillers=(b.sym.imageFillers||[]).slice(); } } if(!t.sym.jackpot) t.sym.jackpot=(d.jackpot||DEFAULT_SYM.jackpot); if(!t.sym.prize) t.sym.prize=(d.prize||DEFAULT_SYM.prize); if(!t.sym.fillers||!t.sym.fillers.length) t.sym.fillers=((d.fillers&&d.fillers.length)?d.fillers:DEFAULT_SYM.fillers).slice(); t.pointsHud=t.pointsHud||{}; if(!t.pointsHud.color) t.pointsHud.color="#18052f"; }); return cfg; }
+  function normalizeCfg(cfg){ if(cfg) TkRewardImages.migrate(cfg.rewards); if(!cfg||!cfg.themes) return cfg; var bm={}; try{ (BUILTIN.themes||[]).forEach(function(t){ bm[t.id]=t; }); }catch(e){} cfg.themes.forEach(function(t){ var b=bm[t.id]; var d=(b&&b.sym)?b.sym:DEFAULT_SYM; t.sym=t.sym||{}; if(b){ if(b.img && typeof t.img==="string" && t.img.indexOf("data:")===0) t.img=b.img; if(b.sym && b.sym.imageJackpot && typeof t.sym.imageJackpot==="string" && t.sym.imageJackpot.indexOf("data:")===0){ t.sym.imageJackpot=b.sym.imageJackpot; t.sym.imagePrize=b.sym.imagePrize; t.sym.imageFillers=(b.sym.imageFillers||[]).slice(); } } if(!t.sym.jackpot) t.sym.jackpot=(d.jackpot||DEFAULT_SYM.jackpot); if(!t.sym.prize) t.sym.prize=(d.prize||DEFAULT_SYM.prize); if(!t.sym.fillers||!t.sym.fillers.length) t.sym.fillers=((d.fillers&&d.fillers.length)?d.fillers:DEFAULT_SYM.fillers).slice(); t.pointsHud=t.pointsHud||{}; if(!t.pointsHud.color) t.pointsHud.color="#18052f"; }); return cfg; }
   var SUGGEST=[
     {label:"Halloween",kw:["halloween","terror","miedo","calabaza","fantasma","spooky","noche","muerto","bruja","zombie","calavera"],sym:{jackpot:"🎃",prize:"👻",fillers:["🦇","🕷️","🍬","🕯️"]}},
     {label:"Navidad",kw:["navidad","christmas","xmas","noel","papa noel","reyes","belen","nochebuena","adviento","turron"],sym:{jackpot:"🎄",prize:"🎁",fillers:["🎅","🔔","⛄","🍬"]}},
@@ -91,7 +91,7 @@
   ];
   const TIER_ORDER = ["Regalos", "Electrónica", "Viajes"];
   const TIER_TAG = { "Regalos":"Nivel 1", "Electrónica":"Nivel 2", "Viajes":"Nivel estrella" };
-  function catalogItems(){ var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null); var list=(cfg&&Array.isArray(cfg.rewards)&&cfg.rewards.length)?cfg.rewards:CATALOG; return list.filter(function(x){ return x && x.enabled!==false; }); }
+  function catalogItems(){ var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null); var list=(cfg&&Array.isArray(cfg.rewards)&&cfg.rewards.length)?cfg.rewards:CATALOG; TkRewardImages.migrate(list); return list.filter(function(x){ return x && x.enabled!==false; }); }
 
   let currentUser = "", state = null, spinning = false;
 
@@ -973,7 +973,7 @@
     const catalog=catalogItems();
     const pts = state.points || 0;
     function progColor(p){ if(p < 40) return "linear-gradient(90deg,#FF3651,#C8102E)"; if(p < 75) return "linear-gradient(90deg,#FFD24B,#FF9D2E)"; return "linear-gradient(90deg,#9df0b8,#2f9d5a)"; }
-    function emj(it){ return (it && it.image) ? '<img class="r-img" src="'+it.image+'" alt="">' : (it ? (it.emoji||"") : ""); }
+    function emj(it){ return TkRewardImages.markup(it, true) || (it ? esc(it.emoji||"") : ""); }
     var TIER_CLASS = { "Regalos":"t1", "Electrónica":"t2", "Viajes":"t3" };
     var heroHtml = "";
     var locked = catalog.filter(function(x){ return x.cost > pts; });
@@ -1036,7 +1036,7 @@
     var pct = it.cost ? Math.max(0, Math.min(100, Math.round(pts/it.cost*100))) : 100;
     var tag = (typeof TIER_TAG!=="undefined" && TIER_TAG[it.tier]) ? TIER_TAG[it.tier] : (it.tier||"");
     function pcolor(p){ if(p<40) return "linear-gradient(90deg,#FF3651,#C8102E)"; if(p<75) return "linear-gradient(90deg,#FFD24B,#FF9D2E)"; return "linear-gradient(90deg,#9df0b8,#2f9d5a)"; }
-    var icon = it.image ? '<img src="' + it.image + '" alt="">' : '<span class="pm-emoji">' + (it.emoji || "🎁") + '</span>';
+    var icon = TkRewardImages.markup(it, false) || '<span class="pm-emoji">' + (it.emoji || "🎁") + '</span>';
     var foot = can
       ? '<button class="pm-btn ok" id="pmRedeem">Canjear premio</button>'
       : '<div class="pm-prog"><div class="pm-prog-fill" style="width:' + pct + '%;background:' + pcolor(pct) + '"></div></div>'
@@ -1743,8 +1743,9 @@
 
   function rewardEditorHtml(){
     if(!Array.isArray(DRAFT.rewards)||!DRAFT.rewards.length) DRAFT.rewards=CATALOG.map(function(x){return Object.assign({},x);});
+    TkRewardImages.migrate(DRAFT.rewards);
     var h='<div class="adm-card adm-rewards-card" id="sec-premios"><div class="adm-sec">🎁 Catálogo de premios</div><div class="adm-hint">Añade, edita o elimina premios. Se aplican al catálogo inmediatamente.</div><div class="adm-reward-list">';
-    DRAFT.rewards.forEach(function(r,i){ h+='<div class="adm-reward-row'+(r.enabled===false?' off':'')+'" data-i="'+i+'"><input class="adm-rw-name" value="'+esc(r.name)+'" placeholder="Nombre"><input class="adm-rw-icon" value="'+esc(r.emoji||"🎁")+'" maxlength="8" aria-label="Icono"><input class="adm-rw-cost" type="number" min="1" value="'+Math.max(1,+r.cost||1)+'" aria-label="Puntos"><select class="adm-rw-tier">'+TIER_ORDER.map(function(t){return '<option'+(r.tier===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><button type="button" class="adm-rw-del" data-i="'+i+'">Eliminar</button><div class="adm-rw-extra"><div class="adm-rw-imgbox">'+(r.image?'<img src="'+r.image+'" alt=""><button type="button" class="adm-rw-imgdel" data-i="'+i+'" title="Quitar imagen">×</button>':'<span class="adm-rw-imgph">Sin<br>imagen</span>')+'</div><label class="adm-file adm-rw-imgbtn">🖼️ '+(r.image?'Cambiar':'Subir imagen')+'<input type="file" accept="image/png,image/jpeg,image/webp" class="adm-rw-img" data-i="'+i+'"></label><label class="adm-rw-toggle"><input type="checkbox" class="adm-rw-on" data-i="'+i+'"'+(r.enabled===false?'':' checked')+'> '+(r.enabled===false?'Oculto':'Activo')+'</label><textarea class="adm-rw-desc" data-i="'+i+'" rows="2" placeholder="Detalles opcionales: modelo, color, talla, condiciones...">'+esc(r.desc||"")+'</textarea></div></div>'; });
+    DRAFT.rewards.forEach(function(r,i){ h+='<div class="adm-reward-row'+(r.enabled===false?' off':'')+'" data-i="'+i+'"><input class="adm-rw-name" value="'+esc(r.name)+'" placeholder="Nombre"><input class="adm-rw-icon" value="'+esc(r.emoji||"🎁")+'" maxlength="8" aria-label="Icono"><input class="adm-rw-cost" type="number" min="1" value="'+Math.max(1,+r.cost||1)+'" aria-label="Puntos"><select class="adm-rw-tier">'+TIER_ORDER.map(function(t){return '<option'+(r.tier===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><button type="button" class="adm-rw-del" data-i="'+i+'">Eliminar</button><div class="adm-rw-extra"><div class="adm-rw-imgbox">'+(r.image?TkRewardImages.markup(r, false)+'<button type="button" class="adm-rw-imgdel" data-i="'+i+'" title="Quitar imagen">×</button>':'<span class="adm-rw-imgph">Sin<br>imagen</span>')+'</div><label class="adm-file adm-rw-imgbtn">🖼️ '+(r.image?'Cambiar':'Subir imagen')+'<input type="file" accept="image/png,image/jpeg,image/webp" class="adm-rw-img" data-i="'+i+'"></label><select class="adm-rw-photo" data-i="'+i+'" aria-label="Elegir foto para '+esc(r.name)+'">'+TkRewardImages.options()+'</select><label class="adm-rw-toggle"><input type="checkbox" class="adm-rw-on" data-i="'+i+'"'+(r.enabled===false?'':' checked')+'> '+(r.enabled===false?'Oculto':'Activo')+'</label><textarea class="adm-rw-desc" data-i="'+i+'" rows="2" placeholder="Detalles opcionales: modelo, color, talla, condiciones...">'+esc(r.desc||"")+'</textarea></div></div>'; });
     h+='</div><button type="button" class="adm-btn primary adm-rw-add">＋ Añadir premio</button></div>'; return h;
   }
 
@@ -2072,6 +2073,7 @@
     each(".adm-rw-name,.adm-rw-icon,.adm-rw-cost,.adm-rw-tier",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} toast("Premio actualizado"); }; });
     each(".adm-rw-on",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast(inp.checked?"Premio visible en el catálogo":"Premio oculto (agotado)"); }; });
     each(".adm-rw-desc",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} toast("Detalles del premio actualizados"); }; });
+    each(".adm-rw-photo",function(inp){ inp.onchange=function(){ if(!inp.value) return; collect(); var i=+inp.getAttribute("data-i"); if(DRAFT.rewards[i]) DRAFT.rewards[i].image=inp.value; saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Foto del premio actualizada"); }; });
     each(".adm-rw-img",function(inp){ inp.onchange=function(){ var i=+inp.getAttribute("data-i"); readRewardImg(inp,function(d){ collect(); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=d; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen del premio actualizada"); }); }; });
     each(".adm-rw-imgdel",function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=null; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen quitada"); }; });
     /* Los avisos se solicitan solo tras una acción explícita del usuario. */

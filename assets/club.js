@@ -2,40 +2,8 @@
 (function () {
   'use strict';
   var ready = false, scheduled = false, route = 'inicio', catalogSignature = '';
-  var originalImages = {
-    'Llavero premium': './img/club-keyring.webp',
-    'Gorra Tiki Taka': './img/club-cap.webp',
-    'Set de copas de bar': './img/club-glasses.webp'
-  };
-  var sheetProducts = {
-    mochiladeviaje: 0,
-    auricularesinalambricos: 1,
-    altavozbluetooth: 2,
-    tabletde10pulgadas: 3,
-    smarttvde50pulgadas: 4,
-    escapadarural2noches: 5,
-    findesemanaenlanieve: 6,
-    cruceroporelmediterraneo: 7
-  };
-  function photoIndex(item) {
-    var key = String(item.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    return Object.prototype.hasOwnProperty.call(sheetProducts, key) ? sheetProducts[key] : null;
-  }
-  function photoKey(item) { var src = imageFor(item), index = photoIndex(item); return src || (index === null ? '' : 'rewards-sheet-' + index); }
-  function makePhoto(item, decorative) {
-    var src = imageFor(item);
-    if (src) { var img = document.createElement('img'); img.className = 'r-img'; img.src = src; img.alt = decorative ? '' : item.name; img.decoding = 'async'; return img; }
-    var index = photoIndex(item); if (index === null) return null;
-    // One shared image, square viewBox and slice preserve photographic proportions.
-    var ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), image = document.createElementNS(ns, 'image');
-    var cell = 443.5;
-    svg.setAttribute('viewBox', (index % 4 * cell) + ' ' + (Math.floor(index / 4) * cell) + ' ' + cell + ' ' + cell);
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice'); svg.setAttribute('class', 'club-product-photo');
-    if (decorative) svg.setAttribute('aria-hidden', 'true');
-    else { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', item.name + ' · imagen ilustrativa'); }
-    image.setAttribute('href', './img/club-rewards-sheet.jpg'); image.setAttribute('width', '1774'); image.setAttribute('height', '887');
-    svg.appendChild(image); return svg;
-  }
+  function photoKey(item) { return item.image || ''; }
+  function makePhoto(item, decorative) { return TkRewardImages.create(item, decorative); }
   function byId(id) { return document.getElementById(id); }
   function put(id, text) { var el = byId(id); if (el && el.textContent !== String(text)) el.textContent = text; }
   function goalKey() { return 'tikitaka_club_goal_' + currentUser; }
@@ -45,7 +13,6 @@
       items.filter(function (it) { return it.cost > state.points; }).sort(function (a, b) { return a.cost - b.cost; })[0] ||
       items.slice().sort(function (a, b) { return b.cost - a.cost; })[0];
   }
-  function imageFor(item) { return item.image || originalImages[item.name] || ''; }
   function syncGoal() {
     var items = catalogItems(), item = selectedGoal(items), panel = byId('clubGoal');
     panel.hidden = !item;
@@ -73,12 +40,6 @@
       catalogSignature = signature;
     }
     select.value = item.name;
-    // Reuse the existing catalog and redemption buttons; add only presentation images.
-    document.querySelectorAll('#catalog .reward[data-idx],#catalog .next-prize[data-idx]').forEach(function (card) {
-      var it = items[+card.getAttribute('data-idx')]; if (!it || it.image) return;
-      var target = card.querySelector('.r-emoji,.np-emoji'), key = photoKey(it);
-      if (target && key && target.dataset.clubPhoto !== key) { target.replaceChildren(makePhoto(it, true)); target.dataset.clubPhoto = key; }
-    });
   }
   function syncWeek() {
     var days = rachaViva(), wrap = byId('clubWeekDays');
