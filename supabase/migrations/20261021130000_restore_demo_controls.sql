@@ -1,7 +1,7 @@
 begin;
 
 -- The token, never a username supplied by the browser, identifies the demo.
-create or replace function public.app_demo_action(p_token uuid, p_action text)
+create or replace function private.app_demo_action(p_token uuid, p_action text)
 returns jsonb language plpgsql security definer set search_path=''
 as $$
 declare v_username text; v_player private.players%rowtype; v_delta bigint:=0;
@@ -40,6 +40,11 @@ begin
   return jsonb_build_object('ok',true,'state',private.player_state(v_username));
 end $$;
 
+revoke all on function private.app_demo_action(uuid,text) from public,anon,authenticated;
+grant execute on function private.app_demo_action(uuid,text) to anon;
+create or replace function public.app_demo_action(p_token uuid, p_action text)
+returns jsonb language sql security invoker set search_path=''
+as $$ select private.app_demo_action(p_token,p_action) $$;
 revoke all on function public.app_demo_action(uuid,text) from public,anon,authenticated;
 grant execute on function public.app_demo_action(uuid,text) to anon;
 
