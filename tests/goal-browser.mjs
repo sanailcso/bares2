@@ -84,6 +84,30 @@ try{
     await assertDock();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),false);
   }
+  async function assertGameEndClear(game){
+    for(const [width,height] of [[390,844],[320,640],[390,568]]){
+      await page.setViewportSize({width,height});
+      await page.evaluate(async()=>{
+        await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
+        window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'});
+        await new Promise(requestAnimationFrame);
+      });
+      const layout=await page.evaluate(()=>{
+        const panel=document.querySelector('#tab-jugar'),dock=document.querySelector('#clubBottomDock');
+        return {end:panel.getBoundingClientRect().bottom,dockTop:dock.getBoundingClientRect().top,
+          dockHeight:dock.getBoundingClientRect().height,padding:parseFloat(getComputedStyle(document.querySelector('#appCard')).paddingBottom)};
+      });
+      assert.ok(layout.padding>=layout.dockHeight+23,'Reserve entire bottom dock: '+JSON.stringify(layout));
+      assert.ok(layout.end<=layout.dockTop-16,game+' final content clears dock at '+width+'x'+height+': '+JSON.stringify(layout));
+    }
+  }
+  await assertGameEndClear('Rodillos');
   await page.screenshot({path:'test-results/points-docked-mobile.png'});
+  await page.locator('#userNavBottom').getByRole('button',{name:'Mi bar',exact:true}).click();
+  await page.locator('#demoRuleta').click();
+  await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
+  await page.locator('#betGo').waitFor({state:'visible'});
+  await assertGameEndClear('Ruleta');
+  await page.screenshot({path:'test-results/roulette-end-visible.png'});
   console.log('Touch goals, mobile catalog and transparent balance joined to navigation passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

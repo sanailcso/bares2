@@ -175,13 +175,16 @@
     // The real animated balance shares the fixed dock with the bottom navigation.
     byId('clubBottomDock').insertBefore(document.querySelector('.balance-wrap'), byId('userNavBottom'));
     byId('clubHomeGame').appendChild(byId('clubGame'));
-    var nav = byId('userNavBottom');
-    function measureNav() {
-      var height = nav.getBoundingClientRect().height;
-      if (height > 0) document.documentElement.style.setProperty('--club-nav-height', height + 'px');
+    var nav = byId('userNavBottom'), dock = byId('clubBottomDock');
+    function measureDock() {
+      var height = dock.getBoundingClientRect().height;
+      if (height > 0) {
+        document.documentElement.style.setProperty('--club-dock-height', height + 'px');
+        document.documentElement.style.setProperty('--club-nav-height', nav.getBoundingClientRect().height + 'px');
+      }
     }
-    new ResizeObserver(measureNav).observe(nav);
-    measureNav();
+    new ResizeObserver(measureDock).observe(dock);
+    measureDock();
     window.__tkNav.apply('inicio');
     document.addEventListener('click', function (event) {
       var nav = event.target.closest('[data-club-nav]'); if (nav) { go(nav.dataset.clubNav); if (nav.dataset.clubNav === 'premios') { rewardsTab('catalog'); if (state) { state.onboardingCatalog = true; saveState(); renderOnboarding(); } } }
