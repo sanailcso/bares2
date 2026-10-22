@@ -1031,6 +1031,7 @@
       if(sr && sr.ok){ finish(parseFloat(sr.mult)||0, sr.points, (typeof sr.betSpins==="number"?sr.betSpins:undefined), sr.afterStake, sr.gain); }
       else if(sr===null){ finish(localBetPick(segs)); } /* demo: tirada local */
       else if(sr && sr.error==="funds"){ _betBusy=false; if(typeof sr.points==="number"){var oldPoints=state.points;state.points=sr.points;saveState();countUp(balance,oldPoints,state.points,300);} goEl.disabled=false; resEl.textContent="No tienes puntos suficientes para esta apuesta."; }
+      else if(sr && sr.error==="daily_limit"){ _betBusy=false; goEl.disabled=true; if(typeof sr.betSpins==="number"){_serverSpins=sr.betSpins;state.betSpins=sr.betSpins;} resEl.textContent="Has alcanzado el límite diario de ruleta. Conservas "+betSpinsLeft()+" tiradas para otro día."; }
       else if(sr && sr.error==="limit"){ _betBusy=false; goEl.disabled=true; resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; }
       else if(sr && sr.error==="disabled"){ _betBusy=false; renderBet(); }
       else if(sr && sr.error==="auth"){ _betBusy=false; forceLogout(); }
