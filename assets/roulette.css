@@ -1,0 +1,18 @@
+/* The generated casing is decorative. The live sectors and labels always match wheelLayout. */
+.roulette-icon{width:42px;height:42px;object-fit:contain;vertical-align:middle;filter:drop-shadow(0 3px 3px #39210c40)}
+.rc-emoji .roulette-icon{width:64px;height:64px}.bet-marquee .roulette-icon{width:32px;height:32px}
+.roulette-premium.bet-wheel-wrap,.club-ui #clubGame .roulette-premium.bet-wheel-wrap{width:264px!important;height:264px!important;max-width:100%;margin:20px auto 24px!important;padding:0!important;border-radius:50%;isolation:isolate;filter:drop-shadow(0 14px 12px #39241040);background:none!important}
+.roulette-case{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;pointer-events:none}
+.finish-silver .roulette-case{filter:grayscale(1)}.finish-noir .roulette-case{filter:brightness(.6) saturate(.6)}
+.roulette-premium .bet-wheel,.club-ui #clubGame .roulette-premium .bet-wheel{position:absolute;inset:17%;width:66%;height:66%;border:2px solid #e6c577!important;background:var(--wheel-sectors)!important;box-shadow:0 0 0 2px #563413,0 0 0 4px #e8c56c,inset 0 0 18px #000b!important;overflow:hidden;z-index:1}
+.roulette-premium .bet-wheel:after{content:"";position:absolute;inset:0!important;border:0!important;border-radius:50%;background:radial-gradient(circle,transparent 28%,#0005 72%,#000b),repeating-conic-gradient(from 0deg,#ffe5a6 0deg .8deg,transparent .8deg var(--sector-step));pointer-events:none}
+.roulette-premium .bet-wheel:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,#fff8,transparent 36%,#0005 65%,#fff3);mix-blend-mode:soft-light;pointer-events:none}
+.roulette-premium .bet-seg-label{z-index:2;height:50%;top:0;transform-origin:50% 100%}
+.roulette-premium .bet-seg-label span,.golden-cabinet .roulette-premium .bet-seg-label span{top:9px;transform:translateX(-50%);font-size:var(--label-size,15px)!important;color:#fff9e7!important;line-height:1.3;text-shadow:0 2px 2px #000,0 -1px #000;letter-spacing:-.5px}
+.roulette-premium .bet-hub,.club-ui #clubGame .roulette-premium .bet-hub{width:48px;height:48px;border:2px solid #ffe8ae!important;background:conic-gradient(#a66c1f,#fff0b7,#916020,#ffecc0,#ae752e)!important;box-shadow:0 0 0 3px #593512,0 0 0 5px #e7bd68,3px 7px 10px #0009!important;z-index:3}
+.roulette-gem{display:block;width:24px;height:24px;border-radius:50%;background:conic-gradient(#effaff,#b4c6d5,#fff 15%,#62788c 30%,#fff 42%,#b4d0e2 60%,#fff 75%,#6c8090);box-shadow:inset 0 0 0 2px #fff9,0 0 0 2px #89602d}
+.roulette-premium .bet-pointer{top:10px;width:22px;height:36px;border:0!important;clip-path:polygon(50% 100%,0 15%,50% 0,100% 15%);background:linear-gradient(90deg,#9d6420,#fff4c7 47%,#c79642 50%,#f4d68e);filter:drop-shadow(0 2px 2px #000)!important;z-index:4}
+.adm-roulette-preview{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:16px 0;background:radial-gradient(ellipse,#eadcc0,transparent 68%);border-radius:20px;margin:12px 0}
+.adm-roulette-preview>.roulette-icon{width:64px;height:64px}
+@media(max-width:360px){.club-ui #clubGame .roulette-premium.bet-wheel-wrap{width:236px!important;height:236px!important}.roulette-premium .bet-seg-label span{font-size:min(13px,var(--label-size,15px))!important}}
+@media(prefers-reduced-motion:reduce){.roulette-premium .bet-wheel{transition-duration:.01ms!important}}

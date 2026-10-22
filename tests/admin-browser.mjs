@@ -82,6 +82,31 @@ try{
   await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
   assert.equal(saves.at(-1).rewards[0].image,'./img/club-cap.webp','Admin photo control still saves the chosen image');
   await visit('sec-apuesta');
+  // Upload both independent appearance assets and restore from the mocked server.
+  const originalBet=structuredClone(publicConfig.bet);
+  const rouletteAsset=await fs.readFile(path.join(root,'img/roulette-premium.webp'));
+  for(const kind of ['Icon','Wheel']){
+    const count=saves.length;
+    await page.locator('#admRoulette'+kind).setInputFiles({name:kind+'.webp',mimeType:'image/webp',buffer:rouletteAsset});
+    await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
+    assert.ok(saves.length>count);
+    assert.ok(saves.at(-1).bet.appearance[kind.toLowerCase()].startsWith('data:image/webp'));
+  }
+  await page.locator('#admRouletteFinish').selectOption('silver');
+  await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
+  const appearance=structuredClone(saves.at(-1).bet.appearance);
+  assert.deepEqual(saves.at(-1).bet.segments,originalBet.segments);
+  await page.evaluate(()=>localStorage.clear());await page.reload();
+  await page.getByLabel('PIN de administrador',{exact:true}).fill('fixture-admin');await page.locator('#admPinOk').click();
+  await page.getByRole('heading',{name:'Panel del club',exact:true}).waitFor();
+  await visit('sec-apuesta');
+  assert.equal(await page.locator('#admRouletteFinish').inputValue(),'silver');
+  assert.equal(await page.locator('.adm-roulette-preview>.roulette-icon').getAttribute('src'),appearance.icon);
+  assert.equal(await page.locator('.adm-roulette-preview .roulette-case').getAttribute('src'),appearance.wheel);
+  await page.screenshot({path:'test-results/roulette-admin.png'});
+  await page.locator('#admRouletteReset').click();
+  await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
+  assert.deepEqual(saves.at(-1).bet.appearance,{});
   await page.locator('.adm-seg-mult').first().fill('1.5');
   await page.locator('.adm-seg-mult').first().press('Tab');
   await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
@@ -193,9 +218,22 @@ try{
   await page.locator('.reels .symbol-img').first().waitFor({state:'visible'});
   assert.ok((await page.locator('#clubGame').evaluate(e=>getComputedStyle(e).backgroundImage)).includes('data:image/webp'));
   assert.ok((await page.locator('.reels .symbol-img').first().getAttribute('src')).startsWith('data:image/webp'));
+  // Confirm geometry at every supported sector count, in normal and golden mode.
+  for(const width of [320,390]){
+    await page.setViewportSize({width,height:700});
+    for(const golden of [false,true]){
+      await page.evaluate(golden=>{state.goldenRound=golden;setGame('bet');},golden);
+      const wheel=page.locator('#betWheel');await wheel.waitFor({state:'visible'});
+      const box=await wheel.boundingBox();assert.ok(box.x>=0 && box.x+box.width<=width);
+      assert.equal(await wheel.locator('.bet-seg-label').count(),await page.evaluate(()=>wheelLayout(activeBetCfg().segments).length));
+      assert.ok((await wheel.evaluate(e=>getComputedStyle(e).backgroundImage)).includes('conic-gradient'));
+      await page.screenshot({path:'test-results/roulette-'+width+'-'+golden+'.png'});
+    }
+  }
   assert.deepEqual(errors,[]);
   console.log('Admin PIN, navigation, statistics, photos, roulette, client modal and responsive layout passed');
 }catch(error){
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
