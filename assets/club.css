@@ -266,3 +266,6 @@ body.club-ui:before,body.club-ui #bgLayer{display:none!important}
 
 html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(136px + env(safe-area-inset-bottom))) + 24px)}
 .club-ui #appCard.club-app{padding-bottom:calc(var(--club-dock-height, calc(136px + env(safe-area-inset-bottom))) + 24px)!important}
+
+/* Uploaded themes are visible inside the game while preserving readable controls. */
+.club-ui #clubGame.has-custom-theme{background-image:linear-gradient(#252328b8,#252328e6),var(--club-theme-bg)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important}

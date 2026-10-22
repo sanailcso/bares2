@@ -13,7 +13,7 @@
   var DEFAULT_SYM = { jackpot:"🍒", prize:"💎", fillers:["⚽","👟","🥅","���"] };
   function graphemes(str){ str=(str==null?"":String(str)).trim(); if(!str) return []; var arr=null; try{ if(typeof Intl!=="undefined"&&Intl.Segmenter){ arr=Array.from(new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(str),function(s){ return s.segment; }); } }catch(e){} if(!arr) arr=Array.from(str); return arr.filter(function(x){ return x&&x.trim(); }); }
   function oneSym(v, fb){ var g=graphemes(v); return g.length?g[0]:(fb||""); }
-  function normalizeCfg(cfg){ if(cfg) TkRewardImages.migrate(cfg.rewards); if(!cfg||!cfg.themes) return cfg; var bm={}; try{ (BUILTIN.themes||[]).forEach(function(t){ bm[t.id]=t; }); }catch(e){} cfg.themes.forEach(function(t){ var b=bm[t.id]; var d=(b&&b.sym)?b.sym:DEFAULT_SYM; t.sym=t.sym||{}; if(b){ if(b.img && typeof t.img==="string" && t.img.indexOf("data:")===0) t.img=b.img; if(b.sym && b.sym.imageJackpot && typeof t.sym.imageJackpot==="string" && t.sym.imageJackpot.indexOf("data:")===0){ t.sym.imageJackpot=b.sym.imageJackpot; t.sym.imagePrize=b.sym.imagePrize; t.sym.imageFillers=(b.sym.imageFillers||[]).slice(); } } if(!t.sym.jackpot) t.sym.jackpot=(d.jackpot||DEFAULT_SYM.jackpot); if(!t.sym.prize) t.sym.prize=(d.prize||DEFAULT_SYM.prize); if(!t.sym.fillers||!t.sym.fillers.length) t.sym.fillers=((d.fillers&&d.fillers.length)?d.fillers:DEFAULT_SYM.fillers).slice(); t.pointsHud=t.pointsHud||{}; if(!t.pointsHud.color) t.pointsHud.color="#18052f"; }); return cfg; }
+  function normalizeCfg(cfg){ if(cfg) TkRewardImages.migrate(cfg.rewards); if(!cfg||!cfg.themes) return cfg; var bm={}; try{ (BUILTIN.themes||[]).forEach(function(t){ bm[t.id]=t; }); }catch(e){} cfg.themes.forEach(function(t){ var b=bm[t.id]; var d=(b&&b.sym)?b.sym:DEFAULT_SYM; t.sym=t.sym||{}; if(!t.sym.jackpot) t.sym.jackpot=(d.jackpot||DEFAULT_SYM.jackpot); if(!t.sym.prize) t.sym.prize=(d.prize||DEFAULT_SYM.prize); if(!t.sym.fillers||!t.sym.fillers.length) t.sym.fillers=((d.fillers&&d.fillers.length)?d.fillers:DEFAULT_SYM.fillers).slice(); t.pointsHud=t.pointsHud||{}; if(!t.pointsHud.color) t.pointsHud.color="#18052f"; }); return cfg; }
   var SUGGEST=[
     {label:"Halloween",kw:["halloween","terror","miedo","calabaza","fantasma","spooky","noche","muerto","bruja","zombie","calavera"],sym:{jackpot:"🎃",prize:"👻",fillers:["🦇","🕷️","🍬","🕯️"]}},
     {label:"Navidad",kw:["navidad","christmas","xmas","noel","papa noel","reyes","belen","nochebuena","adviento","turron"],sym:{jackpot:"🎄",prize:"🎁",fillers:["🎅","🔔","⛄","🍬"]}},
@@ -56,9 +56,9 @@
   function refreshSymbols(){
     var s = (typeof activeSymConfig==="function") ? activeSymConfig() : null;
     if(!s || !s.jackpot) s = DEFAULT_SYM;
-    var useImages = s.mode==="images" && s.imageJackpot && s.imagePrize && s.imageFillers && s.imageFillers.length;
-    var fillers = useImages ? s.imageFillers : ((s.fillers && s.fillers.length) ? s.fillers : DEFAULT_SYM.fillers);
-    CUR_SYM = useImages ? { jackpot:s.imageJackpot, prize:s.imagePrize, fillers:fillers } : { jackpot:s.jackpot, prize:(s.prize||DEFAULT_SYM.prize), fillers:fillers };
+    var useImages = s.mode==="images";
+    var fillers = useImages && s.imageFillers && s.imageFillers.length ? s.imageFillers : ((s.fillers && s.fillers.length) ? s.fillers : DEFAULT_SYM.fillers);
+    CUR_SYM = useImages ? { jackpot:s.imageJackpot||s.jackpot, prize:s.imagePrize||s.prize||DEFAULT_SYM.prize, fillers:fillers } : { jackpot:s.jackpot, prize:(s.prize||DEFAULT_SYM.prize), fillers:fillers };
     CHERRY = CUR_SYM.jackpot; GEM = CUR_SYM.prize;
     SYMBOLS = fillers.concat([CUR_SYM.jackpot]);
     WIN30 = CUR_SYM.prize; WIN50 = CUR_SYM.jackpot;
@@ -279,6 +279,9 @@
   }
   function configSaveError(error){
     var message=String(error && error.message || "");
+    if(message==="uploads_pending") return "Espera a que termine la carga de imágenes y vuelve a guardar.";
+    if(message.indexOf("config_images_too_large")>=0 || message==="config") return "No se ha guardado: las imágenes superan el límite. Reduce o elimina fondos antiguos y vuelve a guardar.";
+    if(message.indexOf("admin_session_required")>=0 || message==="pin") return "No se ha guardado: vuelve a entrar al admin con tu PIN.";
     if(message.indexOf("roulette_return_above_one")>=0) return "No se ha publicado: falta aplicar la actualización de ruleta en Supabase.";
     return "No se ha publicado. "+(message.indexOf("casilla")>=0 || message.indexOf("multiplicador")>=0 || message.indexOf("peso")>=0 ? message : "Revisa la conexión y vuelve a guardar.");
   }
@@ -292,28 +295,34 @@
       var changed=!_configReady || JSON.stringify(ACTIVE_CFG)!==JSON.stringify(cfg);
       ACTIVE_CFG=normalizeCfg(cfg); _configReady=true;
       if(initial) checkForceRefresh(cfg);
-      if(changed){ applyActive(); if(currentUser && state){ renderCatalog(); renderBet(); } }
+      if(changed){ applyActive(); if(currentUser && state){ renderCatalog(); renderBet(); renderSpinState(); } }
     }).finally(function(){ _configLoading=false; });
   }
   function sbLoadConfig(){ return sbRpc("app_public_config",{}).then(function(d){ if(d){ SB_SECURE=true; return d; } return null; }).catch(function(){ return null; /* [SEGURIDAD] sin via legacy */ }); }
+  var _adminSaveMessage="", _adminSaveBad=false, _adminDirty=false;
   var _sbCfgTimer=null, _sbCfgVersion=0, _configRequest=0, _configLoading=false, _configReady=!SB_ON, _configSaveQueue=Promise.resolve();
   function configWithoutSecrets(cfg){
     var clean=clone(cfg||{});
     (clean.users||[]).forEach(function(u){ if(u && Object.prototype.hasOwnProperty.call(u,"pass")) delete u.pass; });
     return clean;
   }
-  function setAdminSaveState(msg, bad){
-    var el=document.getElementById("admSaveState");
-    if(el){ el.textContent=msg||""; el.style.color=bad?"#ff9aac":"#9de7cf"; }
+  function setAdminSaveState(msg,bad){
+    _adminSaveMessage=msg||"";_adminSaveBad=!!bad;
+    document.querySelectorAll("#admSaveState,[data-admin-save-status]").forEach(function(el){
+      el.textContent=_adminSaveMessage;el.style.color=bad?"#b90b32":"#39745b";
+      el.dataset.state=bad?"error":(_adminSaveMessage.indexOf("Guardado")>=0?"saved":"pending");
+    });
   }
   function sbSaveConfigNow(cfg){
     if(!(SB_ON && SB_SECURE && _admPin)) return Promise.reject(new Error("admin_session_required"));
     var snapshot=normalizeCfg(configWithoutSecrets(cfg)), issue=betConfigError(snapshot.bet);
     if(issue) return Promise.reject(new Error(issue));
+    if(JSON.stringify(snapshot).length>3800000)return Promise.reject(new Error("config_images_too_large"));
     ++_configRequest;
     return _configSaveQueue=_configSaveQueue.catch(function(){}).then(function(){ return sbRpc("app_admin_save_config",{ p_pin:_admPin, p_data:snapshot }); }).then(function(r){
       if(!(r && r.ok)) throw new Error((r&&r.error)||"save_failed");
-      ++_configRequest; ACTIVE_CFG=snapshot; ACTIVE_CFG.rev=r.rev;
+      ++_configRequest; ACTIVE_CFG=snapshot; ACTIVE_CFG.rev=r.rev; _configReady=true;
+      if(typeof applyActive==="function"){applyActive();if(currentUser && typeof renderSpinState==="function")renderSpinState();}
       try{ localStorage.setItem("tikitaka_cfg_rev",String(r.rev)); }catch(e){}
       return r;
     });
@@ -326,7 +335,7 @@
     _sbCfgTimer=setTimeout(function(){
       _sbCfgTimer=null;
       setAdminSaveState("Guardando…",false);
-      sbSaveConfigNow(snapshot).then(function(){ if(version===_sbCfgVersion) setAdminSaveState("✓ Guardado en Supabase",false); })
+      sbSaveConfigNow(snapshot).then(function(){ if(version===_sbCfgVersion){_adminDirty=false;try{localStorage.removeItem("tikitaka_admin_pending");}catch(e){}setAdminSaveState("✓ Guardado en Supabase",false);} })
         .catch(function(e){ if(version===_sbCfgVersion) setAdminSaveState(configSaveError(e),true); });
     },800);
   }
@@ -1544,7 +1553,13 @@
   function themeMap(cfg){ var m={}; (cfg.themes||[]).forEach(function(t){ m[t.id]=t; }); return m; }
   function inRange(from,to){ var n=new Date(); var md=(n.getMonth()+1)*100+n.getDate(); var a=from.m*100+from.d, b=to.m*100+to.d; return a<=b ? (md>=a&&md<=b) : (md>=a||md<=b); }
   function resolveTheme(cfg){ var map=themeMap(cfg); if(cfg.override && map[cfg.override]) return cfg.override; var s=cfg.schedule||[]; for(var i=0;i<s.length;i++){ if(map[s[i].themeId] && inRange(s[i].from,s[i].to)) return s[i].themeId; } if(cfg.fallback && map[cfg.fallback]) return cfg.fallback; return cfg.themes[0] ? cfg.themes[0].id : null; }
-  function paintTheme(cfg,id){ var map=themeMap(cfg); var t=map[id]; if(!t){ t=map[resolveTheme(cfg)]; } if(!t) return; var game=document.querySelector(".slot"), hud=document.querySelector(".balance-wrap"); if(game && t.img){ game.style.setProperty("--game-bg", "url(\""+String(t.img).replace(/\"/g,"%22")+"\")"); } if(hud){ var ph=t.pointsHud||{}; hud.style.setProperty("--hud-color",ph.color||"#18052f"); hud.style.setProperty("--hud-image",ph.image?"url(\""+String(ph.image).replace(/\"/g,"%22")+"\")":"none"); } }
+  function paintTheme(cfg,id){ var map=themeMap(cfg); var t=map[id]; if(!t){ t=map[resolveTheme(cfg)]; } if(!t) return; var game=document.querySelector(".slot"), hud=document.querySelector(".balance-wrap"); if(game && t.img){ game.style.setProperty("--game-bg", "url(\""+String(t.img).replace(/\"/g,"%22")+"\")"); } var cabinet=document.getElementById("clubGame"),builtin=themeMap(BUILTIN)[t.id];
+    if(cabinet){
+      var custom=!!(t.img && (!builtin || t.img!==builtin.img));
+      cabinet.classList.toggle("has-custom-theme",custom);
+      cabinet.style.setProperty("--club-theme-bg",custom?'url("'+String(t.img).replace(/"/g,"%22")+'")':"none");
+    }
+    if(hud){ var ph=t.pointsHud||{}; hud.style.setProperty("--hud-color",ph.color||"#18052f"); hud.style.setProperty("--hud-image",ph.image?"url(\""+String(ph.image).replace(/\"/g,"%22")+"\")":"none"); } }
   var PREVIEW_CFG=null;
   function activeSymConfig(){ var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:ACTIVE_CFG; if(!cfg) return null; var map=themeMap(cfg); var t=map[resolveTheme(cfg)]; return (t&&t.sym&&t.sym.jackpot)?t.sym:null; }
   function applyActive(){ var cfg=PREVIEW_CFG||ACTIVE_CFG; applyCfgUsers(cfg); paintTheme(cfg, resolveTheme(cfg)); applyLogo(cfg); refreshSymbols(); try{ if(currentUser) renderBet(); }catch(e){} }
@@ -1559,27 +1574,48 @@
   /* Restaura la sesion guardada para no tener que iniciar sesion tras recargar */
   try{ resumeSession(); }catch(e){}
   function loadDraft(){
+    var cached=null,pending=false;
     try{
-      var s=localStorage.getItem("tikitaka_admin_cfg");
-      if(s){ var clean=normalizeCfg(configWithoutSecrets(JSON.parse(s))); localStorage.setItem("tikitaka_admin_cfg",JSON.stringify(clean)); return clean; }
+      var raw=localStorage.getItem("tikitaka_admin_cfg");
+      if(raw)cached=normalizeCfg(configWithoutSecrets(JSON.parse(raw)));
+      pending=localStorage.getItem("tikitaka_admin_pending")==="1";
     }catch(e){}
-    return normalizeCfg(configWithoutSecrets(ACTIVE_CFG));
+    if(cached && cached.themes && pending)return cached;
+    var fresh=normalizeCfg(configWithoutSecrets(ACTIVE_CFG));
+    if(cached){fresh.users=cached.users||fresh.users;fresh.credits=cached.credits||fresh.credits;}
+    return fresh;
   }
   function saveDraft(){
+    _adminDirty=true;
     DRAFT=normalizeCfg(configWithoutSecrets(DRAFT));
-    try{ localStorage.setItem("tikitaka_admin_cfg", JSON.stringify(DRAFT)); }catch(e){ return false; }
-    try{ sbSaveConfig(DRAFT); }catch(e){}
-    return true;
+    var cached=true;
+    try{localStorage.setItem("tikitaka_admin_cfg",JSON.stringify(DRAFT));}catch(e){cached=false;}
+    try{localStorage.setItem("tikitaka_admin_pending","1");}catch(e){}
+    sbSaveConfig(DRAFT);
+    return cached;
+  }
+  function saveThemeDraft(){
+    saveDraft();PREVIEW_CFG=clone(DRAFT);applyActive();
+    if(currentUser)renderSpinState();
+    renderAdmin();
   }
   function publishDraft(){
+    if(_assetUploads)return Promise.reject(new Error("uploads_pending"));
+    _adminDirty=true;
     DRAFT=normalizeCfg(configWithoutSecrets(DRAFT));
     try{ localStorage.setItem("tikitaka_admin_cfg",JSON.stringify(DRAFT)); }catch(e){}
     if(_sbCfgTimer){ clearTimeout(_sbCfgTimer); _sbCfgTimer=null; }
-    ++_sbCfgVersion;
+    var publishingVersion=++_sbCfgVersion;
     setAdminSaveState("Guardando…",false);
-    return sbSaveConfigNow(DRAFT).then(function(r){ setAdminSaveState("✓ Guardado en Supabase",false); return r; })
+    return sbSaveConfigNow(DRAFT).then(function(r){ if(publishingVersion===_sbCfgVersion){_adminDirty=false;try{localStorage.removeItem("tikitaka_admin_pending");}catch(e){}setAdminSaveState("✓ Guardado en Supabase",false);} return r; })
       .catch(function(e){ setAdminSaveState(configSaveError(e),true); throw e; });
   }
+  window.addEventListener("beforeunload",function(event){
+    var admin=document.getElementById("adminScreen");
+    if(admin && !admin.hidden && (_assetUploads || _sbCfgTimer || _adminDirty)){
+      event.preventDefault();event.returnValue="";
+    }
+  });
   function slug(s){ s=(s||"fondo").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+/,"").replace(/-+$/,""); return s||"fondo"; }
   function uid(base){ var m=themeMap(DRAFT); var id=slug(base), i=2; while(m[id]){ id=slug(base)+"-"+i; i++; } return id; }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
@@ -1771,8 +1807,56 @@
 
   function monthOpts(sel){ var h=""; for(var m=1;m<=12;m++){ h+='<option value="'+m+'"'+(sel===m?" selected":"")+'>'+MESES[m]+'</option>'; } return h; }
   function themeOptions(sel, includeAuto){ var h=""; if(includeAuto){ h+='<option value=""'+(sel?"":" selected")+'>Autom\u00e1tico (calendario)</option>'; } (DRAFT.themes||[]).forEach(function(t){ h+='<option value="'+esc(t.id)+'"'+(sel===t.id?" selected":"")+'>'+esc(t.name)+'</option>'; }); return h; }
-  function readImg(input, cb){ var f=input.files && input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ cb(r.result); }; r.readAsDataURL(f); }
-  function readImgs(input, cb){ var fs=Array.prototype.slice.call(input.files||[]), out=[]; if(!fs.length) return; var left=fs.length; fs.forEach(function(f,i){ var r=new FileReader(); r.onload=function(){ out[i]=r.result; left--; if(!left) cb(out); }; r.readAsDataURL(f); }); }
+  var _assetUploads=0;
+  function optimizeAdminImage(file, kind) {
+    return new Promise(function(resolve,reject){
+      if(!file || !/^image\//.test(file.type||"")) { reject(new Error("invalid_image")); return; }
+      var reader=new FileReader();
+      reader.onerror=function(){reject(new Error("image_read"));};
+      reader.onload=function(){
+        var image=new Image();
+        image.onerror=function(){reject(new Error("image_decode"));};
+        image.onload=function(){
+          try{
+            var max=kind==="symbol"?512:kind==="logo"?768:1600;
+            var budget=kind==="symbol"?150000:kind==="logo"?220000:420000;
+            var scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));
+            var width=Math.max(1,Math.round(image.naturalWidth*scale)),height=Math.max(1,Math.round(image.naturalHeight*scale));
+            var canvas=document.createElement("canvas"),out="";
+            for(var attempt=0;attempt<7;attempt++){
+              canvas.width=width;canvas.height=height;
+              var ctx=canvas.getContext("2d");if(!ctx)throw new Error("canvas");
+              ctx.drawImage(image,0,0,width,height);
+              out=canvas.toDataURL("image/webp",Math.max(.72,.9-attempt*.03));
+              if(out.indexOf("data:image/webp")!==0)out=canvas.toDataURL("image/png");
+              if(out.length<=budget*4/3+64){resolve(out);return;}
+              width=Math.max(1,Math.round(width*.8));height=Math.max(1,Math.round(height*.8));
+            }
+            reject(new Error("image_too_large"));
+          }catch(error){reject(error);}
+        };
+        image.src=reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  function readImg(input, cb){
+    var file=input.files&&input.files[0];if(!file)return;
+    var kind=input.classList.contains("adm-sjimg")||input.classList.contains("adm-spimg")?"symbol":input.id==="admLogo"?"logo":"background";
+    _assetUploads++;setAdminSaveState("Optimizando imagen…",false);
+    return optimizeAdminImage(file,kind).then(function(data){cb(data);}).catch(function(){
+      setAdminSaveState("No se pudo cargar la imagen. Prueba con PNG, JPG o WebP.",true);
+      toast("No se pudo cargar la imagen.");
+    }).finally(function(){_assetUploads--;input.value="";});
+  }
+  function readImgs(input, cb){
+    var files=Array.prototype.slice.call(input.files||[]);if(!files.length)return;
+    _assetUploads++;setAdminSaveState("Optimizando símbolos…",false);
+    return Promise.all(files.map(function(file){return optimizeAdminImage(file,"symbol");})).then(function(images){cb(images);}).catch(function(){
+      setAdminSaveState("No se pudieron cargar los símbolos. Prueba con PNG, JPG o WebP.",true);
+      toast("No se pudieron cargar los símbolos.");
+    }).finally(function(){_assetUploads--;input.value="";});
+  }
   function readRewardImg(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ var img=new Image(); img.onload=function(){ try{ var max=256; var w=img.width||max, h=img.height||max; var s=Math.min(1,max/Math.max(w,h)); var cw=Math.max(1,Math.round(w*s)), ch=Math.max(1,Math.round(h*s)); var c=document.createElement("canvas"); c.width=cw; c.height=ch; var ctx=c.getContext("2d"); ctx.drawImage(img,0,0,cw,ch); var out=c.toDataURL("image/webp",0.85); if(!out||out.indexOf("data:image/webp")!==0) out=c.toDataURL("image/jpeg",0.85); cb(out); }catch(e){ cb(r.result); } }; img.onerror=function(){ cb(r.result); }; img.src=r.result; }; r.readAsDataURL(f); }
   function clampD(d){ if(isNaN(d)||d<1) return 1; if(d>31) return 31; return d; }
   function toast(msg){ var t=document.getElementById("admToast"); if(!t){ t=document.createElement("div"); t.id="admToast"; t.className="adm-toast"; document.body.appendChild(t); } t.textContent=msg; t.classList.add("show"); setTimeout(function(){ t.classList.remove("show"); },2200); }
@@ -1944,7 +2028,7 @@
     h+='<button type="button" class="adm-menu-i" data-t="sec-jugadas">🎲 Jugadas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-recaudacion">💰 Recaudación</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-avisos">📨 Avisos push</button>';
-    h+='</div></nav>';
+    h+='</div><div id="admSaveState" class="adm-save-status" role="status" aria-live="polite"></div></nav>';
     h+='<div class="adm-card" id="sec-update"><div class="adm-sec">🔄 Publicar actualización</div>';
     h+='<div class="adm-hint">Cuando cambies el tema (Halloween, Navidad, logo, fondos, premios...) pulsa este botón para <b>publicar los cambios y forzar</b> que todos los clientes vean la versión nueva la próxima vez que abran la app.</div>';
     h+='<button type="button" class="adm-btn primary" id="admForceUpdate" style="margin-top:10px">🔄 Publicar y forzar actualización</button>';
@@ -2064,11 +2148,12 @@
     h+='<button class="adm-btn ghost" id="admSave">Guardar borrador</button>';
     h+='<button class="adm-btn ghost" id="admDiscard">Descartar cambios</button>';
     h+='<button class="adm-btn primary" id="admView">Ver web principal</button>';
-    h+='<span id="admSaveState" class="adm-hint" role="status" aria-live="polite"></span>';
+    h+='<span data-admin-save-status class="adm-hint" role="status" aria-live="polite"></span>';
     h+='</div>';
     h+='</div>';
     scr.innerHTML=h;
     wireAdmin();
+    setAdminSaveState(_adminSaveMessage,_adminSaveBad);
   }
 
   function wireAdmin(){
@@ -2103,26 +2188,26 @@
         .finally(function(){ _fu.disabled=false; });
     };
     g("admAddRule").onclick=function(){ collect(); var t=(DRAFT.themes[0]||{}).id; DRAFT.schedule.push({themeId:t,from:{m:1,d:1},to:{m:1,d:31}}); renderAdmin(); };
-    g("admFallback").onchange=function(){ collect(); };
-    g("admOverride").onchange=function(){ collect(); paintTheme(DRAFT, resolveTheme(DRAFT)); };
-    g("admAdd").onchange=function(e){ var fn=(e.target.files[0]&&e.target.files[0].name)||""; readImg(e.target, function(d){ collect(); var id=uid("fondo"); var nm=fnameToName(fn); var sg=suggestEmojis(nm+" "+fn); DRAFT.themes.push({id:id,name:nm||"Nuevo fondo",img:d,_fname:fn,sym:clone(sg[0].sym)}); renderAdmin(); toast("Fondo añadido · emojis sugeridos: "+sg[0].label+". Cámbialos con ✨ Sugerir emojis."); }); };
+    g("admFallback").onchange=function(){ collect();saveThemeDraft(); };
+    g("admOverride").onchange=function(){ collect();saveThemeDraft(); };
+    g("admAdd").onchange=function(e){ var fn=(e.target.files[0]&&e.target.files[0].name)||""; readImg(e.target, function(d){ collect(); var id=uid("fondo"); var nm=fnameToName(fn); var sg=suggestEmojis(nm+" "+fn); DRAFT.themes.push({id:id,name:nm||"Nuevo fondo",img:d,_fname:fn,sym:clone(sg[0].sym)}); DRAFT.override=id;saveThemeDraft();toast("Fondo añadido y seleccionado. Guardando…"); }); };
     var each=function(sel,fn){ Array.prototype.forEach.call(document.querySelectorAll(sel), fn); };
     function renderSugg(id){ var cont=document.querySelector('.adm-sugg[data-id="'+id+'"]'); if(!cont) return; var t=null; (DRAFT.themes||[]).forEach(function(x){ if(x.id===id) t=x; }); var nameInp=document.querySelector('.adm-name[data-id="'+id+'"]'); var nm=nameInp?nameInp.value:(t?t.name:""); var list=suggestEmojis(nm+" "+((t&&t._fname)||"")); var hh=""; list.forEach(function(s,i){ hh+='<button type="button" class="adm-sugg-chip" data-id="'+esc(id)+'" data-i="'+i+'"><span class="adm-sugg-emos">'+esc(s.sym.jackpot+s.sym.prize+s.sym.fillers.join(""))+'</span><span class="adm-sugg-lab">'+esc(s.label)+'</span></button>'; }); cont.innerHTML=hh; Array.prototype.forEach.call(cont.querySelectorAll(".adm-sugg-chip"), function(chip){ chip.onclick=function(){ collect(); var i=+chip.getAttribute("data-i"); var sym=list[i].sym; (DRAFT.themes||[]).forEach(function(x){ if(x.id===id){ x.sym={ mode:"emoji", jackpot:sym.jackpot, prize:sym.prize, fillers:sym.fillers.slice(), imageJackpot:(x.sym&&x.sym.imageJackpot), imagePrize:(x.sym&&x.sym.imagePrize), imageFillers:(x.sym&&x.sym.imageFillers)||[] }; } }); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); if(currentUser) renderSpinState(); renderAdmin(); toast("Emojis aplicados: "+list[i].label); }; }); }
-    each(".adm-smode", function(inp){ inp.onchange=function(){ collect(); saveDraft(); applyActive(); if(currentUser) renderSpinState(); renderAdmin(); toast(inp.value==="images"?"Modo imágenes activado":"Modo emojis activado"); }; });
-    each(".adm-sjimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageJackpot=d;t.sym.mode="images";}}); saveDraft(); renderAdmin(); }); }; });
-    each(".adm-spimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imagePrize=d;t.sym.mode="images";}}); saveDraft(); renderAdmin(); }); }; });
-    each(".adm-sfimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImgs(inp,function(ds){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageFillers=(t.sym.imageFillers||[]).concat(ds);t.sym.mode="images";}}); saveDraft(); renderAdmin(); }); }; });
-    each(".adm-simg-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"),i=+b.getAttribute("data-i"); DRAFT.themes.forEach(function(t){if(t.id===id&&t.sym&&t.sym.imageFillers)t.sym.imageFillers.splice(i,1);}); saveDraft(); renderAdmin(); }; });
+    each(".adm-smode", function(inp){ inp.onchange=function(){ collect(); saveThemeDraft(); toast(inp.value==="images"?"Modo imágenes activado":"Modo emojis activado"); }; });
+    each(".adm-sjimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageJackpot=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
+    each(".adm-spimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imagePrize=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
+    each(".adm-sfimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImgs(inp,function(ds){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageFillers=(t.sym.imageFillers||[]).concat(ds);t.sym.mode="images";}}); saveThemeDraft(); }); }; });
+    each(".adm-simg-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"),i=+b.getAttribute("data-i"); DRAFT.themes.forEach(function(t){if(t.id===id&&t.sym&&t.sym.imageFillers)t.sym.imageFillers.splice(i,1);}); saveThemeDraft(); }; });
     each(".adm-hudcolor", function(inp){ inp.oninput=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); }; inp.onchange=function(){ collect(); saveDraft(); renderAdmin(); }; });
     each(".adm-hudimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};t.pointsHud.image=d;}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Fondo del panel actualizado"); }); }; });
     each(".adm-hud-reset", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};delete t.pointsHud.image;t.pointsHud.color="#18052f";}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Panel de puntos restablecido"); }; });
     each(".adm-sugg-btn", function(b){ b.onclick=function(){ collect(); renderSugg(b.getAttribute("data-id")); }; });
     each(".adm-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes=DRAFT.themes.filter(function(t){ return t.id!==id; }); DRAFT.schedule=DRAFT.schedule.filter(function(r){ return r.themeId!==id; }); if(DRAFT.fallback===id) DRAFT.fallback=(DRAFT.themes[0]||{}).id||""; if(DRAFT.override===id) DRAFT.override=null; renderAdmin(); }; });
-    each(".adm-img", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); var fn=(inp.files[0]&&inp.files[0].name)||""; readImg(inp, function(d){ collect(); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.img=d; t._fname=fn; } }); renderAdmin(); toast("Imagen actualizada · pulsa ✨ Sugerir emojis para adaptar los símbolos"); }); }; });
+    each(".adm-img", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); var fn=(inp.files[0]&&inp.files[0].name)||""; readImg(inp, function(d){ collect(); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.img=d; t._fname=fn; } }); saveThemeDraft();toast("Imagen actualizada. Guardando…"); }); }; });
     each(".adm-up", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(i>0){ var s=DRAFT.schedule, t=s[i-1]; s[i-1]=s[i]; s[i]=t; } renderAdmin(); }; });
     each(".adm-dn", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); var s=DRAFT.schedule; if(i<s.length-1){ var t=s[i+1]; s[i+1]=s[i]; s[i]=t; } renderAdmin(); }; });
     each(".adm-rx", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); DRAFT.schedule.splice(i,1); renderAdmin(); }; });
-    each(".adm-thumb", function(th){ th.onclick=function(){ collect(); var id=th.getAttribute("data-id"); DRAFT.override=(DRAFT.override===id?null:id); var ok=saveDraft(); renderAdmin(); if(!ok) toast("Fondo aplicado. Aviso: hay demasiadas imágenes para guardar el borrador en este dispositivo."); }; });
+    each(".adm-thumb", function(th){ th.onclick=function(){ collect(); var id=th.getAttribute("data-id"); DRAFT.override=(DRAFT.override===id?null:id); saveThemeDraft(); }; });
     var _rt=g("admRate"); if(_rt) _rt.onchange=function(){ collect(); };
     var _bon=g("admBetOn"); if(_bon) _bon.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } };
     ["admBetMin","admBetMax","admBetDay"].forEach(function(id){ var el=g(id); if(el) el.onchange=function(){ collect(); saveDraft(); if(currentUser){ try{ renderBet(); }catch(e){} } }; });
@@ -2152,7 +2237,21 @@
   }
 
   
-  function openAdmin(){ removeFab(); DRAFT=loadDraft(); applyCfgUsers(DRAFT); var scr=document.getElementById("adminScreen"); scr.hidden=false; renderAdmin(); }
+  var _adminOpenRequest=0;
+  function openAdmin(){
+    removeFab();var scr=document.getElementById("adminScreen");scr.hidden=false;
+    var request=++_adminOpenRequest;++_configRequest;
+    scr.innerHTML='<div class="adm-wrap"><div class="adm-card">Cargando configuración del servidor…</div></div>';
+    return sbLoadConfig().then(function(cfg){
+      if(request!==_adminOpenRequest || scr.hidden)return;
+      if(cfg && Array.isArray(cfg.themes) && cfg.themes.length){ACTIVE_CFG=normalizeCfg(configWithoutSecrets(cfg));_configReady=true;}
+      DRAFT=loadDraft();applyCfgUsers(DRAFT);
+      var pending=false;try{pending=localStorage.getItem("tikitaka_admin_pending")==="1";}catch(e){}
+      _adminDirty=pending;
+      _adminSaveMessage=pending?"Hay cambios pendientes de guardar. Pulsa Guardar borrador.":(cfg?"Configuración cargada del servidor.":"Sin conexión: mostrando la copia de este dispositivo.");
+      _adminSaveBad=!cfg;renderAdmin();
+    });
+  }
   function removeFab(){ var f=document.getElementById("admFab"); if(f) f.remove(); }
   function showFab(){ removeFab(); var f=document.createElement("button"); f.id="admFab"; f.className="adm-fab"; f.textContent="◀ Volver al backoffice"; f.onclick=function(){ openAdmin(); }; document.body.appendChild(f); }
   function previewSite(){ PREVIEW_CFG=clone(DRAFT); var scr=document.getElementById("adminScreen"); scr.hidden=true; scr.innerHTML=""; applyActive(); if(currentUser){ var _pr=applyRevenueCredits(); if(_pr>0){ renderHistory(); celebrateRevenue(_pr); } } showFab(); }
