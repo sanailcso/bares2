@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../assets/app.js',import.meta.url),'utf8');
+function part(start,end){const a=source.indexOf(start),b=source.indexOf(end,a);assert.ok(a>=0&&b>a);return source.slice(a,b);}
+const cfg={themes:[{id:'default',img:'data:image/webp;custom',sym:{mode:'images',jackpot:'J',prize:'P',fillers:['A'],imageJackpot:'data:image/webp;jackpot',imagePrize:'data:image/webp;prize',imageFillers:['data:image/webp;filler']}}]};
+const norm={TkRewardImages:{migrate(){}},BUILTIN:{themes:[{id:'default',img:'builtin-bg',sym:{imageJackpot:'builtin-j',imagePrize:'builtin-p',imageFillers:['builtin-f']}}]},DEFAULT_SYM:{jackpot:'J',prize:'P',fillers:['A']}};
+vm.createContext(norm);vm.runInContext(part('  function normalizeCfg(','  var SUGGEST='),norm);
+const preserved=norm.normalizeCfg(JSON.parse(JSON.stringify(cfg)));
+assert.deepEqual(preserved.themes[0].img,cfg.themes[0].img);
+assert.deepEqual(preserved.themes[0].sym.imageJackpot,cfg.themes[0].sym.imageJackpot,'Builtin theme may be customized without replacing uploaded symbols');
+const calls=[];
+const quota={DRAFT:cfg,normalizeCfg:x=>x,configWithoutSecrets:x=>x,localStorage:{setItem(){throw new Error('quota');}},sbSaveConfig:x=>calls.push(x)};
+vm.createContext(quota);vm.runInContext(part('  function saveDraft(){','  function publishDraft(){'),quota);
+assert.equal(quota.saveDraft(),false);assert.equal(calls.length,1,'Cache quota cannot block saving to the server');
+const fresh={themes:[{id:'remote',img:'server-image'}]},cached={themes:[{id:'old',img:'old-image'}],users:[],credits:[{id:'private-credit'}]};
+const scope={ACTIVE_CFG:fresh,normalizeCfg:x=>x,configWithoutSecrets:x=>JSON.parse(JSON.stringify(x)),localStorage:{getItem:k=>k==='tikitaka_admin_cfg'?JSON.stringify(cached):null}};
+vm.createContext(scope);vm.runInContext(part('  function loadDraft(){','  function saveDraft(){'),scope);
+assert.equal(scope.loadDraft().themes[0].id,'remote','Confirmed cloud configuration wins over stale cache');
+assert.equal(scope.loadDraft().credits[0].id,'private-credit','Admin-only cached records remain available');
+scope.localStorage.getItem=k=>k==='tikitaka_admin_cfg'?JSON.stringify(cached):'1';
+assert.equal(scope.loadDraft().themes[0].id,'old','Unconfirmed edits are preserved for retry');
+const symbols={activeSymConfig:()=>({mode:'images',jackpot:'J',prize:'P',fillers:['A'],imageJackpot:'custom-j'}),DEFAULT_SYM:{jackpot:'J',prize:'P',fillers:['A']}};
+vm.createContext(symbols);vm.runInContext(part('  function refreshSymbols(){','  const PAL_RED'),symbols);symbols.refreshSymbols();
+assert.equal(symbols.CUR_SYM.jackpot,'custom-j');assert.equal(symbols.CUR_SYM.prize,'P','Partial upload keeps missing roles readable');
+console.log('Theme uploads: preserve assets, save through cache quota, prefer cloud and activate images passed');

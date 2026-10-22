@@ -20,7 +20,7 @@
 #adminScreen .adm-menu-row{display:flex;gap:8px;flex-wrap:wrap}
 #adminScreen .adm-menu-i{border:1px solid #e5e1d9!important;background:white!important;color:#514b48!important;min-height:44px;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:650;white-space:nowrap;flex-shrink:0}
 #adminScreen .adm-menu-i[aria-current="location"]{background:#fbe8ed!important;border-color:#e9b8c5!important;color:#b90b32!important}
-#adminScreen .adm-card{background:#fff!important;border:1px solid #e5e1d9!important;border-radius:20px!important;padding:22px!important;box-shadow:0 3px 14px #45301b04!important;margin-bottom:18px!important;overflow:visible!important;scroll-margin-top:150px}
+#adminScreen .adm-card{background:#fff!important;border:1px solid #e5e1d9!important;border-radius:20px!important;padding:22px!important;box-shadow:0 3px 14px #45301b04!important;margin-bottom:18px!important;overflow:visible!important;scroll-margin-top:176px}
 #adminScreen .adm-card:before{display:none!important}
 #adminScreen .adm-sec{font-size:18px!important;font-weight:700!important;letter-spacing:-.3px!important;text-transform:none!important;color:#252328!important;border-bottom:1px solid #eee9e0!important;padding-bottom:13px!important;margin-bottom:15px!important;line-height:1.35}
 #adminScreen .adm-hint,#adminScreen :is(.adm-upload-help,.adm-upload-note,.adm-imgdim,.adm-sugg-hint,.adm-crmeta,.adm-slab,.adm-sym,.adm-sugg-lab,.adm-canje-meta,.adm-dt){color:#746f69!important;font-size:12px!important;line-height:1.6}
@@ -108,7 +108,7 @@ body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(#pwdErr,#edErr){col
   #adminScreen .adm-wrap{padding:20px 16px calc(32px + env(safe-area-inset-bottom))!important}
   #adminScreen .adm-menu-row{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 2px 7px;scrollbar-width:thin;max-width:100%}
   #adminScreen .adm-menu-t:after{content:" · desliza para ver más";font-weight:450;text-transform:none;letter-spacing:0}
-  #adminScreen .adm-card{padding:18px!important;scroll-margin-top:100px}
+  #adminScreen .adm-card{padding:18px!important;scroll-margin-top:144px}
   #adminScreen .adm-reward-row{grid-template-columns:minmax(0,1fr) 84px;padding:12px}
   #adminScreen .adm-reward-row>.adm-rw-name{grid-column:1/-1}
   #adminScreen .adm-reward-row>.adm-rw-icon{grid-column:1;width:64px}
@@ -136,3 +136,6 @@ body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(#pwdErr,#edErr){col
   #adminScreen .adm-actions button{flex-basis:100%}
 }
 @media(prefers-reduced-motion:reduce){#adminScreen .adm-flash{animation:none}}
+
+#adminScreen #admSaveState{min-height:20px;margin-top:8px;font-size:12px;line-height:1.5;font-weight:650;overflow-wrap:anywhere}
+#adminScreen #admSaveState[data-state="error"]{background:#fff0f2;border:1px solid #f1cbd3;padding:8px 10px;border-radius:10px}
