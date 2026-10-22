@@ -1,0 +1,138 @@
+/* Club diario backoffice: same identity as the customer app. */
+.club-ui #adminScreen{
+  --text:#252328;--muted:#746f69;--border:#e5e1d9;--gold-light:#942d43;--gold:#d70c39;
+  background:#f6f4ee!important;color:#252328!important;color-scheme:light;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  overscroll-behavior:contain;scroll-padding-bottom:32px
+}
+#adminScreen *,#adminScreen *:before,#adminScreen *:after{box-sizing:border-box}
+#adminScreen .adm-wrap{max-width:1080px!important;padding:24px 24px calc(40px + env(safe-area-inset-bottom))!important}
+#adminScreen .adm-top{position:relative!important;top:auto;gap:14px;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;border-radius:0!important;margin:0 0 12px!important}
+#adminScreen .adm-brand{display:flex;align-items:center;gap:14px;min-width:0}
+#adminScreen .adm-brand-logo{display:block;width:62px;height:52px;object-fit:contain;background:#252328;border-radius:13px;padding:7px;flex-shrink:0}
+#adminScreen .adm-eyebrow{display:block;font-size:10px;font-weight:750;letter-spacing:.12em;color:#746f69;margin-bottom:5px}
+#adminScreen .adm-h{margin:0!important;font-size:clamp(20px,3vw,30px)!important;font-weight:750!important;letter-spacing:-.8px!important;line-height:1.15;color:#252328!important;background:none!important;background-clip:border-box!important;-webkit-text-fill-color:currentColor!important;text-shadow:none!important}
+#adminScreen .adm-intro{margin:0 0 20px;font-size:14px;line-height:1.5;color:#746f69}
+#adminScreen .adm-today{background:#eee7db!important;border:0!important;border-radius:14px!important;color:#756754!important;font-size:13px!important;padding:12px 16px!important}
+#adminScreen .adm-today b{color:#594b3b}
+#adminScreen .adm-menu{position:sticky;top:0;z-index:40;background:#f6f4eef5!important;backdrop-filter:blur(14px);margin:0 -2px 20px;padding:12px 2px;border-bottom:1px solid #e5e1d9}
+#adminScreen .adm-menu-t{color:#746f69;font-size:10px;letter-spacing:.1em;font-weight:750}
+#adminScreen .adm-menu-row{display:flex;gap:8px;flex-wrap:wrap}
+#adminScreen .adm-menu-i{border:1px solid #e5e1d9!important;background:white!important;color:#514b48!important;min-height:44px;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:650;white-space:nowrap;flex-shrink:0}
+#adminScreen .adm-menu-i[aria-current="location"]{background:#fbe8ed!important;border-color:#e9b8c5!important;color:#b90b32!important}
+#adminScreen .adm-card{background:#fff!important;border:1px solid #e5e1d9!important;border-radius:20px!important;padding:22px!important;box-shadow:0 3px 14px #45301b04!important;margin-bottom:18px!important;overflow:visible!important;scroll-margin-top:150px}
+#adminScreen .adm-card:before{display:none!important}
+#adminScreen .adm-sec{font-size:18px!important;font-weight:700!important;letter-spacing:-.3px!important;text-transform:none!important;color:#252328!important;border-bottom:1px solid #eee9e0!important;padding-bottom:13px!important;margin-bottom:15px!important;line-height:1.35}
+#adminScreen .adm-hint,#adminScreen :is(.adm-upload-help,.adm-upload-note,.adm-imgdim,.adm-sugg-hint,.adm-crmeta,.adm-slab,.adm-sym,.adm-sugg-lab,.adm-canje-meta,.adm-dt){color:#746f69!important;font-size:12px!important;line-height:1.6}
+#adminScreen :is(.adm-upload-title,.adm-frow label,.adm-canje-prize,.adm-crinfo){color:#252328!important}
+#adminScreen :is(input:not([type="file"]):not([type="checkbox"]):not([type="color"]),select,textarea){
+  background:#faf8f3!important;color:#252328!important;-webkit-text-fill-color:#252328!important;
+  border:1px solid #ded8ce!important;border-radius:11px!important;min-height:44px;max-width:100%;min-width:0;
+  font:inherit!important;font-size:14px!important;padding:10px 12px!important;box-shadow:none!important
+}
+#adminScreen input::placeholder,#adminScreen textarea::placeholder{color:#888078!important;-webkit-text-fill-color:#888078!important;opacity:1}
+#adminScreen option{background:#fff;color:#252328}
+#adminScreen input[type="checkbox"]{accent-color:#d70c39;width:19px;height:19px;vertical-align:middle}
+#adminScreen input[type="color"]{min-width:44px;min-height:44px;max-width:100%;background:transparent!important;border-radius:9px}
+#adminScreen :is(button,.adm-file){min-height:44px;font-family:inherit!important;border-radius:11px!important;font-weight:650!important;font-size:13px!important;background:#f6f2e9!important;color:#51463d!important;border:1px solid #ded5c6!important;box-shadow:none!important;cursor:pointer;max-width:100%;white-space:normal;line-height:1.35;text-shadow:none!important}
+#adminScreen :is(button,.adm-file):hover{transform:none!important;filter:brightness(.98);border-color:#c9b9a5!important}
+#adminScreen :is(button,.adm-file):disabled{opacity:.55;cursor:wait}
+#adminScreen :is(button,input,select,textarea):focus-visible,#adminScreen .adm-file:focus-within{outline:3px solid #d70c3955!important;outline-offset:3px;box-shadow:none!important;border-color:#d70c39!important}
+#adminScreen :is(.adm-btn.primary,.adm-canje-toggle,#admNotifBtn){background:#d70c39!important;border-color:#d70c39!important;color:white!important}
+#adminScreen :is(.adm-del,.adm-crdel,.adm-rx,.adm-rw-del,.adm-rw-imgdel,.adm-seg-del,.adm-simg-del){background:#fff0f2!important;border-color:#f1cbd3!important;color:#b90b32!important}
+#adminScreen .adm-canje-toggle.done{background:#eaf4ed!important;color:#39745b!important;border-color:#cce2d3!important}
+#adminScreen :is(.adm-ubuiltin,.adm-use){background:#eee7db!important;color:#756754!important;border-color:#e5dac8!important}
+#adminScreen :is(.adm-crrow,.adm-canje-item,.adm-reward-row,.adm-symbol-mode,.adm-hud-editor){background:#faf8f3!important;border-color:#e5e1d9!important;border-radius:14px!important;box-shadow:none!important}
+#adminScreen .adm-crrow{flex-wrap:wrap;gap:8px;padding:14px}
+#adminScreen .adm-crinfo{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+#adminScreen .adm-canje-item{flex-wrap:wrap;padding:14px;border-left:3px solid #d8b876}
+#adminScreen .adm-canje-item.done{opacity:1;border-left-color:#39745b}
+#adminScreen .adm-canje-info{flex-basis:190px}
+#adminScreen .adm-canje-tabs{display:flex;flex-wrap:wrap;gap:7px}
+#adminScreen .adm-ct.active{background:#fbe8ed!important;border-color:#e9b8c5!important;color:#b90b32!important}
+#adminScreen .adm-badge{background:#d70c39;color:#fff}
+#adminScreen .adm-theme{align-items:flex-start;padding:18px 0!important}
+#adminScreen .adm-theme.sel{background:#faf5eb;padding:14px!important;border:1px solid #e6d9c5}
+#adminScreen .adm-thumb{width:80px!important;height:112px!important;box-shadow:none!important}
+#adminScreen .adm-thumb.sel{box-shadow:0 0 0 2px #d70c39!important}
+#adminScreen .adm-logo-prev{background:#f1ece2;border-color:#e5e1d9;border-radius:14px}
+#adminScreen .adm-symbol-gallery span{background:#f1ece2;border-color:#e5e1d9}
+#adminScreen .adm-symbol-gallery .adm-simg-del{min-height:28px;width:28px}
+#adminScreen .adm-frow{align-items:flex-start;gap:16px;margin:14px 0}
+#adminScreen .adm-frow label{flex:1;line-height:1.45}
+#adminScreen .adm-frow :is(input,select){width:220px;flex-shrink:0}
+#adminScreen .adm-uform{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#adminScreen .adm-actions{background:#eee7db!important;border:0!important;border-radius:16px!important;padding:16px!important;box-shadow:none!important}
+#adminScreen .adm-actions button{flex:1 1 170px}
+#adminScreen .adm-help{background:#faf8f3;border-color:#ded5c6!important;color:#746f69}
+#adminScreen .adm-help b{color:#942d43}
+#adminScreen .adm-pin{max-width:390px;margin:10vh auto 0!important;padding:26px!important}
+#adminScreen .adm-pin .adm-actions{padding:0!important;background:none!important}
+#adminScreen .adm-pin .adm-actions button{flex:1 1 100px}
+#adminScreen .adm-reward-list{gap:12px}
+#adminScreen .adm-reward-row{padding:14px;grid-template-columns:minmax(140px,1fr) 58px 100px 140px auto;gap:10px}
+#adminScreen .adm-rw-extra{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+#adminScreen .adm-rw-imgbox{width:100px;height:90px;border-radius:12px;background:#eee7db!important;border:0;flex-shrink:0}
+#adminScreen .adm-rw-imgbox :is(img,svg){width:100%;height:100%;object-fit:contain}
+#adminScreen .adm-rw-imgdel{min-height:28px;width:28px}
+#adminScreen .adm-rw-photo{flex:1 1 200px;max-width:100%}
+#adminScreen .adm-rw-desc{flex-basis:100%;width:100%}
+#adminScreen .adm-rw-toggle{color:#39745b;display:flex;gap:6px;align-items:center;min-height:44px}
+#adminScreen .adm-rw-imgph{color:#746f69}
+#adminScreen .adm-seg-row{background:#faf8f3!important;border:1px solid #e5e1d9;gap:8px!important}
+#adminScreen .adm-seg-pct,#adminScreen #admSegRet{color:#39745b!important}
+#adminScreen .adm-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important}
+#adminScreen .adm-kpi{background:#f6f2e9!important;border:0!important;text-align:left!important;padding:18px!important;border-radius:15px!important;min-width:0;overflow-wrap:anywhere}
+#adminScreen .adm-kpi-value{color:#252328!important;font-size:26px!important;letter-spacing:-.8px}
+#adminScreen .adm-kpi-label{color:#625c56!important}
+#adminScreen .adm-kpi-meta{color:#746f69!important}
+#adminScreen .adm-chart{background:#faf8f3!important;border-color:#e5e1d9!important}
+#adminScreen .adm-chart-bar{background:#d70c39!important}
+#adminScreen :is(#admJugList,#admHistList) .adm-reward-list>div,#adminScreen #admHistList details{background:#faf8f3!important;border-color:#e5e1d9!important}
+#adminScreen [style*="color:#ffe277"],#adminScreen [style*="color:#8ff7ff"]{color:#51463d!important}
+#adminScreen [style*="color:#cbb8e6"],#adminScreen [style*="color:#8a7aa8"],#adminScreen [style*="color:#9a86bd"]{color:#746f69!important}
+#adminScreen [style*="color:#7fe0a8"]{color:#39745b!important}
+#adminScreen [style*="color:#ff9a9a"]{color:#b90b32!important}
+#adminScreen .adm-flash{animation:club-admin-flash 1s ease}
+@keyframes club-admin-flash{40%{outline:3px solid #d70c3926;outline-offset:2px}}
+body.club-ui .adm-toast{background:#252328;border-color:#51463d;color:#fff;max-width:calc(100% - 32px);box-shadow:0 5px 20px #25232818}
+body.club-ui .adm-fab{background:#d70c39;border:0;box-shadow:0 5px 18px #d70c3926}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay{background:#25232866!important;backdrop-filter:blur(5px);padding:18px!important}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay>div{background:#fff!important;border:1px solid #e5e1d9!important;box-shadow:0 16px 60px #25232818!important;border-radius:20px!important;max-height:calc(100dvh - 36px);overflow:auto;color:#252328}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(div,label,span,b){color:#625c56!important}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay input{background:#faf8f3!important;color:#252328!important;border:1px solid #ded8ce!important;border-radius:11px!important;min-height:46px;font-size:16px!important}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay button{background:#f6f2e9!important;color:#51463d!important;border:1px solid #ded5c6!important;border-radius:11px!important;min-height:44px}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(#pwdSave,#edSave){background:#d70c39!important;color:#fff!important;border-color:#d70c39!important}
+body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(#pwdErr,#edErr){color:#b90b32!important}
+@media(max-width:800px){
+  #adminScreen .adm-wrap{padding:20px 16px calc(32px + env(safe-area-inset-bottom))!important}
+  #adminScreen .adm-menu-row{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 2px 7px;scrollbar-width:thin;max-width:100%}
+  #adminScreen .adm-menu-t:after{content:" · desliza para ver más";font-weight:450;text-transform:none;letter-spacing:0}
+  #adminScreen .adm-card{padding:18px!important;scroll-margin-top:100px}
+  #adminScreen .adm-reward-row{grid-template-columns:minmax(0,1fr) 84px;padding:12px}
+  #adminScreen .adm-reward-row>.adm-rw-name{grid-column:1/-1}
+  #adminScreen .adm-reward-row>.adm-rw-icon{grid-column:1;width:64px}
+  #adminScreen .adm-reward-row>.adm-rw-cost{grid-column:2}
+  #adminScreen .adm-reward-row>.adm-rw-tier{grid-column:1;grid-row:3}
+  #adminScreen .adm-rw-del{grid-column:2;grid-row:3}
+  #adminScreen .adm-rw-extra{grid-column:1/-1}
+  #adminScreen .adm-frow{flex-direction:column;gap:8px}
+  #adminScreen .adm-frow :is(input,select){width:100%}
+  #adminScreen :is(input:not([type="file"]):not([type="checkbox"]):not([type="color"]),select,textarea){font-size:16px!important}
+  #adminScreen .adm-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:480px){
+  #adminScreen .adm-wrap{padding-left:14px!important;padding-right:14px!important}
+  #adminScreen .adm-card{padding:16px!important;border-radius:18px!important}
+  #adminScreen .adm-theme{flex-direction:column;gap:12px}
+  #adminScreen .adm-tmeta{width:100%}
+  #adminScreen .adm-uform{grid-template-columns:minmax(0,1fr)}
+  #adminScreen .adm-canje-toggle{width:100%}
+  #adminScreen .adm-rw-imgbox{width:88px;height:84px}
+  #adminScreen .adm-rw-photo{flex-basis:100%;width:100%}
+  #adminScreen .adm-kpi{padding:14px!important}
+  #adminScreen .adm-kpi-value{font-size:23px!important}
+  #adminScreen .adm-rule>.adm-rtheme{width:100%}
+  #adminScreen .adm-actions button{flex-basis:100%}
+}
+@media(prefers-reduced-motion:reduce){#adminScreen .adm-flash{animation:none}}
