@@ -16,3 +16,7 @@
 .adm-roulette-preview>.roulette-icon{width:64px;height:64px}
 @media(max-width:360px){.club-ui #clubGame .roulette-premium.bet-wheel-wrap{width:236px!important;height:236px!important}.roulette-premium .bet-seg-label span{font-size:min(13px,var(--label-size,15px))!important}}
 @media(prefers-reduced-motion:reduce){.roulette-premium .bet-wheel{transition-duration:.01ms!important}}
+
+/* Keep the configured roulette icon visible in the player entry card. */
+.club-ui #clubGame .rc-emoji{display:block!important;flex:0 0 48px;width:48px;line-height:0}
+.club-ui #clubGame .rc-emoji .roulette-icon{display:block;width:48px;height:48px}

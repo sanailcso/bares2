@@ -1514,6 +1514,7 @@
   }
   function setGame(g){
     if(g === "bet" && !isBetEnabled()) return;
+    if(g === "bet" && !_betBusy) renderBet();
     if(g === _game){ applyGameVisibility(); return; }
     var slotEl = document.querySelector(".slot");
     var reels = slotEl ? slotEl.querySelector(".reels-wrap") : null;
