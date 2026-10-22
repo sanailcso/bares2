@@ -30,6 +30,8 @@ jobs:
         run: node tests/reward-images.mjs
       - name: Validar tiradas diarias y configuración de ruleta
         run: node tests/game-sync.mjs
+      - name: Validar débito y premio de ruleta
+        run: node tests/roulette-accounting.mjs
       - name: Validar lista de clientes del admin
         run: node tests/admin-users.mjs
       - name: Validar controles demo
