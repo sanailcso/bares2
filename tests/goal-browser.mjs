@@ -49,8 +49,8 @@ try{
   await page.locator('#clubGoal').focus();await page.keyboard.press('ArrowLeft');
   assert.equal(await page.locator('#clubGoalName').innerText(),first,'Keyboard navigation works');
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
-  await page.locator('#catalog .r-img').first().waitFor({state:'visible'});
-  assert.equal(await page.locator('#catalog .r-img').first().evaluate(e=>getComputedStyle(e).objectFit),'contain','Catalog preserves complete product');
+  await page.locator('#catalog .reward .r-img').first().waitFor({state:'visible'});
+  assert.equal(await page.locator('#catalog .reward .r-img').first().evaluate(e=>getComputedStyle(e).objectFit),'contain','Catalog preserves complete product');
   for(const width of [390,320]){
     await page.setViewportSize({width,height:844});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),false,'No horizontal overflow at '+width);
