@@ -119,10 +119,21 @@
   var _serverSpin = null;     // resultado autoritativo de la tirada
   var _CRED = { u:null, t:null }; // sesion: usuario + token (solo en memoria)
   /* PIN de admin validado SOLO en el servidor (app_admin_check); sin hash en el cliente. */
-  function sbRpc(fn, args){
-    if(!SB_ON) return Promise.reject(new Error("nosb"));
-    return fetch(SB_URL+"/rest/v1/rpc/"+fn, { method:"POST", headers:sbHeaders(), body:JSON.stringify(args||{}) })
-      .then(function(r){ return r.json().then(function(data){ if(!r.ok) throw new Error((data&&data.message)||"rpc "+r.status); return data; }); });
+  function sbRpc(fn,args){
+    if(!SB_ON)return Promise.reject(new Error("nosb"));
+    return fetch(SB_URL+"/rest/v1/rpc/"+fn,{method:"POST",headers:sbHeaders(),body:JSON.stringify(args||{})})
+      .then(function(response){
+        return response.text().then(function(body){
+          var data=null,valid=true;
+          try{data=body?JSON.parse(body):null;}catch(e){valid=false;}
+          if(!response.ok || !valid){
+            var error=new Error((data && (data.message||data.error)) || (!valid?"Respuesta no JSON del servidor":"Error HTTP "+response.status));
+            error.status=response.status;error.code=(data&&data.code)||(!valid?"invalid_response":"http_error");error.rpc=fn;
+            throw error;
+          }
+          return data;
+        });
+      });
   }
   function secureAuthLogin(u,p){
     return sbRpc("app_login",{ p_username:u, p_password:p }).then(function(res){
@@ -278,12 +289,25 @@
     return total>0 ? "" : "Al menos una casilla debe tener un peso mayor que cero.";
   }
   function configSaveError(error){
-    var message=String(error && error.message || "");
-    if(message==="uploads_pending") return "Espera a que termine la carga de imágenes y vuelve a guardar.";
-    if(message.indexOf("config_images_too_large")>=0 || message==="config") return "No se ha guardado: las imágenes superan el límite. Reduce o elimina fondos antiguos y vuelve a guardar.";
-    if(message.indexOf("admin_session_required")>=0 || message==="pin") return "No se ha guardado: vuelve a entrar al admin con tu PIN.";
-    if(message.indexOf("roulette_return_above_one")>=0) return "No se ha publicado: falta aplicar la actualización de ruleta en Supabase.";
-    return "No se ha publicado. "+(message.indexOf("casilla")>=0 || message.indexOf("multiplicador")>=0 || message.indexOf("peso")>=0 ? message : "Revisa la conexión y vuelve a guardar.");
+    var message=String(error&&error.message||"");
+    var code=String(error&&error.code||""),status=Number(error&&error.status)||0;
+    var details=message.replace(/data:image\/[^ ]+/g,"[imagen]");
+    if(typeof _admPin==="string" && _admPin)details=details.split(_admPin).join("[oculto]");
+    details=details.replace(/[\r\n\t]+/g," ").slice(0,180);
+    var label=[status?"HTTP "+status:"",code].filter(Boolean).join(" · ");
+    var suffix=label?" ("+label+")":"";
+    if(message==="uploads_pending")return "Espera a que termine la carga de imágenes y vuelve a guardar.";
+    if(message==="config_images_too_large" || message==="config" || status===413)return "No se ha publicado: las imágenes superan el límite. Reduce o elimina fondos antiguos y vuelve a guardar."+suffix;
+    if(message==="admin_session_required" || message==="pin" || status===401)return "No se ha publicado: vuelve a entrar al admin con tu PIN."+suffix;
+    if(code==="42501" || status===403)return "No se ha publicado: Supabase deniega el permiso para guardar. Hay que revisar los permisos de la función de configuración."+suffix;
+    if(code==="PGRST202" || code==="42883" || status===404)return "No se ha publicado: falta la función de guardado en Supabase o no está disponible en su caché."+suffix;
+    if(code==="PGRST203")return "No se ha publicado: Supabase encuentra varias funciones de guardado con los mismos parámetros."+suffix;
+    if(code==="22003")return "No se ha publicado: el servidor rechaza el número de versión por exceder su límite."+suffix;
+    if(code==="57014" || status===504)return "No se ha publicado: Supabase agotó el tiempo de guardado. Los cambios siguen pendientes; vuelve a intentarlo."+suffix;
+    if(message.indexOf("roulette_return_above_one")>=0 || message.indexOf("invalid_bet_config")>=0)return "No se ha publicado: revisa la configuración y la actualización de ruleta en Supabase."+suffix;
+    if(/Failed to fetch|NetworkError|Load failed|network request failed|fetch failed/i.test(message))return "No se ha publicado: no se pudo conectar con Supabase. Revisa la conexión y vuelve a guardar.";
+    if(message==="save_failed")return "No se ha publicado: Supabase no confirmó el guardado. Respuesta no reconocida.";
+    return "No se ha publicado"+suffix+": "+(details||"error desconocido del servidor")+".";
   }
   function refreshPublicConfig(initial){
     var admin=document.getElementById("adminScreen");
@@ -320,7 +344,7 @@
     if(JSON.stringify(snapshot).length>3800000)return Promise.reject(new Error("config_images_too_large"));
     ++_configRequest;
     return _configSaveQueue=_configSaveQueue.catch(function(){}).then(function(){ return sbRpc("app_admin_save_config",{ p_pin:_admPin, p_data:snapshot }); }).then(function(r){
-      if(!(r && r.ok)) throw new Error((r&&r.error)||"save_failed");
+      if(!(r && r.ok)){var failure=new Error((r&&(r.error||r.message))||"save_failed");if(r&&r.code)failure.code=r.code;throw failure;}
       ++_configRequest; ACTIVE_CFG=snapshot; ACTIVE_CFG.rev=r.rev; _configReady=true;
       if(typeof applyActive==="function"){applyActive();if(currentUser && typeof renderSpinState==="function")renderSpinState();}
       try{ localStorage.setItem("tikitaka_cfg_rev",String(r.rev)); }catch(e){}
@@ -2181,7 +2205,7 @@
     var _lr=g("admLogoReset"); if(_lr) _lr.onclick=function(){ collect(); DRAFT.logo=null; saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Logo restablecido"); };
     g("admView").onclick=function(){ collect(); saveDraft(); previewSite(); };
     var _fu=g("admForceUpdate"); if(_fu) _fu.onclick=function(){
-      collect(); DRAFT.rev=Date.now(); _fu.disabled=true;
+      collect(); _fu.disabled=true;
       var note=g("admForceNote"); if(note) note.textContent="Publicando…";
       publishDraft().then(function(){ if(note) note.textContent="Publicado. Los clientes recibirán los cambios al abrir la app o durante su actualización automática."; toast("Actualización publicada"); })
         .catch(function(error){ if(note) note.textContent=configSaveError(error); toast(configSaveError(error)); })

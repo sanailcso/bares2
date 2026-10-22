@@ -23,7 +23,7 @@ try{
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   page=await context.newPage();
   const errors=[],saves=[];
-  let failSave=false;
+  let failSave=false,rpcFailure=null;
   page.on('pageerror',e=>errors.push(e.message));
   const users=[{username:'fixture_bar',nombre:'Cliente de prueba',bar:'Bar de prueba',active:true}];
   const pending={id:'fixture-redemption',username:'fixture_bar',bar:'Bar de prueba',premio:'Llavero premium',puntos:2500,delivered:false,cancelled:false,created_at:'2026-10-22T09:00:00Z'};
@@ -35,6 +35,12 @@ try{
     const headers={'access-control-allow-origin':'*','access-control-allow-headers':'apikey,authorization,content-type','access-control-allow-methods':'POST,GET,OPTIONS'};
     if(req.method()==='OPTIONS'){await route.fulfill({status:204,headers});return;}
     const fn=url.pathname.split('/').pop(),args=req.postDataJSON()||{};
+    if(fn==='app_admin_save_config' && rpcFailure){
+      await route.fulfill({status:rpcFailure.status,headers,contentType:rpcFailure.type||'application/json',body:rpcFailure.body});return;
+    }
+    if(fn==='app_admin_save_config' && Number(args.p_data?.rev)>2147483647){
+      await route.fulfill({status:400,headers,contentType:'application/json',body:JSON.stringify({code:'22003',message:'integer out of range'})});return;
+    }
     let data={ok:true};
     if(fn==='app_public_config')data=publicConfig;
     else if(fn==='app_admin_check')data=args.p_pin==='fixture-admin';
@@ -156,6 +162,25 @@ try{
   assert.ok((await page.locator('#admSaveState').innerText()).includes('No se ha publicado'),'Failed save stays visible after rerender');
   failSave=false;
   await page.locator('#admOverride').selectOption('fondo');await waitSaved();
+
+  // Exercise the real Publish button against different HTTP failures.
+  const publishingErrors=[
+    {status:403,body:JSON.stringify({code:'42501',message:'permission denied for schema private'}),expected:'permiso'},
+    {status:404,body:JSON.stringify({code:'PGRST202',message:'Could not find the function'}),expected:'falta la función'},
+    {status:413,type:'text/html',body:'<html>Payload Too Large</html>',expected:'imágenes superan'},
+    {status:504,type:'text/plain',body:'Gateway timeout',expected:'agotó el tiempo'}
+  ];
+  for(const error of publishingErrors){
+    rpcFailure=error;
+    await page.locator('#admForceUpdate').click();
+    await page.waitForFunction(text=>document.querySelector('#admForceNote')?.textContent.includes(text),error.expected);
+    assert.ok((await page.locator('#admForceNote').innerText()).includes('HTTP '+error.status));
+  }
+  rpcFailure=null;
+  await page.locator('#admForceUpdate').click();
+  await page.waitForFunction(()=>document.querySelector('#admForceNote')?.textContent.startsWith('Publicado.'));
+  assert.ok(Number(saves.at(-1).rev)<=2147483647,'Publish does not invent a timestamp revision that breaks integer backends');
+
   await page.screenshot({path:'test-results/admin-theme-upload-saved.png'});
 
   await page.locator('#admClose').click();
