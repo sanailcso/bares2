@@ -1805,8 +1805,8 @@
   function renderStatsHtml(st){
     if(!st || !st.ok){ return '<div class="adm-canje-empty">'+((st&&st.error==="pin")?"PIN no v\u00e1lido para anal\u00edticas.":"No se pudieron cargar las anal\u00edticas (\u00bfsin conexi\u00f3n o servidor sin actualizar?).")+'</div>'; }
     var f=_statFmt;
-    var kpi=function(lab,val,extra){ return '<div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:12px 10px;text-align:center"><div style="font-size:22px;font-weight:900;color:#8ff7ff;line-height:1.1">'+val+'</div><div style="font-size:11.5px;color:#cbb8e6;margin-top:3px;font-weight:700">'+lab+'</div>'+(extra?'<div style="font-size:10.5px;color:#8a7aa8;margin-top:2px">'+extra+'</div>':'')+'</div>'; };
-    var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+    var kpi=function(lab,val,extra){ return '<div class="adm-kpi" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:12px 10px;text-align:center"><div class="adm-kpi-value" style="font-size:22px;font-weight:900;color:#8ff7ff;line-height:1.1">'+val+'</div><div class="adm-kpi-label" style="font-size:11.5px;color:#cbb8e6;margin-top:3px;font-weight:700">'+lab+'</div>'+(extra?'<div class="adm-kpi-meta" style="font-size:10.5px;color:#8a7aa8;margin-top:2px">'+extra+'</div>':'')+'</div>'; };
+    var h='<div class="adm-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
     h+=kpi("Clientes", f(st.players_total), f(st.players_active7)+" activos (7d)");
     h+=kpi("Puntos en circulaci\u00f3n", f(st.points_held));
     h+=kpi("Puntos canjeados", f(st.points_redeemed));
@@ -1820,8 +1820,8 @@
     var daily=st.daily||[]; var mx=1; daily.forEach(function(d){ if((d.spins||0)>mx) mx=d.spins; });
     if(daily.length){
       h+='<div style="margin:16px 0 8px;font-weight:900;color:#ffe277;font-size:13px">Tiradas \u00b7 \u00faltimos 14 d\u00edas</div>';
-      h+='<div style="display:flex;align-items:flex-end;gap:4px;height:96px;padding:6px;background:rgba(0,0,0,.2);border-radius:12px;border:1px solid var(--border)">';
-      daily.forEach(function(d){ var pct=Math.round((d.spins||0)/mx*100); var dd=String(d.d||"").slice(5); h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end" title="'+dd+": "+(d.spins||0)+' tiradas"><div style="width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#5deeff,#6c22c7);height:'+Math.max(3,pct)+'%"></div><div style="font-size:8.5px;color:#8a7aa8;white-space:nowrap">'+dd+'</div></div>'; });
+      h+='<div class="adm-chart" style="display:flex;align-items:flex-end;gap:4px;height:96px;padding:6px;background:rgba(0,0,0,.2);border-radius:12px;border:1px solid var(--border)">';
+      daily.forEach(function(d){ var pct=Math.round((d.spins||0)/mx*100); var dd=String(d.d||"").slice(5); h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end" title="'+dd+": "+(d.spins||0)+' tiradas"><div class="adm-chart-bar" style="width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#5deeff,#6c22c7);height:'+Math.max(3,pct)+'%"></div><div style="font-size:8.5px;color:#8a7aa8;white-space:nowrap">'+dd+'</div></div>'; });
       h+='</div>';
     }
     var tp=st.top_prizes||[];
@@ -1928,10 +1928,10 @@
     var tm=themeMap(DRAFT); var todayId=resolveTheme(DRAFT); var todayName=tm[todayId]?tm[todayId].name:"\u2014";
     var h="";
     h+='<div class="adm-wrap">';
-    h+='<div class="adm-top"><div class="adm-h">Backoffice \u00b7 Tiki Taka</div><button class="adm-x" id="admClose">Cerrar</button></div>';
+    h+='<div class="adm-top"><div class="adm-brand"><img src="./img/logo.png" class="adm-brand-logo" alt="Tiki Taka"><div><span class="adm-eyebrow">ADMINISTRACIÓN</span><h1 class="adm-h">Panel del club</h1></div></div><button class="adm-x" id="admClose">Cerrar</button></div><p class="adm-intro">Todo lo que pasa en tu club, en un solo lugar.</p>';
     h+='<div class="adm-today">Hoy se mostrar\u00eda: <b>'+esc(todayName)+'</b></div>';
-    h+='<nav class="adm-menu"><div class="adm-menu-t">Menú · todas las funciones</div><div class="adm-menu-row">';
-    h+='<button type="button" class="adm-menu-i" data-t="sec-update">🔄 Publicar</button>';
+    h+='<nav class="adm-menu" aria-label="Secciones de administración"><div class="adm-menu-t">Menú · todas las funciones</div><div class="adm-menu-row">';
+    h+='<button type="button" class="adm-menu-i" data-t="sec-update" aria-current="location">🔄 Publicar</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-analiticas">📊 Analíticas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-canjes">🎁 Canjes</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-logo">🖼️ Logo</button>';
@@ -2074,7 +2074,7 @@
   function wireAdmin(){
     var g=function(id){ return document.getElementById(id); };
     g("admClose").onclick=closeAdmin;
-    var _menu=document.querySelector(".adm-menu"); if(_menu){ _menu.addEventListener("click", function(e){ var b=e.target.closest?e.target.closest(".adm-menu-i"):null; if(!b) return; var t=document.getElementById(b.getAttribute("data-t")); if(t){ t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.add("adm-flash"); setTimeout(function(){ t.classList.remove("adm-flash"); },1300); } if(b.getAttribute("data-t")==="sec-analiticas"){ try{ loadAdminStats(); }catch(e){} } if(b.getAttribute("data-t")==="sec-historial"){ try{ loadCanjes(false); }catch(e){} } if(b.getAttribute("data-t")==="sec-jugadas"){ try{ loadAdminJugadas(); }catch(e){} } }); }
+    var _menu=document.querySelector(".adm-menu"); if(_menu){ _menu.addEventListener("click", function(e){ var b=e.target.closest?e.target.closest(".adm-menu-i"):null; if(!b) return; _menu.querySelectorAll(".adm-menu-i").forEach(function(item){ if(item===b) item.setAttribute("aria-current","location"); else item.removeAttribute("aria-current"); }); var t=document.getElementById(b.getAttribute("data-t")); if(t){ t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.add("adm-flash"); setTimeout(function(){ t.classList.remove("adm-flash"); },1300); } if(b.getAttribute("data-t")==="sec-analiticas"){ try{ loadAdminStats(); }catch(e){} } if(b.getAttribute("data-t")==="sec-historial"){ try{ loadCanjes(false); }catch(e){} } if(b.getAttribute("data-t")==="sec-jugadas"){ try{ loadAdminJugadas(); }catch(e){} } }); }
     function saveBetEditor(){ collect(); recalcSegPct(); saveDraft(); }
     var _segList=g("admSegList");
     if(_segList){
@@ -2157,7 +2157,7 @@
   function showFab(){ removeFab(); var f=document.createElement("button"); f.id="admFab"; f.className="adm-fab"; f.textContent="◀ Volver al backoffice"; f.onclick=function(){ openAdmin(); }; document.body.appendChild(f); }
   function previewSite(){ PREVIEW_CFG=clone(DRAFT); var scr=document.getElementById("adminScreen"); scr.hidden=true; scr.innerHTML=""; applyActive(); if(currentUser){ var _pr=applyRevenueCredits(); if(_pr>0){ renderHistory(); celebrateRevenue(_pr); } } showFab(); }
   function closeAdmin(){ PREVIEW_CFG=null; removeFab(); var scr=document.getElementById("adminScreen"); scr.hidden=true; scr.innerHTML=""; if((location.hash||"").toLowerCase()==="#admin"){ history.replaceState(null,"",location.pathname+location.search); } applyActive(); }
-  function pinGate(){ var scr=document.getElementById("adminScreen"); if(!scr) return; scr.hidden=false; scr.innerHTML='<div class="adm-wrap"><div class="adm-card adm-pin"><div class="adm-sec">Backoffice</div><div class="adm-hint">Introduce el PIN de administrador.</div><input type="password" id="admPin" class="adm-name" placeholder="PIN"/><div class="adm-actions" style="margin-top:12px"><button class="adm-btn ghost" id="admPinCancel">Cancelar</button><button class="adm-btn primary" id="admPinOk">Entrar</button></div></div></div>'; document.getElementById("admPinOk").onclick=function(){ var _pv=document.getElementById("admPin").value||""; checkAdminPin(_pv).then(function(ok){ if(ok){ openAdmin(); } else { toast("PIN incorrecto"); } }); }; document.getElementById("admPinCancel").onclick=closeAdmin; var pi=document.getElementById("admPin"); pi.focus(); pi.addEventListener("keydown", function(e){ if(e.key==="Enter"){ document.getElementById("admPinOk").click(); } }); }
+  function pinGate(){ var scr=document.getElementById("adminScreen"); if(!scr) return; scr.hidden=false; scr.innerHTML='<div class="adm-wrap"><div class="adm-card adm-pin"><div class="adm-sec">Backoffice</div><div class="adm-hint">Introduce el PIN de administrador.</div><input type="password" aria-label="PIN de administrador" id="admPin" class="adm-name" placeholder="PIN"/><div class="adm-actions" style="margin-top:12px"><button class="adm-btn ghost" id="admPinCancel">Cancelar</button><button class="adm-btn primary" id="admPinOk">Entrar</button></div></div></div>'; document.getElementById("admPinOk").onclick=function(){ var _pv=document.getElementById("admPin").value||""; checkAdminPin(_pv).then(function(ok){ if(ok){ openAdmin(); } else { toast("PIN incorrecto"); } }); }; document.getElementById("admPinCancel").onclick=closeAdmin; var pi=document.getElementById("admPin"); pi.focus(); pi.addEventListener("keydown", function(e){ if(e.key==="Enter"){ document.getElementById("admPinOk").click(); } }); }
   function checkAdminHash(){ if((location.hash||"").toLowerCase()==="#admin"){ pinGate(); } }
   window.addEventListener("hashchange", checkAdminHash);
   /* ===== Boton ATRAS del movil: navegar dentro de la app, no recargar/salir ===== */
