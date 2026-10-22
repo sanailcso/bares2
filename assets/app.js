@@ -1899,7 +1899,10 @@
       toast("No se pudieron cargar los símbolos.");
     }).finally(function(){_assetUploads--;input.value="";});
   }
-  function readRewardImg(input, cb){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ var img=new Image(); img.onload=function(){ try{ var max=256; var w=img.width||max, h=img.height||max; var s=Math.min(1,max/Math.max(w,h)); var cw=Math.max(1,Math.round(w*s)), ch=Math.max(1,Math.round(h*s)); var c=document.createElement("canvas"); c.width=cw; c.height=ch; var ctx=c.getContext("2d"); ctx.drawImage(img,0,0,cw,ch); var out=c.toDataURL("image/webp",0.85); if(!out||out.indexOf("data:image/webp")!==0) out=c.toDataURL("image/jpeg",0.85); cb(out); }catch(e){ cb(r.result); } }; img.onerror=function(){ cb(r.result); }; img.src=r.result; }; r.readAsDataURL(f); }
+  function readRewardImg(input, cb){
+    var file=input.files&&input.files[0]; if(!file)return;
+    TkFrameReward(file).then(function(data){if(data)cb(data);}).catch(function(){toast("No se ha podido abrir la imagen. Prueba con PNG, JPG o WebP.");}).finally(function(){input.value="";});
+  }
   function clampD(d){ if(isNaN(d)||d<1) return 1; if(d>31) return 31; return d; }
   function toast(msg){ var t=document.getElementById("admToast"); if(!t){ t=document.createElement("div"); t.id="admToast"; t.className="adm-toast"; document.body.appendChild(t); } t.textContent=msg; t.classList.add("show"); setTimeout(function(){ t.classList.remove("show"); },2200); }
 
