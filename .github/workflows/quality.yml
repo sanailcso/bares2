@@ -68,3 +68,21 @@ jobs:
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/admin_users.sql
       - name: Probar controles demo y aislamiento de clientes
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/demo_controls.sql
+
+  mobile-rewards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save --package-lock=false playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Probar carrusel táctil y catálogo móvil
+        run: node tests/goal-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-rewards
+          path: test-results/
