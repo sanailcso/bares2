@@ -172,8 +172,8 @@
   function init() {
     ready = true;
     initGoalSwipe();
-    // Keep the real animated balance in the game, docked above the mobile nav.
-    byId('clubGame').insertBefore(document.querySelector('.balance-wrap'), document.querySelector('.slot'));
+    // The real animated balance shares the fixed dock with the bottom navigation.
+    byId('clubBottomDock').insertBefore(document.querySelector('.balance-wrap'), byId('userNavBottom'));
     byId('clubHomeGame').appendChild(byId('clubGame'));
     var nav = byId('userNavBottom');
     function measureNav() {
