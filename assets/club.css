@@ -8,7 +8,7 @@ body.club-ui:before,body.club-ui #bgLayer{display:none!important}
 .club-ui button{touch-action:manipulation}
 .club-ui button:focus-visible,.club-ui a:focus-visible,.club-ui select:focus-visible,.club-ui input:focus-visible{outline:3px solid #d70c3955;outline-offset:4px}
 .club-ui .card:before,.club-ui .card:after{display:none!important}
-.club-ui .club-app{width:100%!important;max-width:560px!important;min-height:100dvh;margin:0 auto!important;padding:0 22px calc(112px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:var(--club-bg)!important;box-shadow:none!important;backdrop-filter:none!important;color:var(--club-ink)}
+.club-ui .club-app{width:100%!important;max-width:560px!important;min-height:100dvh;margin:0 auto!important;padding:0 22px calc(var(--club-dock-height, calc(136px + env(safe-area-inset-bottom))) + 24px)!important;border:0!important;border-radius:0!important;background:var(--club-bg)!important;box-shadow:none!important;backdrop-filter:none!important;color:var(--club-ink)}
 .club-ui .app-head{position:relative!important;display:flex!important;align-items:center;gap:12px;margin:0!important;padding:20px 0!important;min-height:87px!important;border:0!important;background:transparent!important;box-shadow:none!important}
 .club-ui .club-brand{display:flex!important;align-items:center;justify-content:center;width:66px!important;min-width:66px!important;height:47px!important;background:#242328!important;border-radius:12px;text-decoration:none;padding:6px!important;box-shadow:none!important;filter:none!important}
 .club-ui .club-brand:before{display:none!important}
@@ -237,8 +237,7 @@ body.club-ui:before,body.club-ui #bgLayer{display:none!important}
 @media(max-width:360px){.club-ui .club-app{padding-left:15px!important;padding-right:15px!important}.club-ui .app-head{gap:9px}.club-brand-copy{font-size:11px}.club-brand-copy span{font-size:10px}.club-intro h1{font-size:29px}.club-wallet{padding:16px}.club-wallet-number strong{font-size:30px}.club-goal{padding:18px 17px 8px}.club-goal h2{font-size:23px}.club-goal-content{width:62%}.club-goal-art{right:-28px;width:60%}.club-game{padding:16px 11px 12px}.club-game-heading h2{font-size:16px}.club-game-heading>span{font-size:9px}.club-ui #clubGame .reels-wrap{--cellH:45px}.club-week{padding:16px 13px}.club-day>span{width:27px;height:27px}.club-week-days{gap:4px}.club-ui #catalog .r-emoji{height:108px!important}.club-ui #catalog .r-name{font-size:12px!important}.club-ui .rewards{gap:9px!important}.club-ui #clubGame .bet-wheel-wrap{width:210px!important;height:210px!important}.club-ui .login-card{padding:23px!important}}
 @media(prefers-reduced-motion:reduce){.club-track span{transition:none}}
 
-/* Leave room for the dock so the final game controls can scroll clear of it. */
-.club-ui.club-playing .club-app{padding-bottom:calc(var(--club-nav-height, 78px) + 100px)!important}
+/* The app padding includes the measured points bar, navigation and safe area. */
 
 /* Browse the real admin catalog without interrupting vertical page scrolling. */
 .club-goal{touch-action:pan-y pinch-zoom}
@@ -264,3 +263,6 @@ body.club-ui:before,body.club-ui #bgLayer{display:none!important}
 .club-ui #clubBottomDock .club-nav{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;border-radius:0!important;box-shadow:none!important}
 .club-ui:not(.club-playing) #clubBottomDock>.balance-wrap{display:none!important}
 .club-ui:not(.club-playing) #clubBottomDock .club-nav{border-radius:18px 18px 0 0!important}
+
+html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(136px + env(safe-area-inset-bottom))) + 24px)}
+.club-ui #appCard.club-app{padding-bottom:calc(var(--club-dock-height, calc(136px + env(safe-area-inset-bottom))) + 24px)!important}
