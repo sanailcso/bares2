@@ -1,6 +1,6 @@
 begin;
 do $$
-declare t uuid; other_token uuid; r jsonb; i int;
+declare t uuid; other_token uuid; r jsonb; i int; before_points bigint;
 begin
   insert into private.sessions(username) values('demo') returning token into t;
   insert into private.app_users(username,pass_hash,nombre,bar) values('demo_guard_fixture','fixture','Fixture','Fixture');
@@ -26,13 +26,15 @@ begin
   if public.app_spin(t)->>'error'<>'already' then raise exception 'Demo spins need explicit reset'; end if;
   update private.app_config set data=jsonb_set(data,'{bet,perDay}','1'::jsonb) where singleton;
   for i in 1..3 loop
+    select points into before_points from private.players where username='demo';
     r:=public.app_bet(t,100);
     if not (r->>'ok')::boolean then raise exception 'Demo quota blocks testing: %',r; end if;
+    if (r->>'points')::bigint<>before_points-100+(r->>'gain')::bigint then raise exception 'Demo must debit its stake'; end if;
   end loop;
   update private.players set bet_spins=3 where username='demo_guard_fixture';
   r:=public.app_bet(other_token,100);
   if not (r->>'ok')::boolean then raise exception 'Customer first roulette spin failed'; end if;
-  if public.app_bet(other_token,100)->>'error'<>'limit' then raise exception 'Customer daily roulette limit changed'; end if;
+  if public.app_bet(other_token,100)->>'error'<>'daily_limit' then raise exception 'Customer daily roulette limit changed'; end if;
   r:=public.app_demo_action(t,'box');
   if not (r#>>'{state,pendingBox}')::boolean then raise exception 'Box failed'; end if;
   if not exists(select 1 from private.players where username='demo_guard_fixture' and streak=0 and last_spin is null and bet_spins=2) then raise exception 'Demo controls changed customer state'; end if;
