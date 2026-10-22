@@ -218,12 +218,17 @@ try{
   await page.locator('.reels .symbol-img').first().waitFor({state:'visible'});
   assert.ok((await page.locator('#clubGame').evaluate(e=>getComputedStyle(e).backgroundImage)).includes('data:image/webp'));
   assert.ok((await page.locator('.reels .symbol-img').first().getAttribute('src')).startsWith('data:image/webp'));
-  // Confirm geometry at every supported sector count, in normal and golden mode.
+  // Exercise the real player entry with available spins, normal and golden.
   for(const width of [320,390]){
     await page.setViewportSize({width,height:700});
     for(const golden of [false,true]){
-      await page.evaluate(golden=>{state.goldenRound=golden;setGame('bet');},golden);
+      await page.evaluate(golden=>{state.goldenRound=golden;state.betSpins=3;_serverSpins=3;setGame('slot');renderRuletaCta();},golden);
+      await page.locator('#rcGo').waitFor({state:'visible'});
+      assert.ok(await page.locator('#ruletaCta .roulette-icon').isVisible(),'Configured entry icon is visible');
+      await page.locator('#rcGo').click();
       const wheel=page.locator('#betWheel');await wheel.waitFor({state:'visible'});
+      assert.equal(await page.locator('#betPanel .roulette-case').getAttribute('src'),'./img/roulette-premium.webp');
+      assert.equal(await page.locator('#betPanel .bet-marquee .roulette-icon').getAttribute('src'),'./img/roulette-premium.webp');
       const box=await wheel.boundingBox();assert.ok(box.x>=0 && box.x+box.width<=width);
       assert.equal(await wheel.locator('.bet-seg-label').count(),await page.evaluate(()=>wheelLayout(activeBetCfg().segments).length));
       assert.ok((await wheel.evaluate(e=>getComputedStyle(e).backgroundImage)).includes('conic-gradient'));
