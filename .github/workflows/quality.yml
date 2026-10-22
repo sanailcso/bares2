@@ -36,6 +36,8 @@ jobs:
         run: node tests/demo-controls.mjs
       - name: Validar guardado y activación de imágenes del admin
         run: node tests/theme-assets.mjs
+      - name: Validar errores concretos al publicar
+        run: node tests/publish-errors.mjs
 
   database-checks:
     runs-on: ubuntu-latest
