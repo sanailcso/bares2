@@ -29,11 +29,22 @@ begin
   if not (v_saved->>'ok')::boolean then raise exception 'Admin roulette save failed'; end if;
   v_public:=public.app_public_config();
   if v_public#>'{bet,segments}'<>v_cfg#>'{bet,segments}' then raise exception 'Client config differs from admin'; end if;
-  update private.players set bet_spins=2 where username='demo';
+  update private.players set points=1000,bet_spins=2 where username='demo';
   v_points:=(private.player_state('demo')->>'points')::bigint;
   v_bet:=public.app_bet(v_token,100);
   if not (v_bet->>'ok')::boolean or (v_bet->>'mult')::numeric not in (1.5,2) then raise exception 'Saved roulette cannot be played: %',v_bet; end if;
-  if (v_bet->>'points')::bigint<>v_points+floor(100*(v_bet->>'mult')::numeric) then raise exception 'Roulette point contract changed'; end if;
+  if (v_bet->>'points')::bigint<>v_points-100+floor(100*(v_bet->>'mult')::numeric) then raise exception 'Roulette point contract changed'; end if;
+  if (v_bet->>'afterStake')::bigint<>v_points-100 then raise exception 'Stake was not debited'; end if;
+  if not exists(select 1 from private.events where username='demo' and type='bet' and delta=(v_bet->>'gain')::bigint-100) then raise exception 'Ledger must record net gain'; end if;
+  v_points:=(v_bet->>'points')::bigint;
+  update private.players set points=99 where username='demo';
+  v_bet:=public.app_bet(v_token,100);
+  if v_bet->>'error'<>'funds' then raise exception 'Insufficient funds accepted'; end if;
+  if (select points<>99 or bet_spins<>1 from private.players where username='demo') then raise exception 'Rejected bet changed player'; end if;
+  update private.players set points=1000 where username='demo';
+  update private.app_config set data=jsonb_set(data,'{bet,segments}','[{"mult":1,"w":1},{"mult":1,"w":1}]') where singleton;
+  v_bet:=public.app_bet(v_token,300);
+  if (v_bet->>'points')::bigint<>1000 or (v_bet->>'gain')::bigint<>300 or (v_bet->>'afterStake')::bigint<>700 then raise exception 'x1 must return the stake: %',v_bet; end if;
   begin
     update private.app_config set data=jsonb_set(data,'{bet,segments}','[{"mult":0,"w":1},{"mult":0.5,"w":1}]') where singleton;
     raise exception 'Forbidden multipliers were accepted';

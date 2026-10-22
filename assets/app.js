@@ -951,20 +951,20 @@
         '<div class="bet-marquee">'+(golden?'⭐ RULETA DORADA':'\uD83C\uDFA1 RULETA DE LA SUERTE')+'</div>'+
         '<button type="button" class="game-switch-btn" id="betBack"><span>\uD83C\uDFB0</span> Cambiar a Rodillos</button>'+
         (golden?'<div class="golden-round"><span class="gr-crown">♛</span><span><b>RONDA DORADA</b><small>Tu giro semanal exclusivo</small></span><span class="gr-stars">✦ ✦</span></div>':'')+
-        '<div class="bet-sub">Elige un nivel de juego: cuanto mayor sea, mayor puede ser el premio. Tus puntos nunca disminuyen. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
+        '<div class="bet-sub">Elige tu apuesta: se descuenta del saldo y después se suma el premio de apuesta × multiplicador. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
         '<div class="bet-wheel-wrap">'+
           '<div class="bet-pointer"></div>'+
           '<div class="bet-wheel" id="betWheel" style="background:conic-gradient('+grad.join(",")+')">'+labels+'</div>'+
           '<div class="bet-hub">\uD83C\uDFAF</div>'+
         '</div>'+
-        '<div class="bet-result" id="betResult">Elige el nivel de premio \uD83D\uDC47</div>'+
+        '<div class="bet-result" id="betResult">Elige los puntos que quieres apostar \uD83D\uDC47</div>'+
         '<div class="bet-controls">'+
           '<button type="button" class="bet-step" id="betMinus">\u2212</button>'+
           '<input type="number" id="betStake" class="bet-stake" min="'+bc.min+'" max="'+bc.max+'" step="'+bc.min+'" value="'+bc.min+'">'+
           '<button type="button" class="bet-step" id="betPlus">\uFF0B</button>'+
         '</div>'+
-        '<button type="button" class="bet-go" id="betGo">JUGAR Y SUMAR</button>'+
-        '<div class="bet-foot">Nivel '+bc.min+'\u2013'+bc.max+' \u00b7 tiradas de ruleta: <b id="betLeft">'+left+'</b> \u00b7 saldo <b>'+fmt(pts)+'</b> pts</div>'+
+        '<button type="button" class="bet-go" id="betGo">APOSTAR Y GIRAR</button>'+
+        '<div class="bet-foot">Apuesta '+bc.min+'\u2013'+bc.max+' \u00b7 tiradas de ruleta: <b id="betLeft">'+left+'</b> \u00b7 saldo <b>'+fmt(pts)+'</b> pts</div>'+
         '<div class="bet-big" id="betBig"></div>'+
       '</div>';
     var stakeInp=document.getElementById("betStake");
@@ -982,6 +982,8 @@
     var resEl=document.getElementById("betResult"), goEl=document.getElementById("betGo");
     if(!state){ return; }
     if(betSpinsLeft()<=0){ if(resEl) resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; return; }
+    if(!Number.isSafeInteger(stake) || stake<bc.min || stake>bc.max) return;
+    if(stake>state.points){ if(resEl) resEl.textContent="No tienes puntos suficientes para esta apuesta."; return; }
     var goldenPlay=!!(state&&state.goldenRound);
     state.onboardingRoulette=true; saveState(); renderOnboarding();
     /* En iPhone/Android hay que esperar a que el contexto de audio se reanude desde este toque. */
@@ -989,7 +991,13 @@
     _betBusy=true; goEl.disabled=true; resEl.textContent=goldenPlay?"Ronda dorada en juego… ⭐":"Girando\u2026 \uD83C\uDF40";
     var wheel=document.getElementById("betWheel");
     var segs=bc.segments, layout=wheelLayout(bc.segments), n=layout.length, step=360/n;
-    var finish=function(mult, newPts, left){
+    var finish=function(mult, newPts, left, afterStake, gain){
+      var before=state.points;
+      var payout=typeof gain==="number"?gain:Math.floor(stake*mult);
+      state.points=typeof afterStake==="number"?afterStake:before-stake;
+      saveState();
+      countUp(balance,before,state.points,300);
+      resEl.textContent="Apuesta: −"+stake+" pts · Girando…";
       var _mm=[]; for(var i=0;i<n;i++){ if(layout[i]===mult){ _mm.push(i); } }
       var idx=_mm.length?_mm[Math.floor(Math.random()*_mm.length)]:0;
       var target=360*6 + (360 - (idx*step + step/2));
@@ -998,19 +1006,20 @@
       wheel.style.transform="rotate("+_betRot+"deg)";
       setTimeout(function(){
         var prev=state.points;
-        if(typeof newPts==="number"){ state.points=newPts; } else { state.points = prev + Math.max(1,Math.floor(stake*mult)); }
+        if(typeof newPts==="number"){ state.points=newPts; } else { state.points = prev + payout; }
         if(typeof left!=="number"){ state.betSpins=Math.max(0,((state.betSpins||0)-1)); }
-        var delta=state.points-prev;
-        var lbl = "\uD83C\uDFA1 Ruleta x"+mult+" (+"+delta+")";
+        var delta=state.points-before;
+        var signedDelta=(delta>=0?"+":"")+delta;
+        var lbl = "\uD83C\uDFA1 Ruleta x"+mult+" · apuesta "+stake+" · premio "+payout+" ("+signedDelta+")";
         state.history.unshift({ type:"bet", date:todayStr(), label:lbl, delta:delta });
         saveState();
         renderCatalog(); renderHistory();
         countUp(balance, prev, state.points, 800);
         if(mult>=2){ launchConfetti(140, (typeof PAL_GOLD!=="undefined"?PAL_GOLD:undefined)); try{ chime(); }catch(e){} }
         if(goldenPlay){ state.goldenRound=false; saveState(); launchConfetti(90, (typeof PAL_GOLD!=="undefined"?PAL_GOLD:undefined)); }
-        resEl.innerHTML='<span class="bet-win">\uD83C\uDF89 x'+mult+' \u00b7 +'+delta+' pts</span>';
+        resEl.innerHTML='<span class="bet-win">\uD83C\uDF89 x'+mult+' \u00b7 premio '+payout+' pts · saldo '+state.points+' pts</span>';
         var _big=document.getElementById("betBig");
-        if(_big){ var _bc2="bb-win", _bm="¡Sumas +"+delta+" pts!"; _big.innerHTML='<div class="bb-mult '+_bc2+'">x'+mult+'</div><div class="bb-msg '+_bc2+'">'+_bm+'</div>'; _big.classList.add("show"); setTimeout(function(){ _big.classList.remove("show"); }, 850); }
+        if(_big){ var _bc2="bb-win", _bm="Premio "+payout+" pts · balance "+signedDelta+" pts"; _big.innerHTML='<div class="bb-mult '+_bc2+'">x'+mult+'</div><div class="bb-msg '+_bc2+'">'+_bm+'</div>'; _big.classList.add("show"); setTimeout(function(){ _big.classList.remove("show"); }, 850); }
         var usedLeft = (typeof left==="number") ? left : betSpinsLeft();
         var lEl=document.getElementById("betLeft"); if(lEl) lEl.textContent=usedLeft;
         if(typeof left==="number"){ _serverSpins=left; state.betSpins=left; }
@@ -1019,8 +1028,9 @@
       }, 3500);
     };
     secureBet(stake).then(function(sr){
-      if(sr && sr.ok){ finish(parseFloat(sr.mult)||0, sr.points, (typeof sr.betSpins==="number"?sr.betSpins:undefined)); }
+      if(sr && sr.ok){ finish(parseFloat(sr.mult)||0, sr.points, (typeof sr.betSpins==="number"?sr.betSpins:undefined), sr.afterStake, sr.gain); }
       else if(sr===null){ finish(localBetPick(segs)); } /* demo: tirada local */
+      else if(sr && sr.error==="funds"){ _betBusy=false; if(typeof sr.points==="number"){var oldPoints=state.points;state.points=sr.points;saveState();countUp(balance,oldPoints,state.points,300);} goEl.disabled=false; resEl.textContent="No tienes puntos suficientes para esta apuesta."; }
       else if(sr && sr.error==="limit"){ _betBusy=false; goEl.disabled=true; resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; }
       else if(sr && sr.error==="disabled"){ _betBusy=false; renderBet(); }
       else if(sr && sr.error==="auth"){ _betBusy=false; forceLogout(); }
