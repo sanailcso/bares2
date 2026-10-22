@@ -51,17 +51,17 @@ body.club-ui:before,body.club-ui #bgLayer{display:none!important}
 .club-game-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 1px 12px}
 .club-game-heading h2{font-size:18px;font-weight:700;letter-spacing:-.4px;margin:0;color:#fff}
 .club-game-heading>span{font-size:10px;color:#dbd3c7;text-align:right}
-.club-ui #clubGame>.balance-wrap{position:fixed!important;inset:auto!important;bottom:calc(var(--club-nav-height, 78px) + 8px)!important;left:50%!important;transform:translateX(-50%)!important;z-index:61!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:12px 14px!important;margin:0 0 12px!important;background:#39353e!important;border:1px solid #615662!important;box-shadow:0 5px 16px #0003!important;border-radius:14px!important;min-height:68px!important;height:auto!important;width:min(calc(100% - 24px), 536px)!important;box-sizing:border-box!important;text-shadow:none!important;color:#e9e4db!important;filter:none!important}
-.club-ui #clubGame>.balance-wrap:before,.club-ui #clubGame>.balance-wrap:after{display:none!important}
-.club-ui #clubGame .balance-label{display:block!important;color:#e1d9cc!important;font-size:11px!important;text-shadow:none!important;margin:0!important;letter-spacing:0!important;text-align:left!important}
-.club-ui #clubGame .balance{font-size:clamp(22px,6vw,30px)!important;line-height:1.1!important;color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important;text-shadow:none!important;font-weight:800!important;margin:0!important;letter-spacing:-.5px!important;text-align:right!important;font-variant-numeric:tabular-nums}
-.club-ui #clubGame .balance:after{content:" pts";font-size:12px;letter-spacing:0;color:#e1d9cc;-webkit-text-fill-color:#e1d9cc}
-.club-ui #clubGame .balance-pts,.club-ui #clubGame #streak{display:none!important}
+.club-ui #clubBottomDock>.balance-wrap{position:relative!important;inset:auto!important;transform:none!important;z-index:auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:10px 18px!important;margin:0!important;background:rgba(255,250,245,.72)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;border:1px solid #e7e0d5!important;border-bottom:0!important;box-shadow:none!important;border-radius:18px 18px 0 0!important;min-height:58px!important;height:auto!important;width:100%!important;box-sizing:border-box!important;text-shadow:none!important;color:#252328!important;filter:none!important}
+.club-ui #clubBottomDock>.balance-wrap:before,.club-ui #clubBottomDock>.balance-wrap:after{display:none!important}
+.club-ui #clubBottomDock .balance-label{display:block!important;color:#746f69!important;font-size:11px!important;text-shadow:none!important;margin:0!important;letter-spacing:0!important;text-align:left!important}
+.club-ui #clubBottomDock .balance{font-size:clamp(22px,6vw,30px)!important;line-height:1.1!important;color:#252328!important;-webkit-text-fill-color:#252328!important;background:none!important;text-shadow:none!important;font-weight:800!important;margin:0!important;letter-spacing:-.5px!important;text-align:right!important;font-variant-numeric:tabular-nums}
+.club-ui #clubBottomDock .balance:after{content:" pts";font-size:12px;letter-spacing:0;color:#746f69;-webkit-text-fill-color:#746f69}
+.club-ui #clubBottomDock .balance-pts,.club-ui #clubBottomDock #streak{display:none!important}
 .club-ui .club-app{overflow:visible!important}
-.club-game-gain{display:block;min-height:15px;margin-top:3px;color:#a6edbf;font-size:12px;font-weight:800;line-height:1.2;letter-spacing:0;text-transform:none}
-.club-ui #clubGame>.balance-wrap.is-gaining{border-color:#8fcaa2!important;animation:club-balance-glow .8s ease}
-@keyframes club-balance-glow{50%{box-shadow:0 0 0 4px #a6edbf20,0 5px 16px #0003}}
-@media(prefers-reduced-motion:reduce){.club-ui #clubGame>.balance-wrap.is-gaining{animation:none}}
+.club-game-gain{display:block;min-height:15px;margin-top:3px;color:#286342;font-size:12px;font-weight:800;line-height:1.2;letter-spacing:0;text-transform:none}
+.club-ui #clubBottomDock>.balance-wrap.is-gaining{border-color:#8fcaa2!important;animation:club-balance-glow .8s ease}
+@keyframes club-balance-glow{50%{box-shadow:inset 0 0 0 1px #39745b44}}
+@media(prefers-reduced-motion:reduce){.club-ui #clubBottomDock>.balance-wrap.is-gaining{animation:none}}
 .club-ui #appCard #clubGame .slot{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:10px!important;position:relative!important;min-height:0!important;height:auto!important;width:100%!important;max-width:none!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;background-image:none!important;overflow:visible!important}
 .club-ui #clubGame .slot:before,.club-ui #clubGame .slot:after,.club-ui #clubGame .marquee{display:none!important}
 .club-ui #clubGame .reels-wrap{position:relative!important;inset:auto!important;display:flex!important;flex-direction:column!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;order:1;--cellH:clamp(47px,14vw,65px)}
@@ -258,3 +258,9 @@ body.club-ui:before,body.club-ui #bgLayer{display:none!important}
 .club-ui #catalog .r-emoji .club-product-photo{display:block;width:100%;height:100%;border-radius:0}
 .club-ui #catalog .r-name{min-height:0;line-height:1.35!important}
 .club-ui #catalog .r-cost{margin-top:8px!important}
+
+/* The live balance and navigation are a single bottom dock with no gap. */
+.club-ui #clubBottomDock{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,560px);z-index:70;display:flex;flex-direction:column;gap:0}
+.club-ui #clubBottomDock .club-nav{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;border-radius:0!important;box-shadow:none!important}
+.club-ui:not(.club-playing) #clubBottomDock>.balance-wrap{display:none!important}
+.club-ui:not(.club-playing) #clubBottomDock .club-nav{border-radius:18px 18px 0 0!important}

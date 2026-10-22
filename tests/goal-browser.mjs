@@ -25,6 +25,20 @@ try{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const login=async()=>{await page.getByPlaceholder('Tu usuario',{exact:true}).fill('demo');await page.getByPlaceholder('Tu contraseña',{exact:true}).fill('demo');await page.getByRole('button',{name:'Entrar al club'}).click();await page.locator('#clubGoalName').waitFor({state:'visible'});};
   await page.goto('http://127.0.0.1:'+server.address().port+'/');await login();
+  async function assertDock(){
+    const geometry=await page.evaluate(()=>{
+      const wallet=document.querySelector('.balance-wrap'),nav=document.querySelector('#userNavBottom');
+      const b=wallet.getBoundingClientRect(),n=nav.getBoundingClientRect(),s=getComputedStyle(wallet);
+      return {gap:n.top-b.bottom,left:b.left-n.left,width:b.width-n.width,position:s.position,background:s.backgroundColor,radius:s.borderTopLeftRadius,parent:wallet.parentElement.id};
+    });
+    assert.equal(geometry.parent,'clubBottomDock');
+    assert.ok(Math.abs(geometry.gap)<1,'Balance touches the navigation with no floating gap');
+    assert.ok(Math.abs(geometry.left)<1&&Math.abs(geometry.width)<1,'Balance aligns with full navigation width');
+    assert.equal(geometry.position,'relative','Balance is part of the dock layout');
+    assert.equal(geometry.background,'rgba(255, 250, 245, 0.72)');
+    assert.equal(geometry.radius,'18px');
+  }
+  await assertDock();
   const first=await page.locator('#clubGoalName').innerText();
   const cdp=await context.newCDPSession(page);
   async function swipe(dx,dy=0){
@@ -49,6 +63,7 @@ try{
   await page.locator('#clubGoal').focus();await page.keyboard.press('ArrowLeft');
   assert.equal(await page.locator('#clubGoalName').innerText(),first,'Keyboard navigation works');
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
+  await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'hidden'});
   await page.locator('#catalog .reward .r-img').first().waitFor({state:'visible'});
   assert.equal(await page.locator('#catalog .reward .r-img').first().evaluate(e=>getComputedStyle(e).objectFit),'contain','Catalog preserves complete product');
   for(const width of [390,320]){
@@ -61,5 +76,14 @@ try{
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.locator('#clubGoal').scrollIntoViewIfNeeded();
   await page.screenshot({path:'test-results/goal-mobile.png'});
-  console.log('Touch swipes, scroll, buttons, keyboard, persistence and mobile catalog passed');
+  await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
+  await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'visible'});
+  for(const width of [390,320]){
+    await page.setViewportSize({width,height:844});
+    await page.mouse.wheel(0,400);
+    await assertDock();
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),false);
+  }
+  await page.screenshot({path:'test-results/points-docked-mobile.png'});
+  console.log('Touch goals, mobile catalog and transparent balance joined to navigation passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
