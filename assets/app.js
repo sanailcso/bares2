@@ -641,7 +641,7 @@
   }
   function rachaPerdida(){ return !!(state && (state.streak || 0) > 0 && rachaViva() === 0); }
 
-  function renderOnboarding(){ var e=document.getElementById("onboarding"); if(!e||!state)return; var a=[['🎰','Primer giro',!!state.lastSpin],['🎡','Probar ruleta',!!state.onboardingRoulette || !!(state.bets&&state.bets.count)],['🎁','Abrir premios',!!state.onboardingCatalog],['🔥','Día 3',rachaViva()>=3]],n=a.filter(function(x){return x[2]}).length;if(n===4){e.innerHTML='';return}e.innerHTML='<div style="margin:14px 0;padding:13px;border:1px solid rgba(93,238,255,.4);border-radius:14px;background:rgba(53,172,230,.12);color:#fff"><b>🚀 Tus primeros pasos · '+n+'/4</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">'+a.map(function(x){return '<span style="padding:7px;border-radius:8px;background:'+(x[2]?'rgba(53,173,104,.25)':'rgba(0,0,0,.2)')+'">'+(x[2]?'✓ ':x[0]+' ')+x[1]+'</span>'}).join('')+'</div></div>'; }
+  function renderOnboarding(){ var e=document.getElementById("onboarding"); if(!e||!state)return; var a=[['🎰','Primer giro',!!state.lastSpin],[rouletteIcon(),'Probar ruleta',!!state.onboardingRoulette || !!(state.bets&&state.bets.count)],['🎁','Abrir premios',!!state.onboardingCatalog],['🔥','Día 3',rachaViva()>=3]],n=a.filter(function(x){return x[2]}).length;if(n===4){e.innerHTML='';return}e.innerHTML='<div style="margin:14px 0;padding:13px;border:1px solid rgba(93,238,255,.4);border-radius:14px;background:rgba(53,172,230,.12);color:#fff"><b>🚀 Tus primeros pasos · '+n+'/4</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">'+a.map(function(x){return '<span style="padding:7px;border-radius:8px;background:'+(x[2]?'rgba(53,173,104,.25)':'rgba(0,0,0,.2)')+'">'+(x[2]?'✓ ':x[0]+' ')+x[1]+'</span>'}).join('')+'</div></div>'; }
 
   function renderStreak(){
     const el = document.getElementById("streak");
@@ -866,7 +866,7 @@
     renderStreak(); renderMilestones(); renderOnboarding(); renderSpinState(); renderCatalog(); renderHistory(); try{ renderBet(); }catch(e){}
     countUp(balance, prev, state.points, 900);
     celebrate(tier);
-    if(_bsAward>0){ setTimeout(function(){ try{ showPop("\uD83C\uDFA1", "+"+_bsAward, "tirada"+(_bsAward>1?"s":"")+" de ruleta", "pop-30"); }catch(e){} try{ renderBet(); }catch(e){} }, 1500); }
+    if(_bsAward>0){ setTimeout(function(){ try{ showPop(rouletteAppearance(activeBetCfg()).icon, "+"+_bsAward, "tirada"+(_bsAward>1?"s":"")+" de ruleta", "pop-30"); }catch(e){} try{ renderBet(); }catch(e){} }, 1500); }
     /* Deja que el usuario vea la combinación final y su premio antes de cambiar de juego. */
     setTimeout(function(){ if(isBetEnabled() && betSpinsLeft()>0){ setGame("bet"); } }, 5200);
     if (stepBonus){ setTimeout(function(){ showPop("🔥", "+" + stepBonus + " pts", "¡Bonus de racha! " + state.streak + " días seguidos", "pop-30"); launchConfetti(120, PAL_RED); }, 2700); }
@@ -922,7 +922,25 @@
     var segs=(Array.isArray(b.segments)&&b.segments.length)?b.segments:BET_DEFAULT.segments;
     return { enabled:(b.enabled!==false), min:Math.max(1,parseInt(b.min,10)||BET_DEFAULT.min),
       max:Math.max(1,parseInt(b.max,10)||BET_DEFAULT.max), perDay:Math.max(1,parseInt(b.perDay,10)||BET_DEFAULT.perDay),
-      segments:segs.map(function(x){ return { mult:parseFloat(x.mult)||0, w:Math.max(0,parseFloat(x.w)||0) }; }), colors:(b.colors && typeof b.colors==="object")?b.colors:{} };
+      segments:segs.map(function(x){ return { mult:parseFloat(x.mult)||0, w:Math.max(0,parseFloat(x.w)||0) }; }), appearance:b.appearance||{}, colors:(b.colors && typeof b.colors==="object")?b.colors:{} };
+  }
+  function rouletteAppearance(b){
+    var a=(b&&b.appearance)||{};
+    function src(v){ return typeof v==="string" && /^(?:data:image\/(?:png|jpeg|webp);base64,|https:\/\/|\.\/img\/)/i.test(v)?v:"./img/roulette-premium.webp"; }
+    return {icon:src(a.icon),wheel:src(a.wheel),finish:["gold","silver","noir"].indexOf(a.finish)>=0?a.finish:"gold"};
+  }
+  function rouletteIcon(b){return '<img class="roulette-icon" src="'+esc(rouletteAppearance(b||activeBetCfg()).icon)+'" alt="" onerror="this.onerror=null;this.src=&#39;./img/roulette-premium.webp&#39;">';}
+  function rouletteWheel(b,id){
+    var a=rouletteAppearance(b),layout=wheelLayout(b.segments),step=360/layout.length,colors=assignBetColors(layout,b.colors||{}),grad=[],labels="";
+    layout.forEach(function(m,i){
+      grad.push(colors[i]+" "+(i*step)+"deg "+((i+1)*step)+"deg");
+      labels+='<div class="bet-seg-label" style="transform:rotate('+(i*step+step/2)+'deg)"><span>×'+m+'</span></div>';
+    });
+    return '<div class="bet-wheel-wrap roulette-premium finish-'+a.finish+'"><img class="roulette-case" src="'+esc(a.wheel)+'" alt="" onerror="this.onerror=null;this.src=&#39;./img/roulette-premium.webp&#39;"><div class="bet-pointer"></div><div class="bet-wheel"'+(id?' id="'+id+'"':'')+' style="--wheel-sectors:conic-gradient('+grad.join(',')+');--sector-step:'+step+'deg;--label-size:'+(layout.length>12?10:layout.length>8?12:15)+'px">'+labels+'</div><div class="bet-hub"><span class="roulette-gem"></span></div></div>';
+  }
+  function rouletteEditor(){
+    var b=DRAFT.bet||BET_DEFAULT,a=rouletteAppearance(b);
+    return '<div class="adm-sec">Diseño de la ruleta</div><div class="adm-hint">Icono y carcasa independientes. Sube PNG, JPG o WebP. Para la carcasa, usa una imagen cuadrada y centrada, sin números: los multiplicadores se dibujan automáticamente encima.</div><div class="adm-roulette-preview">'+rouletteIcon(b)+rouletteWheel(b)+'</div><div class="adm-frow"><label for="admRouletteFinish">Acabado del aro</label><select id="admRouletteFinish">'+[['gold','Oro'],['silver','Platino'],['noir','Oro oscuro']].map(function(x){return '<option value="'+x[0]+'"'+(a.finish===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('')+'</select></div><div class="adm-frow"><label for="admRouletteIcon">Cambiar icono</label><input id="admRouletteIcon" type="file" accept="image/png,image/jpeg,image/webp" class="adm-sjimg"></div><div class="adm-frow"><label for="admRouletteWheel">Cambiar imagen de la rueda</label><input id="admRouletteWheel" type="file" accept="image/png,image/jpeg,image/webp" class="adm-sjimg"></div><button type="button" class="adm-btn ghost" id="admRouletteReset">Restaurar diseño original</button>';
   }
   function betHouseEdge(segs){ var t=0,e=0; segs.forEach(function(x){ t+=x.w; e+=x.w*x.mult; }); return t>0?(e/t):0; }
   function betsUsedToday(){ var t=todayStr(); if(SB_SECURE && _serverBets && _serverBets.date===t){ return _serverBets.count||0; } if(!state) return 0; if(!state.bets||state.bets.date!==t){ return 0; } return state.bets.count||0; }
@@ -936,27 +954,16 @@
     if(!_configReady || betConfigError(bc)){ host.innerHTML='<div class="bet-card"><p>'+(!_configReady?"Cargando la ruleta…":"La ruleta no está disponible en este momento.")+'</p><button type="button" class="game-switch-btn" id="betBack">Volver a rodillos</button></div>'; document.getElementById("betBack").onclick=function(){setGame("slot");}; return; }
     if(!bc.enabled){ host.innerHTML=""; try{ applyGameVisibility(); }catch(e){} return; }
     try{ applyGameVisibility(); }catch(e){}
-    var layout=wheelLayout(bc.segments), n=layout.length, step=360/n, grad=[], labels="", _bcolors=assignBetColors(layout, (bc&&bc.colors)||{});
-    for(var i=0;i<n;i++){
-      var c=_bcolors[i];
-      grad.push(c+" "+(i*step)+"deg "+((i+1)*step)+"deg");
-      var ang=i*step+step/2;
-      labels+='<div class="bet-seg-label" style="transform:rotate('+ang+'deg)"><span style="transform:translate(-50%,-84px) rotate('+(-ang)+'deg)">x'+layout[i]+'</span></div>';
-    }
     var left=betSpinsLeft();
     var pts=state?state.points:0;
     var golden=!!(state&&state.goldenRound);
     host.innerHTML =
       '<div class="bet-card game-cabinet '+(golden?'golden-cabinet':'')+'">'+
-        '<div class="bet-marquee">'+(golden?'⭐ RULETA DORADA':'\uD83C\uDFA1 RULETA DE LA SUERTE')+'</div>'+
+        '<div class="bet-marquee">'+rouletteIcon(bc)+(golden?' RULETA DORADA':' RULETA DE LA SUERTE')+'</div>'+
         '<button type="button" class="game-switch-btn" id="betBack"><span>\uD83C\uDFB0</span> Cambiar a Rodillos</button>'+
         (golden?'<div class="golden-round"><span class="gr-crown">♛</span><span><b>RONDA DORADA</b><small>Tu giro semanal exclusivo</small></span><span class="gr-stars">✦ ✦</span></div>':'')+
         '<div class="bet-sub">Elige tu apuesta: se descuenta del saldo y después se suma el premio de apuesta × multiplicador. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
-        '<div class="bet-wheel-wrap">'+
-          '<div class="bet-pointer"></div>'+
-          '<div class="bet-wheel" id="betWheel" style="background:conic-gradient('+grad.join(",")+')">'+labels+'</div>'+
-          '<div class="bet-hub">\uD83C\uDFAF</div>'+
-        '</div>'+
+        rouletteWheel(bc,'betWheel')+
         '<div class="bet-result" id="betResult">Elige los puntos que quieres apostar \uD83D\uDC47</div>'+
         '<div class="bet-controls">'+
           '<button type="button" class="bet-step" id="betMinus">\u2212</button>'+
@@ -1498,7 +1505,7 @@
     if(slotEl) slotEl.classList.toggle("show-rc", show);
     if(!show){ el.innerHTML = ""; return; }
     el.innerHTML = '<div class="rc-inner">'
-      + '<div class="rc-emoji">\uD83C\uDFA1</div>'
+      + '<div class="rc-emoji">'+rouletteIcon()+'</div>'
       + '<div class="rc-txt"><div class="rc-title">\u00a1Tienes ' + left + ' tirada' + (left===1?'':'s') + ' de ruleta!</div>'
       + '<div class="rc-sub">Pulsa para quitar los rodillos y jugar a la ruleta</div></div>'
       + '<button type="button" class="rc-btn" id="rcGo">Cambiar a Ruleta \u2192</button>'
@@ -1908,6 +1915,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; var _d=row.querySelector(".adm-rw-desc"); if(_d) r.desc=(_d.value||"").trim(); });
     var rt=document.getElementById("admRate"); if(rt) DRAFT.pointsPer100=parseFloat(rt.value)||300;
     var gr=document.getElementById("admGrowth"); if(gr){ var _g=parseFloat(gr.value); DRAFT.growthPerEur=isNaN(_g)?15:_g; }
+    var _finish=document.getElementById("admRouletteFinish"); if(_finish){DRAFT.bet=DRAFT.bet||{};DRAFT.bet.appearance=DRAFT.bet.appearance||{};DRAFT.bet.appearance.finish=_finish.value;}
     var _bo=document.getElementById("admBetOn"); if(_bo){ DRAFT.bet=DRAFT.bet||{}; DRAFT.bet.enabled=(_bo.value==="1"); var _bmn=document.getElementById("admBetMin"), _bmx=document.getElementById("admBetMax"), _bd=document.getElementById("admBetDay"); DRAFT.bet.min=Math.max(1,parseInt(_bmn&&_bmn.value,10)||100); DRAFT.bet.max=Math.max(DRAFT.bet.min,parseInt(_bmx&&_bmx.value,10)||1000); DRAFT.bet.perDay=Math.max(1,parseInt(_bd&&_bd.value,10)||3); DRAFT.bet.segments=(function(){ var out=[]; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); if(!mi||!wi) return; var mult=parseFloat(mi.value), w=parseFloat(wi.value); if(!Number.isFinite(mult)||mult<1||mult>20) { out.push({mult:mult,w:w}); return; } if(isNaN(w)||w<0) w=0; out.push({ mult:mult, w:w }); }); return out.length?out:BET_DEFAULT.segments.map(function(x){ return { mult:x.mult, w:x.w }; }); })(); DRAFT.bet.colors=(function(){ var c={}; Array.prototype.forEach.call(document.querySelectorAll(".adm-seg-row"),function(row){ var mi=row.querySelector(".adm-seg-mult"), ci=row.querySelector(".adm-seg-color"); if(mi&&ci&&/^#[0-9a-fA-F]{3,8}$/.test(ci.value)){ c[String(parseFloat(mi.value))]=ci.value; } }); return c; })(); }
   }
 
@@ -2132,11 +2140,12 @@
     var _bet=(DRAFT.bet)?DRAFT.bet:{}; var _bEnabled=(_bet.enabled!==false); var _bMin=parseInt(_bet.min,10)||100; var _bMax=parseInt(_bet.max,10)||1000; var _bDay=parseInt(_bet.perDay,10)||3;
     h+='<div class="adm-card" id="sec-apuesta"><div class="adm-sec">\uD83C\uDFA1 Ruleta de apuestas</div>';
     h+='<div class="adm-hint">Permite a tus clientes apostar puntos para multiplicarlos. Ya no pueden perder puntos: como m\u00ednimo conservan lo apostado.</div>';
+    h+=rouletteEditor();
     h+='<div class="adm-frow"><label>Activar la ruleta de apuestas</label><select id="admBetOn"><option value="1"'+(_bEnabled?' selected':'')+'>Activada</option><option value="0"'+(!_bEnabled?' selected':'')+'>Desactivada</option></select></div>';
     h+='<div class="adm-frow"><label>Apuesta m\u00ednima (pts)</label><input type="number" min="1" id="admBetMin" class="adm-num" value="'+_bMin+'"></div>';
     h+='<div class="adm-frow"><label>Apuesta m\u00e1xima (pts)</label><input type="number" min="1" id="admBetMax" class="adm-num" value="'+_bMax+'"></div>';
     h+='<div class="adm-hint" style="margin-top:6px">\uD83C\uDFB0 Las tiradas de ruleta ya no son diarias: cada cliente gana <b>1, 2 o 3 tiradas al azar</b> cada vez que juega a los rodillos.</div>';
-    h+='<div class="adm-hint" style="margin-top:6px">Configura multiplicadores entre x1 y x20. Los puntos del nivel elegido no se descuentan del saldo.</div>';    h+='<div class="adm-sec" style="margin-top:16px;font-size:15px">🎡 Probabilidades y colores de la ruleta</div>';
+    h+='<div class="adm-hint" style="margin-top:6px">Configura multiplicadores entre x1 y x20. La apuesta se descuenta del saldo y después se suma el premio.</div>';    h+='<div class="adm-sec" style="margin-top:16px;font-size:15px">🎡 Probabilidades y colores de la ruleta</div>';
     h+='<div class="adm-hint">Cada fila es una casilla de la ruleta. Ajusta el <b>multiplicador</b>, su <b>peso</b> (a más peso, más probable) y su <b>color</b>. El porcentaje se calcula solo. Los cambios se aplican al Publicar.</div>';
     h+='<div id="admSegList" style="margin-top:10px">';
     (function(){ var _bsegs=(DRAFT.bet&&Array.isArray(DRAFT.bet.segments)&&DRAFT.bet.segments.length)?DRAFT.bet.segments:BET_DEFAULT.segments; var _bcm=(DRAFT.bet&&DRAFT.bet.colors&&typeof DRAFT.bet.colors==="object")?DRAFT.bet.colors:{}; var _mults=_bsegs.map(function(sg){ return sg.mult; }); var _cols=assignBetColors(_mults, _bcm); _bsegs.forEach(function(sg,ix){ h+=segRowHtml(sg, _cols[ix]); }); })();
@@ -2229,6 +2238,10 @@
     function renderSugg(id){ var cont=document.querySelector('.adm-sugg[data-id="'+id+'"]'); if(!cont) return; var t=null; (DRAFT.themes||[]).forEach(function(x){ if(x.id===id) t=x; }); var nameInp=document.querySelector('.adm-name[data-id="'+id+'"]'); var nm=nameInp?nameInp.value:(t?t.name:""); var list=suggestEmojis(nm+" "+((t&&t._fname)||"")); var hh=""; list.forEach(function(s,i){ hh+='<button type="button" class="adm-sugg-chip" data-id="'+esc(id)+'" data-i="'+i+'"><span class="adm-sugg-emos">'+esc(s.sym.jackpot+s.sym.prize+s.sym.fillers.join(""))+'</span><span class="adm-sugg-lab">'+esc(s.label)+'</span></button>'; }); cont.innerHTML=hh; Array.prototype.forEach.call(cont.querySelectorAll(".adm-sugg-chip"), function(chip){ chip.onclick=function(){ collect(); var i=+chip.getAttribute("data-i"); var sym=list[i].sym; (DRAFT.themes||[]).forEach(function(x){ if(x.id===id){ x.sym={ mode:"emoji", jackpot:sym.jackpot, prize:sym.prize, fillers:sym.fillers.slice(), imageJackpot:(x.sym&&x.sym.imageJackpot), imagePrize:(x.sym&&x.sym.imagePrize), imageFillers:(x.sym&&x.sym.imageFillers)||[] }; } }); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); if(currentUser) renderSpinState(); renderAdmin(); toast("Emojis aplicados: "+list[i].label); }; }); }
     each(".adm-smode", function(inp){ inp.onchange=function(){ collect(); saveThemeDraft(); toast(inp.value==="images"?"Modo imágenes activado":"Modo emojis activado"); }; });
     each(".adm-sjimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageJackpot=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
+    function saveRouletteAppearance(){saveDraft();PREVIEW_CFG=clone(DRAFT);if(currentUser){renderBet();renderRuletaCta();}renderAdmin();}
+    ["Icon","Wheel"].forEach(function(kind){var input=g("admRoulette"+kind);if(input)input.onchange=function(){readImg(input,function(data){collect();DRAFT.bet.appearance=DRAFT.bet.appearance||{};DRAFT.bet.appearance[kind.toLowerCase()]=data;saveRouletteAppearance();});};});
+    if(g("admRouletteFinish"))g("admRouletteFinish").onchange=function(){collect();saveRouletteAppearance();};
+    if(g("admRouletteReset"))g("admRouletteReset").onclick=function(){collect();DRAFT.bet.appearance={};saveRouletteAppearance();};
     each(".adm-spimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imagePrize=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-sfimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImgs(inp,function(ds){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageFillers=(t.sym.imageFillers||[]).concat(ds);t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-simg-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"),i=+b.getAttribute("data-i"); DRAFT.themes.forEach(function(t){if(t.id===id&&t.sym&&t.sym.imageFillers)t.sym.imageFillers.splice(i,1);}); saveThemeDraft(); }; });
@@ -2347,3 +2360,4 @@ document.addEventListener("DOMContentLoaded",function(){document.body.classList.
     }
   }catch(e){}
 })();
+
