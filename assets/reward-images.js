@@ -31,7 +31,7 @@
     var alt = decorative ? '' : item.name;
     if (!match) return '<img class="r-img" src="' + esc(item.image) + '" alt="' + esc(alt) + '" decoding="async">';
     var index = Number(match[1]), cell = 443.5;
-    return '<svg class="club-product-photo" width="100%" height="100%" viewBox="' + (index % 4 * cell) + ' ' + (Math.floor(index / 4) * cell) + ' ' + cell + ' ' + cell + '" preserveAspectRatio="xMidYMid slice" ' +
+    return '<svg class="club-product-photo" width="100%" height="100%" viewBox="' + (index % 4 * cell) + ' ' + (Math.floor(index / 4) * cell) + ' ' + cell + ' ' + cell + '" preserveAspectRatio="xMidYMid meet" ' +
       (decorative ? 'aria-hidden="true"' : 'role="img" aria-label="' + esc(alt) + '"') +
       '><image href="./img/club-rewards-sheet.jpg" width="1774" height="887"/></svg>';
   }

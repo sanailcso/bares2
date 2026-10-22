@@ -7,8 +7,13 @@
   function byId(id) { return document.getElementById(id); }
   function put(id, text) { var el = byId(id); if (el && el.textContent !== String(text)) el.textContent = text; }
   function goalKey() { return 'tikitaka_club_goal_' + currentUser; }
+  var goalSession = { user: '', name: '' };
+  function chooseGoal(name) {
+    goalSession = { user: currentUser, name: name };
+    try { localStorage.setItem(goalKey(), name); } catch (e) {}
+  }
   function selectedGoal(items) {
-    var name = ''; try { name = localStorage.getItem(goalKey()) || ''; } catch (e) {}
+    var name = goalSession.user === currentUser ? goalSession.name : ''; try { name = localStorage.getItem(goalKey()) || name; } catch (e) {}
     return items.find(function (it) { return it.name === name; }) ||
       items.filter(function (it) { return it.cost > state.points; }).sort(function (a, b) { return a.cost - b.cost; })[0] ||
       items.slice().sort(function (a, b) { return b.cost - a.cost; })[0];
@@ -40,7 +45,52 @@
       catalogSignature = signature;
     }
     select.value = item.name;
+    var index = items.indexOf(item);
+    put('clubGoalPosition', (index + 1) + ' / ' + items.length);
+    byId('clubGoalBrowse').hidden = items.length < 2;
   }
+
+  function browseGoal(direction) {
+    var items = catalogItems();
+    if (items.length < 2) return;
+    var index = items.indexOf(selectedGoal(items));
+    var item = items[(index + direction + items.length) % items.length];
+    chooseGoal(item.name);
+    syncGoal();
+    put('clubGoalAnnouncement', 'Objetivo: ' + item.name + ', ' + fmt(item.cost) + ' puntos');
+  }
+  function initGoalSwipe() {
+    var panel = byId('clubGoal'), gesture = null, suppressClickUntil = 0;
+    var interactive = function (target) { return target.closest('button,a,input,select,textarea'); };
+    panel.addEventListener('pointerdown', function (event) {
+      if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0) || interactive(event.target)) return;
+      gesture = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      panel.setPointerCapture(event.pointerId);
+    });
+    panel.addEventListener('pointerup', function (event) {
+      if (!gesture || gesture.id !== event.pointerId) return;
+      var dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
+      gesture = null;
+      if (Math.abs(dx) < 42 || Math.abs(dx) <= Math.abs(dy) * 1.4) return;
+      suppressClickUntil = Date.now() + 350;
+      browseGoal(dx < 0 ? 1 : -1);
+    });
+    ['pointercancel', 'lostpointercapture'].forEach(function (name) {
+      panel.addEventListener(name, function () { gesture = null; });
+    });
+    panel.addEventListener('click', function (event) {
+      if (Date.now() < suppressClickUntil && !interactive(event.target)) { event.preventDefault(); event.stopPropagation(); }
+    }, true);
+    panel.addEventListener('keydown', function (event) {
+      if (interactive(event.target)) return;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault(); browseGoal(event.key === 'ArrowRight' ? 1 : -1);
+      }
+    });
+    byId('clubGoalPrevious').onclick = function () { browseGoal(-1); };
+    byId('clubGoalNext').onclick = function () { browseGoal(1); };
+  }
+
   function syncWeek() {
     var days = rachaViva(), wrap = byId('clubWeekDays');
     put('clubWeekTitle', state.pendingBox ? 'Tu caja sorpresa te espera' : days ? 'Tu racha · día ' + days + ' de 7' : rachaPerdida() ? 'Hoy empieza una nueva racha' : 'Tu racha empieza hoy');
@@ -121,6 +171,7 @@
   }
   function init() {
     ready = true;
+    initGoalSwipe();
     // Keep the real animated balance in the game, docked above the mobile nav.
     byId('clubGame').insertBefore(document.querySelector('.balance-wrap'), document.querySelector('.slot'));
     byId('clubHomeGame').appendChild(byId('clubGame'));
@@ -140,7 +191,7 @@
     byId('clubProfile').onclick = function () { go('mibar'); accountTab('cuenta'); };
     byId('clubBrandHome').onclick = function (e) { e.preventDefault(); go('inicio'); };
     byId('clubNotifications').onclick = function () { requestNotif().then(function () { subscribeClientPush(); }); };
-    byId('clubGoalSelect').onchange = function () { try { localStorage.setItem(goalKey(), this.value); } catch (e) {} queueSync(); toast('Tu objetivo se ha actualizado'); };
+    byId('clubGoalSelect').onchange = function () { chooseGoal(this.value); queueSync(); toast('Tu objetivo se ha actualizado'); };
     new MutationObserver(queueSync).observe(byId('balance'), { childList: true, characterData: true, subtree: true });
     new MutationObserver(queueSync).observe(document.querySelector('.slot'), { attributes: true, attributeFilter: ['class'] });
     queueSync();
