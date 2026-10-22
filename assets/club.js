@@ -79,7 +79,7 @@
       panel.addEventListener(name, function () { gesture = null; });
     });
     panel.addEventListener('click', function (event) {
-      if (Date.now() < suppressClickUntil) { event.preventDefault(); event.stopPropagation(); }
+      if (Date.now() < suppressClickUntil && !interactive(event.target)) { event.preventDefault(); event.stopPropagation(); }
     }, true);
     panel.addEventListener('keydown', function (event) {
       if (interactive(event.target)) return;
