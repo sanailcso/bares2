@@ -1927,7 +1927,7 @@
     if(!Array.isArray(DRAFT.rewards)||!DRAFT.rewards.length) DRAFT.rewards=CATALOG.map(function(x){return Object.assign({},x);});
     TkRewardImages.migrate(DRAFT.rewards);
     var h='<div class="adm-card adm-rewards-card" id="sec-premios"><div class="adm-sec">🎁 Catálogo de premios</div><div class="adm-hint">Añade, edita o elimina premios. Se aplican al catálogo inmediatamente.</div><div class="adm-reward-list">';
-    DRAFT.rewards.forEach(function(r,i){ h+='<div class="adm-reward-row'+(r.enabled===false?' off':'')+'" data-i="'+i+'"><input class="adm-rw-name" value="'+esc(r.name)+'" placeholder="Nombre"><input class="adm-rw-icon" value="'+esc(r.emoji||"🎁")+'" maxlength="8" aria-label="Icono"><input class="adm-rw-cost" type="number" min="1" value="'+Math.max(1,+r.cost||1)+'" aria-label="Puntos"><select class="adm-rw-tier">'+TIER_ORDER.map(function(t){return '<option'+(r.tier===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><button type="button" class="adm-rw-del" data-i="'+i+'">Eliminar</button><div class="adm-rw-extra"><div class="adm-rw-imgbox">'+(r.image?TkRewardImages.markup(r, false)+'<button type="button" class="adm-rw-imgdel" data-i="'+i+'" title="Quitar imagen">×</button>':'<span class="adm-rw-imgph">Sin<br>imagen</span>')+'</div><label class="adm-file adm-rw-imgbtn">🖼️ '+(r.image?'Cambiar':'Subir imagen')+'<input type="file" accept="image/png,image/jpeg,image/webp" class="adm-rw-img" data-i="'+i+'"></label><select class="adm-rw-photo" data-i="'+i+'" aria-label="Elegir foto para '+esc(r.name)+'">'+TkRewardImages.options()+'</select><label class="adm-rw-toggle"><input type="checkbox" class="adm-rw-on" data-i="'+i+'"'+(r.enabled===false?'':' checked')+'> '+(r.enabled===false?'Oculto':'Activo')+'</label><textarea class="adm-rw-desc" data-i="'+i+'" rows="2" placeholder="Detalles opcionales: modelo, color, talla, condiciones...">'+esc(r.desc||"")+'</textarea></div></div>'; });
+    DRAFT.rewards.forEach(function(r,i){ h+='<div class="adm-reward-row'+(r.enabled===false?' off':'')+'" data-i="'+i+'"><input class="adm-rw-name" value="'+esc(r.name)+'" placeholder="Nombre"><input class="adm-rw-icon" value="'+esc(r.emoji||"🎁")+'" maxlength="8" aria-label="Icono"><input class="adm-rw-cost" type="number" min="1" value="'+Math.max(1,+r.cost||1)+'" aria-label="Puntos"><select class="adm-rw-tier">'+TIER_ORDER.map(function(t){return '<option'+(r.tier===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select><button type="button" class="adm-rw-del" data-i="'+i+'">Eliminar</button><div class="adm-rw-extra"><div class="adm-rw-imgbox">'+(r.image?TkRewardImages.markup(r, false)+'<button type="button" class="adm-rw-imgdel" data-i="'+i+'" title="Quitar imagen">×</button>':'<span class="adm-rw-imgph">Sin<br>imagen</span>')+'</div><label class="adm-file adm-rw-imgbtn">🖼️ '+(r.image?'Cambiar':'Subir imagen')+'<input type="file" accept="image/png,image/jpeg,image/webp" class="adm-rw-img" data-i="'+i+'"></label><select class="adm-rw-photo" data-i="'+i+'" aria-label="Elegir foto para '+esc(r.name)+'">'+TkRewardImages.options()+'</select><button type="button" class="adm-rw-home" data-i="'+i+'">Ajustar imagen de portada</button><label class="adm-rw-toggle"><input type="checkbox" class="adm-rw-on" data-i="'+i+'"'+(r.enabled===false?'':' checked')+'> '+(r.enabled===false?'Oculto':'Activo')+'</label><textarea class="adm-rw-desc" data-i="'+i+'" rows="2" placeholder="Detalles opcionales: modelo, color, talla, condiciones...">'+esc(r.desc||"")+'</textarea></div></div>'; });
     h+='</div><button type="button" class="adm-btn primary adm-rw-add">＋ Añadir premio</button></div>'; return h;
   }
 
@@ -2278,6 +2278,15 @@
     each(".adm-rw-on",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast(inp.checked?"Premio visible en el catálogo":"Premio oculto (agotado)"); }; });
     each(".adm-rw-desc",function(inp){ inp.onchange=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} toast("Detalles del premio actualizados"); }; });
     each(".adm-rw-photo",function(inp){ inp.onchange=function(){ if(!inp.value) return; collect(); var i=+inp.getAttribute("data-i"); if(DRAFT.rewards[i]) DRAFT.rewards[i].image=inp.value; saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Foto del premio actualizada"); }; });
+    each(".adm-rw-home",function(button){ button.onclick=function(){
+      collect(); var i=+button.getAttribute("data-i"), reward=DRAFT.rewards[i];
+      TkGoalAppearance.edit(reward).then(function(value){
+        if(!value || DRAFT.rewards[i]!==reward)return;
+        collect(); reward.homeAppearance=value; saveDraft(); PREVIEW_CFG=clone(DRAFT);
+        if(currentUser){applyActive();renderCatalog();}
+        toast("Ajustes de portada actualizados");
+      });
+    }; });
     each(".adm-rw-img",function(inp){ inp.onchange=function(){ var i=+inp.getAttribute("data-i"); readRewardImg(inp,function(d){ collect(); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=d; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen del premio actualizada"); }); }; });
     each(".adm-rw-imgdel",function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(DRAFT.rewards[i]){ DRAFT.rewards[i].image=null; } saveDraft(); PREVIEW_CFG=clone(DRAFT); if(currentUser){applyActive();renderCatalog();} renderAdmin(); toast("Imagen quitada"); }; });
     /* Los avisos se solicitan solo tras una acción explícita del usuario. */
@@ -2364,4 +2373,5 @@ document.addEventListener("DOMContentLoaded",function(){document.body.classList.
     }
   }catch(e){}
 })();
+
 

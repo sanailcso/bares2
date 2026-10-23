@@ -150,3 +150,20 @@ body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(#pwdErr,#edErr){col
 .reward-frame-actions{display:flex;flex-wrap:wrap;gap:8px}
 .reward-frame-actions button{flex:1;min-height:44px;padding:10px;border:1px solid #d8cbbb;border-radius:10px;background:#fff;color:#30291f;cursor:pointer}
 .reward-frame-actions [data-frame=save]{background:#b82f34;color:#fff;border-color:#b82f34}
+
+
+/* Home-card appearance editor: live preview with the same styles as the player. */
+.goal-appearance-dialog{box-sizing:border-box;width:min(560px,calc(100% - 20px));max-height:92dvh;overflow:auto;margin:auto;padding:18px;border:1px solid #ddd3c6;border-radius:18px;background:#fffaf2;color:#30291f;box-shadow:0 24px 80px #0005;--club-red:#b82f34}
+.goal-appearance-dialog::backdrop{background:#0009}
+.goal-appearance-dialog>h2{margin:0 0 10px;font-size:21px}
+.goal-appearance-dialog>p{font-size:13px;line-height:1.5}
+.goal-appearance-preview{width:100%;box-sizing:border-box;margin:14px 0}
+.goal-appearance-fields{display:grid;gap:14px}
+.goal-appearance-fields label{display:grid;gap:5px;font-size:13px;font-weight:600}
+.goal-appearance-fields label>span{display:flex;justify-content:space-between;gap:8px}
+.goal-appearance-fields output{font-variant-numeric:tabular-nums}
+.goal-appearance-fields input{width:100%;min-height:30px;accent-color:#b82f34}
+.goal-appearance-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.goal-appearance-actions button{flex:1;min-height:44px;padding:10px;border:1px solid #d8cbbb;border-radius:10px;background:white;color:#30291f;cursor:pointer}
+.goal-appearance-actions [data-action=save]{background:#b82f34;color:white;border-color:#b82f34}
+#adminScreen .adm-rw-home{min-height:44px;padding:10px;border:1px solid #d8cbbb;border-radius:10px;background:#fff;color:#30291f;cursor:pointer}
