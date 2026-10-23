@@ -201,9 +201,17 @@ try{
   await page.locator('.adm-theme[data-id="fondo"]').waitFor({state:'attached'});
   await waitSaved();
   assert.equal(saves.at(-1).override,'fondo','New background is saved and selected');
+  const backgroundControl=page.locator('.adm-festive[data-id="fondo"] .adm-theme-opacity');
+  await backgroundControl.evaluate(input=>{input.value='40';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));});await waitSaved();
+  assert.equal(saves.at(-1).themes.find(t=>t.id==='fondo').backgroundOpacity,40);
+  await page.locator('.adm-thumb[data-id="default"]').click();await waitSaved();
+  assert.ok(await page.locator('#clubThemeBackground').evaluate(e=>e.style.backgroundImage.includes('bg-default.png')),'Classic theme applies its own image without decoration');
+  await page.locator('.adm-thumb[data-id="fondo"]').click();await waitSaved();
+  assert.ok(await page.locator('#clubThemeBackground').evaluate(e=>e.style.backgroundImage.includes('data:image/webp')),'Switching themes replaces the wallpaper');
+
   const festive=page.locator('.adm-festive[data-id="fondo"]');
   await festive.locator('select').selectOption('halloween');await waitSaved();
-  await festive.locator('input').evaluate(input=>{input.value='22';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));});await waitSaved();
+  await festive.locator('.adm-festive-intensity').evaluate(input=>{input.value='22';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));});await waitSaved();
   assert.deepEqual(saves.at(-1).themes.find(t=>t.id==='fondo').decoration,{style:'halloween',intensity:22});
   assert.equal(await festive.locator('.festive-preview-layer').getAttribute('data-festive'),'halloween');
   assert.equal(await page.locator('#clubFestive').isVisible(),false,'Decorations stay out of the admin');
@@ -232,7 +240,8 @@ try{
   assert.equal(await page.locator('#admOverride').inputValue(),'fondo','Cloud restores selection after reload with no local cache');
   assert.equal(await page.locator('.adm-smode[data-id="fondo"]').inputValue(),'images');
   assert.equal(await festive.locator('select').inputValue(),'halloween','Festive style survives cloud reload');
-  assert.equal(await festive.locator('input').inputValue(),'22');
+  assert.equal(await festive.locator('.adm-festive-intensity').inputValue(),'22');
+  assert.equal(await backgroundControl.inputValue(),'40','Wallpaper intensity survives reload');
 
   assert.equal(await page.locator('.adm-theme[data-id="fondo"] .adm-symbol-gallery img').count(),7,'All seven symbols survive reload');
   await page.locator('.adm-thumb[data-id="fondo"]').click();
@@ -275,8 +284,8 @@ try{
   assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).position),'absolute','Decorations move with the document');
   assert.equal(await page.locator('#clubFestive').evaluate(e=>e.parentElement.id),'appCard');
   assert.equal(await page.locator('#clubFestive .festive-corner').count(),0,'Halloween fills the background instead of isolated corners');
-  assert.match(await page.locator('#clubFestive .festive-wallpaper').evaluate(e=>getComputedStyle(e).backgroundImage),/halloween-ivory-background.webp/);
-  await page.evaluate(async()=>{const image=new Image();image.src='./img/halloween-ivory-background.webp';await image.decode();});
+  assert.ok(await page.locator('#clubThemeBackground').evaluate(e=>getComputedStyle(e).backgroundImage.includes('data:image/webp')),'Uploaded theme is the whole app wallpaper');
+  assert.equal(await page.locator('#clubThemeBackground').evaluate(e=>getComputedStyle(e).opacity),'0.4');
   const calendar=await page.evaluate(()=>{
     const previous=PREVIEW_CFG,cfg=clone(ACTIVE_CFG),date=new Date();
     cfg.override=null;cfg.fallback='default';cfg.themes.find(t=>t.id==='default').decoration={style:'none',intensity:18};
@@ -292,7 +301,7 @@ try{
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
   const scrollGeometry=await page.evaluate(async()=>{
     window.scrollTo(0,0);await new Promise(requestAnimationFrame);
-    const layer=document.getElementById('clubFestive'),top=layer.getBoundingClientRect().top;
+    const layer=document.getElementById('clubThemeBackground'),top=layer.getBoundingClientRect().top;
     const wallpaperHeight=layer.getBoundingClientRect().height,appHeight=document.getElementById('appCard').getBoundingClientRect().height;
     window.scrollTo(0,300);await new Promise(requestAnimationFrame);
     const result={delta:top-layer.getBoundingClientRect().top,scroll:window.scrollY,wallpaperHeight,appHeight};
@@ -335,6 +344,7 @@ try{
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
 
 
 
