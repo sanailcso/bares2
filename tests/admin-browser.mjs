@@ -271,6 +271,28 @@ try{
   assert.ok(Number(saves.at(-1).rev)<=2147483647,'Publish does not invent a timestamp revision that breaks integer backends');
 
   await page.screenshot({path:'test-results/admin-theme-upload-saved.png'});
+  // Removing only the background must persist without deleting the theme's other settings.
+  const beforeRemove=structuredClone(saves.at(-1).themes.find(t=>t.id==='fondo'));
+  await page.locator('.adm-img-clear[data-id="fondo"]').click();await waitSaved();
+  const removedTheme=saves.at(-1).themes.find(t=>t.id==='fondo');
+  assert.ok(removedTheme,'Theme remains available');
+  assert.equal(removedTheme.img,null);
+  assert.deepEqual(removedTheme.sym,beforeRemove.sym);
+  assert.deepEqual(removedTheme.decoration,beforeRemove.decoration);
+  assert.equal(removedTheme.backgroundOpacity,beforeRemove.backgroundOpacity);
+  assert.equal(saves.at(-1).override,'fondo');
+  assert.equal(await page.locator('#clubThemeBackground').evaluate(e=>e.hidden),true);
+  assert.equal(await page.locator('.slot').evaluate(e=>e.style.getPropertyValue('--game-bg')),'');
+  assert.equal(await page.locator('#clubGame').evaluate(e=>e.classList.contains('has-custom-theme')),false);
+  await page.evaluate(()=>localStorage.clear());await page.reload();
+  await page.getByLabel('PIN de administrador',{exact:true}).fill('fixture-admin');await page.locator('#admPinOk').click();
+  await page.getByRole('heading',{name:'Panel del club',exact:true}).waitFor();await visit('sec-fondos');
+  assert.equal(await page.locator('.adm-img-clear[data-id="fondo"]').isDisabled(),true,'Removal survives cloud reload');
+  assert.equal(await page.locator('#clubThemeBackground').evaluate(e=>e.hidden),true);
+  // Upload is still available after removing the image.
+  await page.locator('.adm-img[data-id="fondo"]').setInputFiles(upload('fondo-restaurado.png'));await waitSaved();
+  assert.ok(saves.at(-1).themes.find(t=>t.id==='fondo').img.startsWith('data:image/webp'));
+
 
   await page.locator('#admClose').click();
   assert.equal(await page.locator('#adminScreen').isVisible(),false);
@@ -344,6 +366,7 @@ try{
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
 
 
 
