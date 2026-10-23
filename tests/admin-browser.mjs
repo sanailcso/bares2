@@ -272,6 +272,11 @@ try{
   assert.equal(await page.locator('#clubFestive').isVisible(),true);
   assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).pointerEvents),'none','Decoration cannot block taps');
   assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).opacity),'0.22');
+  await page.locator('#clubFestive img').first().evaluate(image=>image.decode());
+  assert.equal(await page.locator('#clubFestive svg').count(),0,'Halloween uses the photographic asset');
+  assert.equal(await page.locator('#clubFestive img').first().getAttribute('src'),'./img/halloween-silk-web.webp');
+  assert.equal(await page.locator('#clubFestive img').first().evaluate(image=>image.naturalWidth),768);
+
   const calendar=await page.evaluate(()=>{
     const previous=PREVIEW_CFG,cfg=clone(ACTIVE_CFG),date=new Date();
     cfg.override=null;cfg.fallback='default';cfg.themes.find(t=>t.id==='default').decoration={style:'none',intensity:18};
@@ -319,6 +324,7 @@ try{
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
 
 
 
