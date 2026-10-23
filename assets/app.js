@@ -1604,7 +1604,12 @@
     if(hud){ var ph=t.pointsHud||{}; hud.style.setProperty("--hud-color",ph.color||"#18052f"); hud.style.setProperty("--hud-image",ph.image?"url(\""+String(ph.image).replace(/\"/g,"%22")+"\")":"none"); } }
   var PREVIEW_CFG=null;
   function activeSymConfig(){ var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:ACTIVE_CFG; if(!cfg) return null; var map=themeMap(cfg); var t=map[resolveTheme(cfg)]; return (t&&t.sym&&t.sym.jackpot)?t.sym:null; }
-  function applyActive(){ var cfg=PREVIEW_CFG||ACTIVE_CFG; applyCfgUsers(cfg); paintTheme(cfg, resolveTheme(cfg)); applyLogo(cfg); refreshSymbols(); try{ if(currentUser) renderBet(); }catch(e){} }
+  function syncFestiveDecoration(){ var cfg=PREVIEW_CFG||ACTIVE_CFG, t=themeMap(cfg)[resolveTheme(cfg)]; TkFestive.apply(t&&t.decoration); }
+  var _festiveDay="";
+  function refreshFestiveDate(){var day=todayStr();if(day!==_festiveDay){_festiveDay=day;syncFestiveDecoration();}}
+  setInterval(refreshFestiveDate,60000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)refreshFestiveDate();});
+  function applyActive(){ var cfg=PREVIEW_CFG||ACTIVE_CFG; applyCfgUsers(cfg); paintTheme(cfg, resolveTheme(cfg)); syncFestiveDecoration(); applyLogo(cfg); refreshSymbols(); try{ if(currentUser) renderBet(); }catch(e){} }
   function applyLogo(cfg){ var img=document.getElementById("brandLogo"); if(!img) return; var src=(cfg&&cfg.logo)||DEFAULT_LOGO; var bm=img.parentNode; if(src){ img.src=src; img.style.display="block"; if(bm&&bm.classList) bm.classList.add("has-logo"); } else { img.removeAttribute("src"); img.style.display="none"; if(bm&&bm.classList) bm.classList.remove("has-logo"); } }
   try{ applyLogo(ACTIVE_CFG); }catch(e){}
   applyActive();
@@ -1914,6 +1919,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".adm-sf[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.sym=t.sym||{}; t.sym.fillers=graphemes(inp.value); } }); });
     Array.prototype.forEach.call(document.querySelectorAll(".adm-smode[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.sym=t.sym||{}; t.sym.mode=inp.value; } }); });
     Array.prototype.forEach.call(document.querySelectorAll(".adm-hudcolor[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.pointsHud=t.pointsHud||{}; t.pointsHud.color=inp.value||"#18052f"; } }); });
+    document.querySelectorAll(".adm-festive").forEach(function(row){var id=row.getAttribute("data-id");DRAFT.themes.forEach(function(t){if(t.id===id)t.decoration=TkFestive.read(row);});});
     var fb=document.getElementById("admFallback"); if(fb) DRAFT.fallback=fb.value;
     var ov=document.getElementById("admOverride"); if(ov) DRAFT.override=ov.value||null;
     Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; var _d=row.querySelector(".adm-rw-desc"); if(_d) r.desc=(_d.value||"").trim(); });
@@ -2065,7 +2071,7 @@
     h+='<button type="button" class="adm-menu-i" data-t="sec-analiticas">📊 Analíticas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-canjes">🎁 Canjes</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-logo">🖼️ Logo</button>';
-    h+='<button type="button" class="adm-menu-i" data-t="sec-fondos">🎨 Fondos</button>';
+    h+='<button type="button" class="adm-menu-i" data-t="sec-fondos">🎨 Fondos y fiestas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-premios">🏆 Premios</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-calendario">📅 Calendario</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-ajustes">⚙️ Ajustes</button>';
@@ -2100,11 +2106,12 @@
     h+='<div class="adm-logo-row"><div class="adm-logo-prev"><img src="'+((DRAFT.logo||DEFAULT_LOGO))+'" alt="logo"></div>';
     h+='<div class="adm-trow"><label class="adm-file">\u2b06 Subir nuevo logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" id="admLogo"></label><button type="button" class="adm-logo-reset" id="admLogoReset">Restablecer logo original</button></div></div>';
     h+='<div class="adm-upload-note">Recomendado: PNG con fondo transparente, en horizontal. Se ajusta autom\u00e1ticamente al alto de la cabecera.</div></div>';
-    h+='<div class="adm-card" id="sec-fondos"><div class="adm-sec">Fondos</div><div id="admThemes">';
+    h+='<div class="adm-card" id="sec-fondos"><div class="adm-sec">Fondos y fiestas</div><div id="admThemes">';
     (DRAFT.themes||[]).forEach(function(t){
       h+='<div class="adm-theme'+(DRAFT.override===t.id?" sel":"")+'" data-id="'+esc(t.id)+'">';
       h+='<div class="adm-thumb'+(DRAFT.override===t.id?" sel":"")+'" data-id="'+esc(t.id)+'" title="Usar este fondo" style="background-image:url('+(t.img||"")+')"><span class="adm-use">'+(DRAFT.override===t.id?"✓ Usando":"Usar")+'</span></div>';
       h+='<div class="adm-tmeta"><input class="adm-name" data-id="'+esc(t.id)+'" value="'+esc(t.name)+'"/>';
+      h+=TkFestive.editor(t);
       h+='<div class="adm-syms"><span class="adm-slab">Símbolos del rodillo</span>';
       h+='<label class="adm-sym">Jackpot (50)<input class="adm-sj" data-id="'+esc(t.id)+'" maxlength="6" value="'+esc((t.sym&&t.sym.jackpot)||"")+'"></label>';
       h+='<label class="adm-sym">Premio (30)<input class="adm-sp" data-id="'+esc(t.id)+'" maxlength="6" value="'+esc((t.sym&&t.sym.prize)||"")+'"></label>';
@@ -2249,6 +2256,7 @@
     each(".adm-spimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imagePrize=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-sfimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImgs(inp,function(ds){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageFillers=(t.sym.imageFillers||[]).concat(ds);t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-simg-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"),i=+b.getAttribute("data-i"); DRAFT.themes.forEach(function(t){if(t.id===id&&t.sym&&t.sym.imageFillers)t.sym.imageFillers.splice(i,1);}); saveThemeDraft(); }; });
+    TkFestive.bind(scr,function(){collect();saveDraft();PREVIEW_CFG=clone(DRAFT);applyActive();});
     each(".adm-hudcolor", function(inp){ inp.oninput=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); }; inp.onchange=function(){ collect(); saveDraft(); renderAdmin(); }; });
     each(".adm-hudimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};t.pointsHud.image=d;}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Fondo del panel actualizado"); }); }; });
     each(".adm-hud-reset", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};delete t.pointsHud.image;t.pointsHud.color="#18052f";}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Panel de puntos restablecido"); }; });
@@ -2373,5 +2381,6 @@ document.addEventListener("DOMContentLoaded",function(){document.body.classList.
     }
   }catch(e){}
 })();
+
 
 

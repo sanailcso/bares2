@@ -1,0 +1,16 @@
+.club-festive-layer{position:fixed;inset:72px 0 105px;margin-inline:auto;width:min(100%,560px);z-index:12;pointer-events:none;overflow:hidden;user-select:none}
+.club-festive-layer[hidden],.festive-preview-layer[hidden],body.login-mode .club-festive-layer,body:has(#adminScreen:not([hidden])) .club-festive-layer{display:none}
+.festive-corner{position:absolute;display:block;width:clamp(92px,27vw,145px);height:auto;aspect-ratio:1;pointer-events:none}
+.festive-corner svg{display:block;width:100%;height:100%}
+.festive-top{left:0;top:0}
+.festive-bottom{right:0;bottom:0;transform:rotate(180deg)}
+#adminScreen .adm-festive{margin:12px 0;padding:14px;background:#faf7f1;border:1px solid #e5ded2;border-radius:12px;min-width:0}
+#adminScreen .adm-festive h3{font-size:14px;margin:0 0 8px;color:#40372c}
+#adminScreen .adm-festive p{font-size:12px;line-height:1.5;color:#746857}
+#adminScreen .adm-festive label{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;margin:10px 0;color:#40372c}
+#adminScreen .adm-festive select{max-width:100%;min-height:44px;border:1px solid #ded6c8;border-radius:8px;background:white;color:#40372c;padding:8px}
+#adminScreen .adm-festive input{width:100%;min-height:30px;accent-color:#a95645}
+.adm-festive-preview{position:relative;isolation:isolate;overflow:hidden;background:#f6f2e9;border-radius:12px;min-height:145px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px;text-align:center;color:#504536}
+.adm-festive-preview>span{font-size:11px}
+.festive-preview-layer{position:absolute;inset:0;pointer-events:none}
+.festive-preview-layer .festive-corner{width:110px}
