@@ -271,7 +271,7 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-ui #clubGame.has-custom-theme{background-image:linear-gradient(#252328b8,#252328e6),var(--club-theme-bg)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important}
 
 /* Stable frame: intrinsic image dimensions must not stretch the catalog card. */
-.club-ui #catalog .r-emoji{position:relative}
+.club-ui #catalog .r-emoji{position:relative;width:100%;min-width:0;flex:0 0 auto}
 .club-ui #catalog .r-emoji :is(.r-img,.club-product-photo){position:absolute;inset:0;display:block;object-fit:contain!important;object-position:center!important}
 .club-ui .pm-icon{display:flex;align-items:center;justify-content:center}
 .club-ui .pm-icon img{object-fit:contain!important;object-position:center!important;mix-blend-mode:normal!important}
