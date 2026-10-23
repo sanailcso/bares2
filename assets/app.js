@@ -1595,7 +1595,7 @@
   function themeMap(cfg){ var m={}; (cfg.themes||[]).forEach(function(t){ m[t.id]=t; }); return m; }
   function inRange(from,to){ var n=new Date(); var md=(n.getMonth()+1)*100+n.getDate(); var a=from.m*100+from.d, b=to.m*100+to.d; return a<=b ? (md>=a&&md<=b) : (md>=a||md<=b); }
   function resolveTheme(cfg){ var map=themeMap(cfg); if(cfg.override && map[cfg.override]) return cfg.override; var s=cfg.schedule||[]; for(var i=0;i<s.length;i++){ if(map[s[i].themeId] && inRange(s[i].from,s[i].to)) return s[i].themeId; } if(cfg.fallback && map[cfg.fallback]) return cfg.fallback; return cfg.themes[0] ? cfg.themes[0].id : null; }
-  function paintTheme(cfg,id){ var map=themeMap(cfg); var t=map[id]; if(!t){ t=map[resolveTheme(cfg)]; } if(!t) return; var game=document.querySelector(".slot"), hud=document.querySelector(".balance-wrap"); if(game && t.img){ game.style.setProperty("--game-bg", "url(\""+String(t.img).replace(/\"/g,"%22")+"\")"); } var cabinet=document.getElementById("clubGame"),builtin=themeMap(BUILTIN)[t.id];
+  function paintTheme(cfg,id){ var map=themeMap(cfg); var t=map[id]; if(!t){ t=map[resolveTheme(cfg)]; } if(!t) return; var game=document.querySelector(".slot"), hud=document.querySelector(".balance-wrap"); if(game && t.img){ game.style.setProperty("--game-bg", "url(\""+String(t.img).replace(/\"/g,"%22")+"\")"); } else if(game){ game.style.removeProperty("--game-bg"); } var cabinet=document.getElementById("clubGame"),builtin=themeMap(BUILTIN)[t.id];
     if(cabinet){
       var custom=!!(t.img && (!builtin || t.img!==builtin.img));
       cabinet.classList.toggle("has-custom-theme",custom);
@@ -2130,7 +2130,8 @@
       h+='<div class="adm-sugg" data-id="'+esc(t.id)+'"></div>';
       h+='<div class="adm-imgdim">📐 Imagen recomendada: vertical <b>1080 × 1920 px</b> (9:16) · JPG o PNG · ocupa toda la pantalla, centra lo importante.</div>';
       h+='<div class="adm-trow"><label class="adm-file">Cambiar fondo de la app<input type="file" accept="image/*" class="adm-img" data-id="'+esc(t.id)+'"></label>';
-      h+='<button class="adm-del" data-id="'+esc(t.id)+'">Eliminar</button></div></div></div>';
+      h+='<button type="button" class="adm-btn ghost adm-img-clear" data-id="'+esc(t.id)+'"'+(t.img?'':' disabled')+'>'+(t.img?'Quitar imagen · usar fondo claro':'Fondo claro activo')+'</button>';
+      h+='<button class="adm-del" data-id="'+esc(t.id)+'">Eliminar tema</button></div></div></div>';
     });
     h+='</div><div class="adm-imgdim" style="margin:6px 2px 10px">📐 Sube imágenes verticales de <b>1080 × 1920 px</b> (9:16) para que se vean nítidas a pantalla completa.</div><label class="adm-file adm-add">+ A\u00f1adir fondo<input type="file" accept="image/*" id="admAdd"></label></div>';
     h+=rewardEditorHtml();
@@ -2262,6 +2263,11 @@
     each(".adm-hud-reset", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};delete t.pointsHud.image;t.pointsHud.color="#18052f";}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Panel de puntos restablecido"); }; });
     each(".adm-sugg-btn", function(b){ b.onclick=function(){ collect(); renderSugg(b.getAttribute("data-id")); }; });
     each(".adm-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes=DRAFT.themes.filter(function(t){ return t.id!==id; }); DRAFT.schedule=DRAFT.schedule.filter(function(r){ return r.themeId!==id; }); if(DRAFT.fallback===id) DRAFT.fallback=(DRAFT.themes[0]||{}).id||""; if(DRAFT.override===id) DRAFT.override=null; renderAdmin(); }; });
+    each(".adm-img-clear",function(button){button.onclick=function(){
+      collect();var id=button.getAttribute("data-id");
+      DRAFT.themes.forEach(function(theme){if(theme.id===id){theme.img=null;delete theme._fname;}});
+      saveThemeDraft();toast("Imagen quitada. Se usará el fondo claro.");
+    };});
     each(".adm-img", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); var fn=(inp.files[0]&&inp.files[0].name)||""; readImg(inp, function(d){ collect(); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.img=d; t._fname=fn; } }); saveThemeDraft();toast("Imagen actualizada. Guardando…"); }); }; });
     each(".adm-up", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); if(i>0){ var s=DRAFT.schedule, t=s[i-1]; s[i-1]=s[i]; s[i]=t; } renderAdmin(); }; });
     each(".adm-dn", function(b){ b.onclick=function(){ collect(); var i=+b.getAttribute("data-i"); var s=DRAFT.schedule; if(i<s.length-1){ var t=s[i+1]; s[i+1]=s[i]; s[i]=t; } renderAdmin(); }; });
@@ -2381,6 +2387,7 @@ document.addEventListener("DOMContentLoaded",function(){document.body.classList.
     }
   }catch(e){}
 })();
+
 
 
 
