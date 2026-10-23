@@ -152,7 +152,7 @@ try{
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.evaluate(()=>{state.points=1200;countUp(document.getElementById('balance'),0,1200,900);});
   await page.waitForFunction(()=>{const n=Number(document.getElementById('balance').textContent.replace(/\D/g,''));return n>0&&n<1200;});
-  assert.equal(await page.locator('#clubGameGain').innerText(),'+1.200 puntos');
+  assert.equal(await page.locator('#clubGameGain').innerText(),'+1200 puntos');
   assert.equal(await page.locator('.club-wallet').evaluate(e=>e.classList.contains('is-gaining')),true);
   assert.equal(await page.locator('#balance').evaluate(e=>getComputedStyle(e).animationName),'club-points-zoom');
   await page.screenshot({path:'test-results/points-gain-mobile.png'});
