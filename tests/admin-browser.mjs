@@ -272,11 +272,11 @@ try{
   assert.equal(await page.locator('#clubFestive').isVisible(),true);
   assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).pointerEvents),'none','Decoration cannot block taps');
   assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).opacity),'0.22');
-  await page.locator('#clubFestive img').first().evaluate(image=>image.decode());
-  assert.equal(await page.locator('#clubFestive svg').count(),0,'Halloween uses the photographic asset');
-  assert.equal(await page.locator('#clubFestive img').first().getAttribute('src'),'./img/halloween-silk-web.webp');
-  assert.equal(await page.locator('#clubFestive img').first().evaluate(image=>image.naturalWidth),768);
-
+  assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).position),'absolute','Decorations move with the document');
+  assert.equal(await page.locator('#clubFestive').evaluate(e=>e.parentElement.id),'appCard');
+  assert.equal(await page.locator('#clubFestive .festive-corner').count(),0,'Halloween fills the background instead of isolated corners');
+  assert.match(await page.locator('#clubFestive .festive-wallpaper').evaluate(e=>getComputedStyle(e).backgroundImage),/halloween-ivory-background.webp/);
+  await page.evaluate(async()=>{const image=new Image();image.src='./img/halloween-ivory-background.webp';await image.decode();});
   const calendar=await page.evaluate(()=>{
     const previous=PREVIEW_CFG,cfg=clone(ACTIVE_CFG),date=new Date();
     cfg.override=null;cfg.fallback='default';cfg.themes.find(t=>t.id==='default').decoration={style:'none',intensity:18};
@@ -290,6 +290,17 @@ try{
   await page.screenshot({path:'test-results/festive-player.png'});
 
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
+  const scrollGeometry=await page.evaluate(async()=>{
+    window.scrollTo(0,0);await new Promise(requestAnimationFrame);
+    const layer=document.getElementById('clubFestive'),top=layer.getBoundingClientRect().top;
+    const wallpaperHeight=layer.getBoundingClientRect().height,appHeight=document.getElementById('appCard').getBoundingClientRect().height;
+    window.scrollTo(0,300);await new Promise(requestAnimationFrame);
+    const result={delta:top-layer.getBoundingClientRect().top,scroll:window.scrollY,wallpaperHeight,appHeight};
+    window.scrollTo(0,0);return result;
+  });
+  assert.ok(scrollGeometry.scroll>100,'Catalog scroll fixture');
+  assert.ok(Math.abs(scrollGeometry.delta-scrollGeometry.scroll)<2,'Wallpaper follows scrolling');
+  assert.ok(Math.abs(scrollGeometry.wallpaperHeight-scrollGeometry.appHeight)<2,'Wallpaper spans full app height');
   await page.locator('#clubGoalSelect').selectOption(publicConfig.rewards[0].name);
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#clubGoalArt')?.style.maskImage.includes('120deg'));
@@ -324,6 +335,7 @@ try{
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
 
 
 
