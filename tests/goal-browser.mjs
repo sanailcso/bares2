@@ -124,5 +124,30 @@ try{
   await page.locator('#betGo').waitFor({state:'visible'});
   await assertGameEndClear('Ruleta');
   await page.screenshot({path:'test-results/roulette-end-visible.png'});
+  // A single click in Home navigates and starts exactly one real offline demo spin.
+  await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
+  await page.evaluate(()=>{
+    setGame('slot');state.lastSpin=null;state.streak=0;state.pendingBox=false;state.goldenRound=false;renderSpinState();
+    localStorage.setItem('tikitaka_notif_later_'+currentUser,String(Date.now()+86400000));
+    document.getElementById('clubGame').dataset.entryProbe='same-node';
+    window.__entrySpinCalls=0;const original=window.secureSpin;
+    window.secureSpin=function(){window.__entrySpinCalls++;return original.apply(this,arguments);};
+  });
+  await page.locator('#spinBtn').click();
+  assert.equal(await page.locator('#userNavBottom [data-nav="jugar"]').getAttribute('aria-current'),'page');
+  assert.equal(await page.locator('#clubGame').evaluate(e=>e.parentElement.id),'clubPlayGame');
+  assert.equal(await page.locator('#clubGame').getAttribute('data-entry-probe'),'same-node','Reuse the active game');
+  assert.equal(await page.locator('#tab-jugar').evaluate(e=>getComputedStyle(e).animationName),'none','No tab fade during game entry');
+  await page.waitForFunction(()=>!spinning);
+  assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'One click starts only one spin');
+  assert.equal(await page.evaluate(()=>state.lastSpin),await page.evaluate(()=>todayStr()));
+  await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
+  await page.evaluate(()=>{state.betSpins=3;_serverSpins=3;setGame('slot');renderRuletaCta();});
+  await page.locator('#rcGo').click();
+  await page.locator('#betWheel').waitFor({state:'visible'});
+  assert.equal(await page.locator('#userNavBottom [data-nav="jugar"]').getAttribute('aria-current'),'page','Roulette entry also opens Play');
+  assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'Navigation does not replay the spin');
+  assert.deepEqual(errors,[]);
   console.log('Touch goals, mobile catalog and transparent balance joined to navigation passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
