@@ -277,4 +277,6 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-ui .pm-icon img{object-fit:contain!important;object-position:center!important;mix-blend-mode:normal!important}
 .club-goal-art img{object-fit:contain;object-position:center}
 
-.club-goal-art:has(img){right:8px;top:12px;width:36%;mask-image:none;mix-blend-mode:normal}
+/* Let the featured prize fill the card behind the progress, fading into the text. */
+.club-goal-art{right:-12px;top:0;bottom:0;width:72%;height:100%;-webkit-mask-image:linear-gradient(to right,transparent,#000 32%);mask-image:linear-gradient(to right,transparent,#000 32%);mix-blend-mode:multiply}
+.club-goal-art img{object-position:right center}
