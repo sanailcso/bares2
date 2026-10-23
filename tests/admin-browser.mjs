@@ -85,7 +85,7 @@ try{
   await page.locator('.adm-rw-home').first().click();
   const homeDialog=page.locator('.goal-appearance-dialog');
   for(const [key,value] of Object.entries(homeSettings)){
-    await homeDialog.locator('[data-setting="'+key+'"]').fill(String(value));
+    await homeDialog.locator('[data-setting="'+key+'"]').evaluate((input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));},value);
   }
   assert.match(await homeDialog.locator('.club-goal-art').evaluate(e=>e.style.maskImage),/120deg/);
   assert.match(await homeDialog.locator('.club-goal-art>img').evaluate(e=>e.style.transform),/rotate\(15deg\)/);
