@@ -139,3 +139,14 @@ body.club-ui:has(#adminScreen:not([hidden])) #pwdOverlay :is(#pwdErr,#edErr){col
 
 #adminScreen #admSaveState{min-height:20px;margin-top:8px;font-size:12px;line-height:1.5;font-weight:650;overflow-wrap:anywhere}
 #adminScreen #admSaveState[data-state="error"]{background:#fff0f2;border:1px solid #f1cbd3;padding:8px 10px;border-radius:10px}
+
+.reward-frame-dialog{box-sizing:border-box;width:min(540px,calc(100% - 24px));max-height:90dvh;overflow:auto;margin:auto;padding:20px;border:1px solid #ddd3c6;border-radius:18px;background:#fffaf2;color:#30291f;box-shadow:0 24px 80px #0005}
+.reward-frame-dialog::backdrop{background:#0009}
+.reward-frame-dialog h2{margin:0 0 10px;font-size:20px}
+.reward-frame-dialog p{font-size:14px;line-height:1.5}
+.reward-frame-dialog canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;background:#eee8dd;border-radius:12px;touch-action:none;cursor:grab}
+.reward-frame-dialog label{display:grid;gap:10px;margin:18px 0;font-weight:600}
+.reward-frame-dialog input{width:100%;min-height:36px;accent-color:#c43a39}
+.reward-frame-actions{display:flex;flex-wrap:wrap;gap:8px}
+.reward-frame-actions button{flex:1;min-height:44px;padding:10px;border:1px solid #d8cbbb;border-radius:10px;background:#fff;color:#30291f;cursor:pointer}
+.reward-frame-actions [data-frame=save]{background:#b82f34;color:#fff;border-color:#b82f34}

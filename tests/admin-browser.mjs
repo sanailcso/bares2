@@ -81,6 +81,28 @@ try{
   await photo.selectOption('./img/club-cap.webp');
   await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
   assert.equal(saves.at(-1).rewards[0].image,'./img/club-cap.webp','Admin photo control still saves the chosen image');
+  // Portrait and landscape uploads keep every edge inside the saved 4:3 frame.
+  for (const [w,h] of [[80,240],[300,80]]) {
+    const data=await page.evaluate(([w,h])=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#f00';x.fillRect(0,0,w,h);return c.toDataURL('image/png').split(',')[1];},[w,h]);
+    await page.locator('.adm-rw-img').first().setInputFiles({name:'product.png',mimeType:'image/png',buffer:Buffer.from(data,'base64')});
+    const dialog=page.locator('.reward-frame-dialog');
+    await dialog.waitFor({state:'visible'});
+    const bounds=await dialog.locator('canvas').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let l=512,r=0,t=384,b=0;
+      for(let y=0;y<384;y++)for(let x=0;x<512;x++)if(d[(y*512+x)*4+3]>0){l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}
+      return {l,r,t,b};
+    });
+    assert.ok(bounds.l>=15&&bounds.r<=496&&bounds.t>=15&&bounds.b<=368,'Whole image has breathing room');
+    assert.ok(Math.abs(bounds.l-(511-bounds.r))<=1&&Math.abs(bounds.t-(383-bounds.b))<=1,'Upload is centered');
+    await dialog.locator('canvas').press('ArrowRight');
+    await dialog.getByRole('button',{name:'Centrar y ver completa'}).click();
+    await page.screenshot({path:'test-results/reward-frame-'+w+'x'+h+'.png'});
+    await dialog.getByRole('button',{name:'Usar este encuadre'}).click();
+    await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
+    assert.ok(saves.at(-1).rewards[0].image.startsWith('data:image/webp'));
+  }
+  await photo.selectOption('./img/club-cap.webp');
+  await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
   await visit('sec-apuesta');
   // Upload both independent appearance assets and restore from the mocked server.
   const originalBet=structuredClone(publicConfig.bet);
