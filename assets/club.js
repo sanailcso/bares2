@@ -142,6 +142,7 @@
   window.tkClubNavigation = function (name) {
     route = name;
     if (!ready) return;
+    if (name !== 'jugar') byId('tab-jugar').style.removeProperty('animation');
     var mount = byId(name === 'inicio' ? 'clubHomeGame' : 'clubPlayGame'), game = byId('clubGame');
     if ((name === 'inicio' || name === 'jugar') && game.parentNode !== mount) mount.appendChild(game);
     document.querySelectorAll('#userNavBottom button').forEach(function (b) { if (b.dataset.nav === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -176,6 +177,17 @@
     // The real animated balance shares the fixed dock with the bottom navigation.
     byId('clubBottomDock').insertBefore(document.querySelector('.balance-wrap'), byId('userNavBottom'));
     byId('clubHomeGame').appendChild(byId('clubGame'));
+    // Move the existing game before its original click handler runs. Never replay a click.
+    byId('clubGame').addEventListener('click', function (event) {
+      var button=event.target.closest('#spinBtn,#lever,#betGo,#rcGo');
+      if(route!=='inicio'||!button||button.disabled||button.getAttribute('aria-disabled')==='true')return;
+      byId('tab-jugar').style.animation='none';
+      go('jugar');
+      // Cancel the normal smooth navigation scroll so the game is ready in this frame.
+      window.scrollTo({top:0,behavior:'instant'});
+      button.focus({preventScroll:true});
+    }, true);
+
     var nav = byId('userNavBottom'), dock = byId('clubBottomDock');
     function measureDock() {
       var height = dock.getBoundingClientRect().height;
@@ -202,4 +214,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
 
