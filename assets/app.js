@@ -1604,7 +1604,7 @@
     if(hud){ var ph=t.pointsHud||{}; hud.style.setProperty("--hud-color",ph.color||"#18052f"); hud.style.setProperty("--hud-image",ph.image?"url(\""+String(ph.image).replace(/\"/g,"%22")+"\")":"none"); } }
   var PREVIEW_CFG=null;
   function activeSymConfig(){ var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:ACTIVE_CFG; if(!cfg) return null; var map=themeMap(cfg); var t=map[resolveTheme(cfg)]; return (t&&t.sym&&t.sym.jackpot)?t.sym:null; }
-  function syncFestiveDecoration(){ var cfg=PREVIEW_CFG||ACTIVE_CFG, t=themeMap(cfg)[resolveTheme(cfg)]; TkFestive.apply(t&&t.decoration); }
+  function syncFestiveDecoration(){ var cfg=PREVIEW_CFG||ACTIVE_CFG, t=themeMap(cfg)[resolveTheme(cfg)]; TkFestive.apply(t&&t.decoration,t); }
   var _festiveDay="";
   function refreshFestiveDate(){var day=todayStr();if(day!==_festiveDay){_festiveDay=day;syncFestiveDecoration();}}
   setInterval(refreshFestiveDate,60000);
@@ -1919,7 +1919,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".adm-sf[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.sym=t.sym||{}; t.sym.fillers=graphemes(inp.value); } }); });
     Array.prototype.forEach.call(document.querySelectorAll(".adm-smode[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.sym=t.sym||{}; t.sym.mode=inp.value; } }); });
     Array.prototype.forEach.call(document.querySelectorAll(".adm-hudcolor[data-id]"), function(inp){ var id=inp.getAttribute("data-id"); DRAFT.themes.forEach(function(t){ if(t.id===id){ t.pointsHud=t.pointsHud||{}; t.pointsHud.color=inp.value||"#18052f"; } }); });
-    document.querySelectorAll(".adm-festive").forEach(function(row){var id=row.getAttribute("data-id");DRAFT.themes.forEach(function(t){if(t.id===id)t.decoration=TkFestive.read(row);});});
+    document.querySelectorAll(".adm-festive").forEach(function(row){var id=row.getAttribute("data-id");DRAFT.themes.forEach(function(t){if(t.id===id){t.decoration=TkFestive.read(row);t.backgroundOpacity=Number(row.querySelector(".adm-theme-opacity").value);}});});
     var fb=document.getElementById("admFallback"); if(fb) DRAFT.fallback=fb.value;
     var ov=document.getElementById("admOverride"); if(ov) DRAFT.override=ov.value||null;
     Array.prototype.forEach.call(document.querySelectorAll(".adm-reward-row"),function(row){ var i=+row.getAttribute("data-i"), r=DRAFT.rewards&&DRAFT.rewards[i]; if(!r)return; r.name=(row.querySelector(".adm-rw-name").value||"Premio").trim(); r.emoji=oneSym(row.querySelector(".adm-rw-icon").value,"🎁"); r.cost=Math.max(1,Math.round(+row.querySelector(".adm-rw-cost").value||1)); r.tier=row.querySelector(".adm-rw-tier").value; var _on=row.querySelector(".adm-rw-on"); if(_on) r.enabled=_on.checked; var _d=row.querySelector(".adm-rw-desc"); if(_d) r.desc=(_d.value||"").trim(); });
@@ -2129,7 +2129,7 @@
       h+='<div class="adm-sugg-row"><button type="button" class="adm-sugg-btn" data-id="'+esc(t.id)+'">✨ Ver 8 sugerencias</button><span class="adm-sugg-hint">según el nombre del fondo; al elegir una se activa el modo emojis</span></div>';
       h+='<div class="adm-sugg" data-id="'+esc(t.id)+'"></div>';
       h+='<div class="adm-imgdim">📐 Imagen recomendada: vertical <b>1080 × 1920 px</b> (9:16) · JPG o PNG · ocupa toda la pantalla, centra lo importante.</div>';
-      h+='<div class="adm-trow"><label class="adm-file">Reemplazar imagen<input type="file" accept="image/*" class="adm-img" data-id="'+esc(t.id)+'"></label>';
+      h+='<div class="adm-trow"><label class="adm-file">Cambiar fondo de la app<input type="file" accept="image/*" class="adm-img" data-id="'+esc(t.id)+'"></label>';
       h+='<button class="adm-del" data-id="'+esc(t.id)+'">Eliminar</button></div></div></div>';
     });
     h+='</div><div class="adm-imgdim" style="margin:6px 2px 10px">📐 Sube imágenes verticales de <b>1080 × 1920 px</b> (9:16) para que se vean nítidas a pantalla completa.</div><label class="adm-file adm-add">+ A\u00f1adir fondo<input type="file" accept="image/*" id="admAdd"></label></div>';
@@ -2256,7 +2256,7 @@
     each(".adm-spimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imagePrize=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-sfimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImgs(inp,function(ds){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageFillers=(t.sym.imageFillers||[]).concat(ds);t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-simg-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"),i=+b.getAttribute("data-i"); DRAFT.themes.forEach(function(t){if(t.id===id&&t.sym&&t.sym.imageFillers)t.sym.imageFillers.splice(i,1);}); saveThemeDraft(); }; });
-    TkFestive.bind(document.getElementById("adminScreen"),function(){collect();saveDraft();PREVIEW_CFG=clone(DRAFT);applyActive();});
+    TkFestive.bind(document.getElementById("adminScreen"),function(){collect();saveDraft();PREVIEW_CFG=clone(DRAFT);applyActive();},function(id){return themeMap(DRAFT)[id];});
     each(".adm-hudcolor", function(inp){ inp.oninput=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); }; inp.onchange=function(){ collect(); saveDraft(); renderAdmin(); }; });
     each(".adm-hudimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};t.pointsHud.image=d;}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Fondo del panel actualizado"); }); }; });
     each(".adm-hud-reset", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};delete t.pointsHud.image;t.pointsHud.color="#18052f";}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Panel de puntos restablecido"); }; });
@@ -2381,6 +2381,7 @@ document.addEventListener("DOMContentLoaded",function(){document.body.classList.
     }
   }catch(e){}
 })();
+
 
 
 

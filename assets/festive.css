@@ -18,9 +18,15 @@
 
 
 /* The wallpaper belongs to the document, behind cards and controls. */
-.festive-wallpaper{position:absolute;inset:0;background-image:url("../img/halloween-ivory-background.webp");background-size:100% auto;background-position:center top;background-repeat:repeat-y;background-attachment:scroll;pointer-events:none}
+.festive-wallpaper{position:absolute;inset:0;background-size:100% auto;background-position:center top;background-repeat:repeat-y;background-attachment:scroll;pointer-events:none}
 .club-ui #appCard[data-festive-theme="halloween"]{--club-bg:#f5efe5;--club-paper:#fffcf6;--club-line:#e5d9c8;--club-soft:#eee1cf}
 .club-ui #appCard[data-festive-theme="halloween"] .club-goal{background:#eee2ce}
 .club-ui #appCard[data-festive-theme="halloween"] #catalog .reward{background:#fffcf6!important;border-color:#e5d9c8!important}
 .adm-festive-preview:has([data-festive="halloween"]){min-height:230px;background:#f5efe5}
 .adm-festive-preview>strong,.adm-festive-preview>span{position:relative;z-index:1}
+
+
+/* The selected theme image is the single wallpaper source for every customer tab. */
+.club-theme-background{position:absolute;inset:0;z-index:-2;border-radius:inherit;pointer-events:none;background-size:100% auto;background-position:center top;background-repeat:repeat-y;background-attachment:scroll}
+.club-theme-background[hidden],body.login-mode .club-theme-background,body:has(#adminScreen:not([hidden])) .club-theme-background{display:none}
+.theme-preview-layer{position:absolute;inset:0;pointer-events:none;background-size:100% auto;background-position:center top;background-repeat:repeat-y}
