@@ -201,6 +201,14 @@ try{
   await page.locator('.adm-theme[data-id="fondo"]').waitFor({state:'attached'});
   await waitSaved();
   assert.equal(saves.at(-1).override,'fondo','New background is saved and selected');
+  const festive=page.locator('.adm-festive[data-id="fondo"]');
+  await festive.locator('select').selectOption('halloween');await waitSaved();
+  await festive.locator('input').evaluate(input=>{input.value='22';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));});await waitSaved();
+  assert.deepEqual(saves.at(-1).themes.find(t=>t.id==='fondo').decoration,{style:'halloween',intensity:22});
+  assert.equal(await festive.locator('.festive-preview-layer').getAttribute('data-festive'),'halloween');
+  assert.equal(await page.locator('#clubFestive').isVisible(),false,'Decorations stay out of the admin');
+  await page.screenshot({path:'test-results/festive-admin.png'});
+
   await page.locator('.adm-sjimg[data-id="fondo"]').setInputFiles(upload('jackpot.png'));await waitSaved();
   await page.locator('.adm-spimg[data-id="fondo"]').setInputFiles(upload('especial.png'));await waitSaved();
   await page.locator('.adm-sfimg[data-id="fondo"]').setInputFiles(Array.from({length:5},(_,i)=>upload('simbolo-'+i+'.png')));await waitSaved();
@@ -223,6 +231,9 @@ try{
   await page.locator('.adm-theme[data-id="fondo"]').waitFor({state:'attached'});
   assert.equal(await page.locator('#admOverride').inputValue(),'fondo','Cloud restores selection after reload with no local cache');
   assert.equal(await page.locator('.adm-smode[data-id="fondo"]').inputValue(),'images');
+  assert.equal(await festive.locator('select').inputValue(),'halloween','Festive style survives cloud reload');
+  assert.equal(await festive.locator('input').inputValue(),'22');
+
   assert.equal(await page.locator('.adm-theme[data-id="fondo"] .adm-symbol-gallery img').count(),7,'All seven symbols survive reload');
   await page.locator('.adm-thumb[data-id="fondo"]').click();
   failSave=true;
@@ -258,6 +269,21 @@ try{
   await page.getByPlaceholder('Tu contraseña',{exact:true}).fill('demo');
   await page.getByRole('button',{name:'Entrar al club'}).click();
   await page.waitForFunction(()=>document.querySelector('#clubGoalSelect')?.options.length>0);
+  assert.equal(await page.locator('#clubFestive').isVisible(),true);
+  assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).pointerEvents),'none','Decoration cannot block taps');
+  assert.equal(await page.locator('#clubFestive').evaluate(e=>getComputedStyle(e).opacity),'0.22');
+  const calendar=await page.evaluate(()=>{
+    const previous=PREVIEW_CFG,cfg=clone(ACTIVE_CFG),date=new Date();
+    cfg.override=null;cfg.fallback='default';cfg.themes.find(t=>t.id==='default').decoration={style:'none',intensity:18};
+    cfg.schedule=[{themeId:'fondo',from:{m:date.getMonth()+1,d:date.getDate()},to:{m:date.getMonth()+1,d:date.getDate()}}];
+    PREVIEW_CFG=cfg;syncFestiveDecoration();const scheduled=document.getElementById('clubFestive').dataset.festive;
+    cfg.schedule=[];syncFestiveDecoration();const hidden=document.getElementById('clubFestive').hidden;
+    cfg.override='fondo';syncFestiveDecoration();const manual=document.getElementById('clubFestive').dataset.festive;
+    PREVIEW_CFG=previous;syncFestiveDecoration();return {scheduled,hidden,manual};
+  });
+  assert.deepEqual(calendar,{scheduled:'halloween',hidden:true,manual:'halloween'},'Calendar enables decoration; fallback removes it; manual selection overrides');
+  await page.screenshot({path:'test-results/festive-player.png'});
+
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
   await page.locator('#clubGoalSelect').selectOption(publicConfig.rewards[0].name);
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
@@ -293,5 +319,6 @@ try{
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
 
 
