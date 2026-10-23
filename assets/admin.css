@@ -42,7 +42,7 @@
 #adminScreen :is(.adm-del,.adm-crdel,.adm-rx,.adm-rw-del,.adm-rw-imgdel,.adm-seg-del,.adm-simg-del){background:#fff0f2!important;border-color:#f1cbd3!important;color:#b90b32!important}
 #adminScreen .adm-canje-toggle.done{background:#eaf4ed!important;color:#39745b!important;border-color:#cce2d3!important}
 #adminScreen :is(.adm-ubuiltin,.adm-use){background:#eee7db!important;color:#756754!important;border-color:#e5dac8!important}
-#adminScreen :is(.adm-crrow,.adm-canje-item,.adm-reward-row,.adm-symbol-mode,.adm-hud-editor){background:#faf8f3!important;border-color:#e5e1d9!important;border-radius:14px!important;box-shadow:none!important}
+#adminScreen :is(.adm-crrow,.adm-canje-item,.adm-reward-row,.adm-symbol-mode){background:#faf8f3!important;border-color:#e5e1d9!important;border-radius:14px!important;box-shadow:none!important}
 #adminScreen .adm-crrow{flex-wrap:wrap;gap:8px;padding:14px}
 #adminScreen .adm-crinfo{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
 #adminScreen .adm-canje-item{flex-wrap:wrap;padding:14px;border-left:3px solid #d8b876}
