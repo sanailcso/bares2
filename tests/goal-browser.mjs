@@ -65,6 +65,21 @@ try{
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
   await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'hidden'});
   await page.locator('#catalog .reward .r-img').first().waitFor({state:'visible'});
+  for (const width of [320,390,560]) {
+    await page.setViewportSize({width,height:844});
+    const photos=await page.locator('#catalog .r-emoji').evaluateAll(frames=>frames.filter(f=>f.querySelector('img,svg')).map(f=>{
+      const b=f.getBoundingClientRect(),image=f.querySelector('img,svg'),r=image.getBoundingClientRect();
+      return {width:b.width,height:b.height,imageWidth:r.width,imageHeight:r.height,loaded:image.tagName.toLowerCase()!=='img'||(image.complete&&image.naturalWidth>0)};
+    }));
+    assert.ok(photos.length>0);
+    for(const photo of photos){
+      assert.ok(photo.width>80&&photo.height>60,'Photo frame must not collapse: '+JSON.stringify(photo));
+      assert.ok(photo.imageWidth>80&&photo.imageHeight>60,'Product has a visible size');
+      assert.ok(photo.loaded,'Product image loaded');
+      assert.ok(Math.abs(photo.width/photo.height-4/3)<.02,'Frame retains 4:3 proportions');
+    }
+  }
+  await page.setViewportSize({width:390,height:844});
   assert.equal(await page.locator('#catalog .reward .r-img').first().evaluate(e=>getComputedStyle(e).objectFit),'contain','Catalog preserves complete product');
   for(const width of [390,320]){
     await page.setViewportSize({width,height:844});
