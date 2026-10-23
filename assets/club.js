@@ -38,6 +38,7 @@
       if (photo) { art.appendChild(makePhoto(item, true)); }
       else { var symbol = document.createElement('span'); symbol.className = 'club-goal-symbol'; symbol.textContent = item.emoji && !/[?\uFFFD]/.test(item.emoji) ? item.emoji : '✦'; art.appendChild(symbol); }
     }
+    TkGoalAppearance.apply(art, item.homeAppearance);
     var signature = items.map(function (it) { return it.name + ':' + it.cost; }).join('|');
     var select = byId('clubGoalSelect');
     if (signature !== catalogSignature) {
@@ -201,3 +202,4 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+

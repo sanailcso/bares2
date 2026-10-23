@@ -81,6 +81,24 @@ try{
   await photo.selectOption('./img/club-cap.webp');
   await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
   assert.equal(saves.at(-1).rewards[0].image,'./img/club-cap.webp','Admin photo control still saves the chosen image');
+  const homeSettings={fade:65,reach:75,angle:120,scale:125,x:-8,y:6,rotate:15};
+  await page.locator('.adm-rw-home').first().click();
+  const homeDialog=page.locator('.goal-appearance-dialog');
+  for(const [key,value] of Object.entries(homeSettings)){
+    await homeDialog.locator('[data-setting="'+key+'"]').fill(String(value));
+  }
+  assert.match(await homeDialog.locator('.club-goal-art').evaluate(e=>e.style.maskImage),/120deg/);
+  assert.match(await homeDialog.locator('.club-goal-art>img').evaluate(e=>e.style.transform),/rotate\(15deg\)/);
+  await page.screenshot({path:'test-results/admin-home-appearance.png'});
+  await homeDialog.getByRole('button',{name:'Guardar ajustes',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#admSaveState')?.textContent.includes('Guardado'));
+  assert.deepEqual(saves.at(-1).rewards[0].homeAppearance,homeSettings);
+  assert.equal(saves.at(-1).rewards[1].homeAppearance,undefined,'Other prizes keep their defaults');
+  await page.locator('.adm-rw-home').first().click();
+  await homeDialog.getByRole('button',{name:'Restablecer',exact:true}).click();
+  assert.equal(await homeDialog.locator('[data-setting="rotate"]').inputValue(),'0');
+  await homeDialog.getByRole('button',{name:'Cancelar',exact:true}).click();
+  assert.deepEqual(saves.at(-1).rewards[0].homeAppearance,homeSettings,'Cancel does not save reset');
   // Portrait and landscape uploads keep every edge inside the saved 4:3 frame.
   for (const [w,h] of [[80,240],[300,80]]) {
     const data=await page.evaluate(([w,h])=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#f00';x.fillRect(0,0,w,h);return c.toDataURL('image/png').split(',')[1];},[w,h]);
@@ -121,6 +139,10 @@ try{
   await page.evaluate(()=>localStorage.clear());await page.reload();
   await page.getByLabel('PIN de administrador',{exact:true}).fill('fixture-admin');await page.locator('#admPinOk').click();
   await page.getByRole('heading',{name:'Panel del club',exact:true}).waitFor();
+  await visit('sec-premios');
+  await page.locator('.adm-rw-home').first().click();
+  for(const [key,value] of Object.entries(homeSettings)) assert.equal(await homeDialog.locator('[data-setting="'+key+'"]').inputValue(),String(value),'Setting survives reload: '+key);
+  await homeDialog.getByRole('button',{name:'Cancelar',exact:true}).click();
   await visit('sec-apuesta');
   assert.equal(await page.locator('#admRouletteFinish').inputValue(),'silver');
   assert.equal(await page.locator('.adm-roulette-preview>.roulette-icon').getAttribute('src'),appearance.icon);
@@ -235,6 +257,14 @@ try{
   await page.getByPlaceholder('Tu usuario',{exact:true}).fill('demo');
   await page.getByPlaceholder('Tu contraseña',{exact:true}).fill('demo');
   await page.getByRole('button',{name:'Entrar al club'}).click();
+  await page.waitForFunction(()=>document.querySelector('#clubGoalSelect')?.options.length>0);
+  await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
+  await page.locator('#clubGoalSelect').selectOption(publicConfig.rewards[0].name);
+  await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#clubGoalArt')?.style.maskImage.includes('120deg'));
+  assert.match(await page.locator('#clubGoalArt').evaluate(e=>e.style.maskImage),/120deg/);
+  assert.match(await page.locator('#clubGoalArt>img').evaluate(e=>e.style.transform),/rotate\(15deg\)/);
+  await page.screenshot({path:'test-results/player-home-appearance.png'});
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
   await page.locator('#clubGame.has-custom-theme').waitFor({state:'visible'});
   await page.locator('.reels .symbol-img').first().waitFor({state:'visible'});
@@ -263,4 +293,5 @@ try{
   if(page){await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/admin-failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-3500));}
   throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
 
