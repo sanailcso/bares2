@@ -14,3 +14,11 @@
 .adm-festive-preview>span{font-size:11px}
 .festive-preview-layer{position:absolute;inset:0;pointer-events:none}
 .festive-preview-layer .festive-corner{width:110px}
+
+
+/* Photographic silk, with an asymmetric composition and no opaque backing. */
+.festive-corner img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+[data-festive="halloween"] .festive-top{width:clamp(170px,48vw,235px);left:-4px;top:-4px}
+[data-festive="halloween"] .festive-bottom{width:clamp(110px,32vw,155px);right:-3px;bottom:-3px;opacity:.65}
+.festive-preview-layer[data-festive="halloween"] .festive-top{width:160px}
+.festive-preview-layer[data-festive="halloween"] .festive-bottom{width:105px}

@@ -2256,7 +2256,7 @@
     each(".adm-spimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imagePrize=d;t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-sfimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImgs(inp,function(ds){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.sym=t.sym||{};t.sym.imageFillers=(t.sym.imageFillers||[]).concat(ds);t.sym.mode="images";}}); saveThemeDraft(); }); }; });
     each(".adm-simg-del", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"),i=+b.getAttribute("data-i"); DRAFT.themes.forEach(function(t){if(t.id===id&&t.sym&&t.sym.imageFillers)t.sym.imageFillers.splice(i,1);}); saveThemeDraft(); }; });
-    TkFestive.bind(scr,function(){collect();saveDraft();PREVIEW_CFG=clone(DRAFT);applyActive();});
+    TkFestive.bind(document.getElementById("adminScreen"),function(){collect();saveDraft();PREVIEW_CFG=clone(DRAFT);applyActive();});
     each(".adm-hudcolor", function(inp){ inp.oninput=function(){ collect(); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); }; inp.onchange=function(){ collect(); saveDraft(); renderAdmin(); }; });
     each(".adm-hudimg", function(inp){ inp.onchange=function(){ var id=inp.getAttribute("data-id"); readImg(inp,function(d){ collect(); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};t.pointsHud.image=d;}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Fondo del panel actualizado"); }); }; });
     each(".adm-hud-reset", function(b){ b.onclick=function(){ collect(); var id=b.getAttribute("data-id"); DRAFT.themes.forEach(function(t){if(t.id===id){t.pointsHud=t.pointsHud||{};delete t.pointsHud.image;t.pointsHud.color="#18052f";}}); saveDraft(); PREVIEW_CFG=clone(DRAFT); applyActive(); renderAdmin(); toast("Panel de puntos restablecido"); }; });
@@ -2381,6 +2381,7 @@ document.addEventListener("DOMContentLoaded",function(){document.body.classList.
     }
   }catch(e){}
 })();
+
 
 
 
