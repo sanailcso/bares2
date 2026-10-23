@@ -1,4 +1,5 @@
-.club-festive-layer{position:fixed;inset:72px 0 105px;margin-inline:auto;width:min(100%,560px);z-index:12;pointer-events:none;overflow:hidden;user-select:none}
+.club-ui #appCard.club-app{position:relative;isolation:isolate}
+.club-festive-layer{position:absolute;inset:0;width:100%;z-index:-1;pointer-events:none;overflow:hidden;user-select:none;border-radius:inherit}
 .club-festive-layer[hidden],.festive-preview-layer[hidden],body.login-mode .club-festive-layer,body:has(#adminScreen:not([hidden])) .club-festive-layer{display:none}
 .festive-corner{position:absolute;display:block;width:clamp(92px,27vw,145px);height:auto;aspect-ratio:1;pointer-events:none}
 .festive-corner svg{display:block;width:100%;height:100%}
@@ -16,9 +17,10 @@
 .festive-preview-layer .festive-corner{width:110px}
 
 
-/* Photographic silk, with an asymmetric composition and no opaque backing. */
-.festive-corner img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
-[data-festive="halloween"] .festive-top{width:clamp(170px,48vw,235px);left:-4px;top:-4px}
-[data-festive="halloween"] .festive-bottom{width:clamp(110px,32vw,155px);right:-3px;bottom:-3px;opacity:.65}
-.festive-preview-layer[data-festive="halloween"] .festive-top{width:160px}
-.festive-preview-layer[data-festive="halloween"] .festive-bottom{width:105px}
+/* The wallpaper belongs to the document, behind cards and controls. */
+.festive-wallpaper{position:absolute;inset:0;background-image:url("../img/halloween-ivory-background.webp");background-size:100% auto;background-position:center top;background-repeat:repeat-y;background-attachment:scroll;pointer-events:none}
+.club-ui #appCard[data-festive-theme="halloween"]{--club-bg:#f5efe5;--club-paper:#fffcf6;--club-line:#e5d9c8;--club-soft:#eee1cf}
+.club-ui #appCard[data-festive-theme="halloween"] .club-goal{background:#eee2ce}
+.club-ui #appCard[data-festive-theme="halloween"] #catalog .reward{background:#fffcf6!important;border-color:#e5d9c8!important}
+.adm-festive-preview:has([data-festive="halloween"]){min-height:230px;background:#f5efe5}
+.adm-festive-preview>strong,.adm-festive-preview>span{position:relative;z-index:1}
