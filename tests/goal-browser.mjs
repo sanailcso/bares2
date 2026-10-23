@@ -147,6 +147,34 @@ try{
   await page.locator('#betWheel').waitFor({state:'visible'});
   assert.equal(await page.locator('#userNavBottom [data-nav="jugar"]').getAttribute('aria-current'),'page','Roulette entry also opens Play');
   assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'Navigation does not replay the spin');
+  // Confirmed point changes attract attention and overlapping counters settle correctly.
+  await page.waitForTimeout(3800);
+  await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
+  await page.evaluate(()=>{state.points=1200;countUp(document.getElementById('balance'),0,1200,900);});
+  await page.waitForFunction(()=>{const n=Number(document.getElementById('balance').textContent.replace(/\D/g,''));return n>0&&n<1200;});
+  assert.equal(await page.locator('#clubGameGain').innerText(),'+1200 puntos');
+  assert.equal(await page.locator('.club-wallet').evaluate(e=>e.classList.contains('is-gaining')),true);
+  assert.equal(await page.locator('#balance').evaluate(e=>getComputedStyle(e).animationName),'club-points-zoom');
+  await page.screenshot({path:'test-results/points-gain-mobile.png'});
+  // A newer change must cancel the previous animation, even if it was longer.
+  await page.evaluate(()=>{countUp(document.getElementById('balance'),1200,5000,3500);state.points=750;countUp(document.getElementById('balance'),1200,750,700);});
+  assert.equal(await page.locator('#clubGameGain').innerText(),'−450 puntos');
+  await page.waitForFunction(()=>document.getElementById('balance').textContent==='750');
+  await page.waitForTimeout(2900);
+  assert.equal(await page.locator('#balance').innerText(),'750','An older counter cannot overwrite a newer balance');
+  assert.equal(await page.locator('#clubHomeBalance').innerText(),'750');
+  assert.equal(await page.locator('#clubGameGain').innerText(),'');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
+  await page.evaluate(()=>{state.points=800;countUp(document.getElementById('balance'),750,800,900);});
+  await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'visible'});
+  assert.equal(await page.locator('#balance').innerText(),'800','Reduced motion shows final balance immediately');
+  assert.equal(await page.locator('#balance').evaluate(e=>getComputedStyle(e).animationName),'none');
+  assert.equal(await page.locator('#clubGameGain').innerText(),'+50 puntos');
+  await page.waitForTimeout(3300);
+  await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'hidden'});
+  await page.evaluate(()=>countUp(document.getElementById('balance'),800,800,900));
+  assert.equal(await page.locator('#clubGameGain').innerText(),'','Unchanged balances do not trigger a reward');
   assert.deepEqual(errors,[]);
   console.log('Touch goals, mobile catalog and transparent balance joined to navigation passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

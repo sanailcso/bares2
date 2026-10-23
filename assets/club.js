@@ -127,17 +127,28 @@
     document.body.classList.toggle('club-playing', route === 'inicio' || route === 'jugar');
   }
   function queueSync() { if (ready && !scheduled) { scheduled = true; requestAnimationFrame(sync); } }
-  // Reuse the game's real balance animation. Display only the confirmed change.
+  // Emphasize confirmed balance changes without changing the points awarded.
   var originalCountUp = window.countUp, gainTimer;
   window.countUp = function (element, from, to, duration) {
-    if (element === byId('balance')) {
-      var gain = byId('clubGameGain'), wallet = element.closest('.balance-wrap');
-      clearTimeout(gainTimer);
-      if (gain) gain.textContent = to > from ? '+' + fmt(to - from) + ' puntos' : '';
-      if (wallet) wallet.classList.toggle('is-gaining', to > from);
-      gainTimer = setTimeout(function () { if (gain) gain.textContent = ''; if (wallet) wallet.classList.remove('is-gaining'); }, Math.max(3200, duration || 0));
-    }
-    return originalCountUp.apply(this, arguments);
+    if (element !== byId('balance') || to === from) return originalCountUp.apply(this, arguments);
+    var increase = to > from, delta = (increase ? '+' : '−') + fmt(Math.abs(to - from)) + ' puntos';
+    var wallets = [element.closest('.balance-wrap'), document.querySelector('.club-wallet')];
+    clearTimeout(gainTimer);
+    put('clubGameGain', delta); put('clubHomeGain', delta);
+    document.body.classList.add('club-points-changing');
+    wallets.forEach(function (wallet) {
+      if (!wallet) return;
+      wallet.classList.remove('is-gaining', 'is-spending');
+      void wallet.offsetWidth; // Restart the pulse for consecutive awards.
+      wallet.classList.add(increase ? 'is-gaining' : 'is-spending');
+    });
+    duration = Math.max(duration || 0, increase ? 1100 : 700);
+    gainTimer = setTimeout(function () {
+      put('clubGameGain', ''); put('clubHomeGain', '');
+      wallets.forEach(function (wallet) { if (wallet) wallet.classList.remove('is-gaining', 'is-spending'); });
+      document.body.classList.remove('club-points-changing');
+    }, Math.max(3200, duration + 600));
+    return originalCountUp.call(this, element, from, to, duration);
   };
   window.tkClubNavigation = function (name) {
     route = name;

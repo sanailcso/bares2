@@ -1250,14 +1250,19 @@
   }
 
   function countUp(el, from, to, dur){
+    cancelAnimationFrame(el._countFrame);
+    if(from === to || !(dur > 0) || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      el.textContent = fmt(to);
+      return;
+    }
     const start = performance.now();
     function step(now){
       const t = Math.min(1, (now - start) / dur);
       const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 3)));
       el.textContent = fmt(val);
-      if (t < 1) requestAnimationFrame(step);
+      if (t < 1) el._countFrame = requestAnimationFrame(step);
     }
-    requestAnimationFrame(step);
+    el._countFrame = requestAnimationFrame(step);
   }
 
   function celebrateRevenue(added){
