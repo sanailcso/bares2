@@ -96,7 +96,9 @@
     var days = rachaViva(), wrap = byId('clubWeekDays');
     put('clubWeekTitle', state.pendingBox ? 'Tu caja sorpresa te espera' : days ? 'Tu racha · día ' + days + ' de 7' : rachaPerdida() ? 'Hoy empieza una nueva racha' : 'Tu racha empieza hoy');
     var next = nextStreakGoal(days);
-    put('clubWeekHint', state.pendingBox ? 'Abre tu caja desde Jugar.' : next && next.box ? 'Día 7: una caja de 70, 90 o 110 puntos.' : next ? 'Al día ' + next.day + ', +' + next.bonus + ' puntos.' : 'Un giro cada día. Un premio más cerca.');
+    byId('clubOpenBox').hidden = !state.pendingBox;
+    schedulePendingBox(600);
+    put('clubWeekHint', state.pendingBox ? 'Tu regalo está listo. Elige una caja y descubre tus puntos.' : next && next.box ? 'Día 7: una caja de 70, 90 o 110 puntos.' : next ? 'Al día ' + next.day + ', +' + next.bonus + ' puntos.' : 'Un giro cada día. Un premio más cerca.');
     if (wrap.dataset.days !== String(days)) {
       wrap.dataset.days = String(days); wrap.replaceChildren();
       for (var i = 1; i <= 7; i++) { var d = document.createElement('div'), mark = document.createElement('span'), label = document.createElement('small'); d.className = 'club-day' + (i <= days ? ' done' : '') + (i === days + 1 ? ' next' : ''); mark.textContent = i <= days ? '✓' : i === 7 ? '✦' : String(i); label.textContent = 'Día ' + i; d.append(mark, label); wrap.appendChild(d); }
@@ -185,6 +187,7 @@
   function init() {
     ready = true;
     initGoalSwipe();
+    byId('clubOpenBox').onclick = openBoxPicker;
     // The real animated balance shares the fixed dock with the bottom navigation.
     byId('clubBottomDock').insertBefore(document.querySelector('.balance-wrap'), byId('userNavBottom'));
     byId('clubHomeGame').appendChild(byId('clubGame'));

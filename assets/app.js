@@ -624,7 +624,7 @@
     renderBet();
     renderHistory();
     renderMyCanjes();
-    if (state && state.pendingBox){ setTimeout(function(){ openBoxPicker(); }, 600); }
+    schedulePendingBox(600);
   }
 
   /* ===== Vigencia de la racha =====
@@ -870,7 +870,7 @@
     /* Deja que el usuario vea la combinación final y su premio antes de cambiar de juego. */
     setTimeout(function(){ if(isBetEnabled() && betSpinsLeft()>0){ setGame("bet"); } }, 5200);
     if (stepBonus){ setTimeout(function(){ showPop("🔥", "+" + stepBonus + " pts", "¡Bonus de racha! " + state.streak + " días seguidos", "pop-30"); launchConfetti(120, PAL_RED); }, 2700); }
-    if (boxDay){ setTimeout(function(){ openBoxPicker(); }, 2700); }
+    if (boxDay){ schedulePendingBox(2700); }
   }
 
   function celebrate(tier){
@@ -1358,55 +1358,99 @@
     void pop.offsetWidth; pop.classList.add("show");
     pop.onanimationend = function(){ pop.className = "prize-pop"; };
   }
-  var _boxVals = null, _boxDone = false;
+  var _boxVals = null, _boxDone = false, _boxTimer = null, _boxNoticeUser = '';
+  function schedulePendingBox(delay){
+    if(!state || !state.pendingBox){ clearTimeout(_boxTimer); _boxTimer=null; _boxNoticeUser=''; return; }
+    if(_boxTimer || _boxNoticeUser===currentUser || !currentUser) return;
+    var user=currentUser;
+    _boxTimer=setTimeout(function(){
+      _boxTimer=null;
+      if(user!==currentUser || !state || !state.pendingBox) return;
+      if(spinning || _betBusy || document.body.classList.contains('login-mode') || !document.getElementById('adminScreen').hidden){
+        schedulePendingBox(600); return;
+      }
+      openBoxPicker();
+    },delay || 600);
+  }
+  function closeBoxPicker(){
+    var bp=document.getElementById('boxPop');
+    if(bp.open) bp.close();
+    bp.classList.remove('show'); bp.setAttribute('aria-hidden','true');
+  }
   function _boxShuffle(a){ for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
   function openBoxPicker(){
-    var bp = document.getElementById("boxPop"); if (!bp) return;
-    if (bp.classList.contains("show")) return;
+    var bp = document.getElementById("boxPop");
+    if (!bp || !currentUser || !state || !state.pendingBox || bp.open) return;
+    clearTimeout(_boxTimer); _boxTimer=null; _boxNoticeUser=currentUser;
     _boxDone = false;
     _boxVals = _boxShuffle(BOX_VALUES.slice());
-    document.getElementById("boxTitle").textContent = "🎉 ¡7 días de racha!";
-    document.getElementById("boxSub").textContent = "Elige una caja para descubrir tu premio sorpresa";
+    document.getElementById("boxTitle").textContent = "Tu constancia tiene premio";
+    document.getElementById("boxSub").textContent = "Elige una de las tres cajas y descubre tus puntos sorpresa.";
     var row = document.getElementById("boxRow"); var h = "";
-    for (var i=0;i<_boxVals.length;i++){ h += '<div class="box-item" data-i="'+i+'">🎁</div>'; }
+    for (var i=0;i<_boxVals.length;i++){
+      h += '<button type="button" class="box-item" data-i="'+i+'" aria-label="Abrir caja '+(i+1)+'"><img src="./img/surprise-box-premium.webp" alt="" width="320" height="320"><span class="box-choice">Caja '+(i+1)+'</span></button>';
+    }
     row.innerHTML = h;
     bp.classList.remove("locked");
+    var later=document.getElementById('boxLater'); later.disabled=false; later.hidden=false;
+    later.onclick=closeBoxPicker;
+    bp.oncancel=function(event){event.preventDefault();if(!_boxDone)closeBoxPicker();};
     Array.prototype.forEach.call(row.querySelectorAll(".box-item"), function(el){ el.onclick = function(){ claimBox(parseInt(el.getAttribute("data-i"),10)); }; });
-    bp.classList.add("show");
+    bp.classList.add("show"); bp.setAttribute('aria-hidden','false'); bp.showModal();
+    row.querySelector('button').focus();
   }
   function claimBox(i){
-    if (_boxDone) return; _boxDone = true;
+    if (_boxDone || !state || !state.pendingBox || !_boxVals || !Number.isInteger(i) || i<0 || i>=_boxVals.length) return;
+    _boxDone = true;
+    var user=currentUser, token=_CRED.t, claimedState=state;
     var bp = document.getElementById("boxPop"); bp.classList.add("locked");
     var row = document.getElementById("boxRow");
+    row.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+    document.getElementById('boxLater').disabled=true;
+    document.getElementById('boxSub').textContent='Abriendo tu caja…';
+    function stillCurrent(){return currentUser===user && _CRED.t===token && state===claimedState;}
+    function retry(){
+      if(!stillCurrent()){closeBoxPicker();return;}
+      _boxDone=false;bp.classList.remove('locked');
+      row.querySelectorAll('button').forEach(function(b){b.disabled=false;});
+      document.getElementById('boxLater').disabled=false;
+      document.getElementById('boxSub').textContent='No se ha podido abrir. Tu caja sigue pendiente; vuelve a elegirla.';
+    }
     var _reveal=function(val, serverPts){
+      if(!stillCurrent()){closeBoxPicker();return;}
       Array.prototype.forEach.call(row.querySelectorAll(".box-item"), function(b){
-        var bi = parseInt(b.getAttribute("data-i"),10);
-        var showv = (bi===i) ? val : _boxVals[bi];
-        b.innerHTML = '<span class="box-val">+'+showv+'</span>';
-        if (bi === i){ b.classList.add("opened"); } else { b.classList.add("dim"); }
+        var chosen=parseInt(b.getAttribute('data-i'),10)===i;
+        b.classList.add(chosen?'opened':'dim');
+        b.querySelector('.box-choice').textContent=chosen?'+'+fmt(val)+' puntos':'';
+        if(chosen)b.setAttribute('aria-label','Has ganado '+fmt(val)+' puntos');
       });
-      document.getElementById("boxTitle").textContent = "🎁 +" + val + " puntos";
-      document.getElementById("boxSub").textContent = "¡Enhorabuena! Tu racha se reinicia y empieza un nuevo ciclo.";
+      document.getElementById("boxTitle").textContent = "+" + fmt(val) + " puntos para ti";
+      document.getElementById("boxSub").textContent = "Tu nueva racha empieza ahora. ¡También has desbloqueado la ronda dorada!";
+      document.getElementById('boxLater').hidden=true;
       var prev = state.points;
-      if(typeof serverPts==="number"){ state.points = serverPts; state.streak = 0; } else { state.points = prev + val; }
-      state.pendingBox = false;
+      state.points = typeof serverPts==="number" ? serverPts : prev + val;
+      state.streak = 0; state.pendingBox = false; _boxNoticeUser='';
       state.goldenRound = true;
       state.history.unshift({ type:"spin", date:todayStr(), label:"🎁 Caja sorpresa (7 días de racha)", delta:val });
       state.history.unshift({ type:"bet", date:todayStr(), label:"⭐ Ronda dorada desbloqueada", delta:0 });
       saveState();
-      notifyGoldenRound();
       countUp(balance, prev, state.points, 900);
-      launchConfetti(160, PAL_GOLD);
-      renderCatalog(); renderHistory();
-      setTimeout(function(){ bp.classList.remove("show"); try{ if(betSpinsLeft()>0) setGame("bet"); }catch(e){} }, 2800);
+      renderStreak(); renderMilestones(); renderCatalog(); renderHistory();
+      setTimeout(function(){
+        closeBoxPicker();
+        if(!stillCurrent())return;
+        notifyGoldenRound();
+        try{ if(betSpinsLeft()>0) setGame("bet"); }catch(e){}
+      }, 2800);
     };
-    if(!SB_ON && currentUser==="demo"){ _reveal(_boxVals[i]); return; } /* demo: caja local */
-    if(!(SB_SECURE && _CRED.t)){ toast("⚠️ Necesitas conexión para abrir la caja."); try{ bp.classList.remove("show"); }catch(e){} return; } /* [SEGURIDAD] fallo cerrado */
+    if(!SB_ON && currentUser==="demo"){ _reveal(_boxVals[i]); return; }
+    if(!(SB_SECURE && _CRED.t)){ retry(); return; }
     sbRpc("app_pick_box",{ p_token:_CRED.t }).then(function(res){
-        if(res && res.ok){ _reveal(res.value, res.points); }
-        else if(res && res.ok===false && res.error==="auth"){ forceLogout(); }
-        else { toast("⚠️ Sin conexión con el servidor. Prueba de nuevo."); try{ bp.classList.remove("show"); }catch(e){} }
-      }).catch(function(){ toast("⚠️ Sin conexión con el servidor. Prueba de nuevo."); try{ bp.classList.remove("show"); }catch(e){} });
+      if(!stillCurrent()){closeBoxPicker();return;}
+      if(res && res.ok){ _reveal(res.value, res.points); }
+      else if(res && res.error==="auth"){closeBoxPicker();forceLogout();}
+      else {retry();}
+    }).catch(retry);
   }
   function flashScreen(){ const f = document.getElementById("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
 
