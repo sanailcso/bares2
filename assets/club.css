@@ -278,5 +278,5 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-goal-art img{object-fit:contain;object-position:center}
 
 /* Let the featured prize fill the card behind the progress, fading into the text. */
-.club-goal-art{right:-12px;top:0;bottom:0;width:72%;height:100%;-webkit-mask-image:linear-gradient(to right,transparent,#000 32%);mask-image:linear-gradient(to right,transparent,#000 32%);mix-blend-mode:multiply}
+.club-goal-art{right:-12px;top:0;bottom:0;width:72%;height:100%;-webkit-mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.06) 18%,rgba(0,0,0,.25) 38%,rgba(0,0,0,.58) 60%,rgba(0,0,0,.88) 82%,#000 100%);mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.06) 18%,rgba(0,0,0,.25) 38%,rgba(0,0,0,.58) 60%,rgba(0,0,0,.88) 82%,#000 100%);mix-blend-mode:multiply}
 .club-goal-art img{object-position:right center}
