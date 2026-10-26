@@ -169,7 +169,7 @@ try{
   await page.evaluate(()=>{countUp(document.getElementById('balance'),1200,5000,3500);state.points=750;countUp(document.getElementById('balance'),1200,750,700);});
   assert.equal(await page.locator('#clubGameGain').innerText(),'−450 puntos');
   await page.waitForFunction(()=>document.getElementById('balance').textContent==='750');
-  await page.waitForTimeout(2900);
+  await page.waitForTimeout(3900);
   assert.equal(await page.locator('#balance').innerText(),'750','An older counter cannot overwrite a newer balance');
   assert.equal(await page.locator('#clubHomeBalance').innerText(),'750');
   assert.equal(await page.locator('#clubGameGain').innerText(),'');
@@ -251,8 +251,13 @@ try{
   await page.evaluate(()=>{countUp(document.getElementById('balance'),100,250,2000);});
   await page.locator('.club-neon-ring').waitFor({state:'visible'});
   assert.equal(await page.locator('.club-neon-ring').evaluate(e=>getComputedStyle(e,':before').animationName),'club-neon-orbit');
-  await page.waitForTimeout(2100);
-  assert.equal(await page.locator('.club-neon-ring').isVisible(),false,'Neon stops when counter finishes');
+  await page.waitForTimeout(2000);
+  const halfway=await page.locator('#balance').innerText();
+  assert.ok(Number(halfway)>100&&Number(halfway)<220,'Gains are still climbing steadily after two seconds');
+  assert.equal(await page.locator('.club-neon-ring').isVisible(),true,'Neon remains active throughout the longer gain');
+  await page.waitForFunction(()=>document.getElementById('balance').textContent==='250');
+  await page.locator('.club-neon-ring').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#balance').innerText(),'250','Longer animation finishes at the exact balance');
   for(const golden of [false,true]){
     for(const [width,height] of [[390,844],[320,640],[390,568],[900,900]]){
       await page.setViewportSize({width,height});

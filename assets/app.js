@@ -1268,7 +1268,9 @@
     const start = performance.now();
     function step(now){
       const t = Math.min(1, (now - start) / dur);
-      const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 3)));
+      // Gains keep a steady pace until the end instead of rushing through the first seconds.
+      const risingBalance = el.id === 'balance' && to > from;
+      const val = risingBalance ? (t === 1 ? to : Math.floor(from + (to - from) * t)) : Math.round(from + (to - from) * (1 - Math.pow(1 - t, 3)));
       el.textContent = fmt(val);
       if (t < 1) el._countFrame = requestAnimationFrame(step);
     }
