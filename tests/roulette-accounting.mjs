@@ -11,7 +11,9 @@ async function run(reply,mult=2,points=1000){
     document:{getElementById:id=>elements[id]||(elements[id]=element())},saveState(){},renderOnboarding(){},playRouletteAudio(){},
     wheelLayout:()=>[mult],secureBet:async()=>reply,localBetPick:()=>mult,countUp:(_,from,to)=>changes.push([from,to]),balance:{},
     setTimeout:fn=>timers.push(fn),todayStr:()=> '2026-10-22',renderCatalog(){},renderHistory(){},launchConfetti(){},chime(){},setGame(){},forceLogout(){}};
-  vm.createContext(scope);vm.runInContext(source.slice(start,end),scope);
+  vm.createContext(scope);
+  vm.runInContext(source.slice(source.indexOf('  function recordPointMovement('),source.indexOf('  function renderHistory(')),scope);
+  vm.runInContext(source.slice(start,end),scope);
   scope.placeBet(300);await new Promise(r=>setImmediate(r));
   return {scope,timers,changes,elements};
 }
@@ -22,6 +24,7 @@ for(const mult of [1,1.5,2,3]){
     assert.equal(r.scope.state.points,700,'Stake is visible before the result');
     assert.equal(r.scope._betBusy,true);r.timers.shift()();
     assert.equal(r.scope.state.points,final);assert.equal(r.scope.state.history[0].delta,prize-300);
+    assert.equal(r.scope.state.history[0].before,1000);assert.equal(r.scope.state.history[0].after,final);
     assert.deepEqual(r.changes,[[1000,700],[700,final]]);
     assert.equal(r.scope.state.betSpins,1);
   }

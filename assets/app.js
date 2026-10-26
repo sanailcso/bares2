@@ -427,7 +427,7 @@
       state.appliedCredits[c.id] = true; changed = true;
       if(pts > 0){
         state.points += pts; added += pts;
-        state.history.unshift({ type:"revenue", date:(c.date || todayStr()), label:"Recaudación de máquinas" + (c.concept ? (" · " + c.concept) : ""), delta:pts });
+        state.history.unshift({ type:"revenue", date:(c.date || todayStr()), label:"Recaudación de máquinas" + (c.concept ? (" · " + c.concept) : ""), delta:pts, before:state.points-pts, after:state.points });
       }
     });
     if(changed) saveState();
@@ -441,10 +441,12 @@
           var added=+r.added||0;
           if(added>0 && Array.isArray(r.claimed)){
             if(!state.appliedCredits) state.appliedCredits={};
+            var creditBalance=state.points-added;
             r.claimed.forEach(function(c){
               if(!c || !c.id) return;
               state.appliedCredits[c.id]=true;
-              state.history.unshift({ type:"revenue", date:(c.date||todayStr()), label:"Recaudación de máquinas"+(c.concept?(" · "+c.concept):""), delta:(+c.pts||0) });
+              state.history.unshift({ type:"revenue", date:(c.date||todayStr()), label:"Recaudación de máquinas"+(c.concept?(" · "+c.concept):""), delta:(+c.pts||0), before:creditBalance, after:creditBalance+(+c.pts||0) });
+              creditBalance+=(+c.pts||0);
             });
             try{ saveState(); }catch(e){}
           }
@@ -852,16 +854,16 @@
     state.lastSpin = today; state.lastSymbols = target; state.lastWin = tier;
     const prev = state.points; state.points += tier;
     const label = tier===TIER_TOP ? "¡JACKPOT! Tirada diaria" : (tier===TIER_MID ? "¡Triple! Tirada diaria" : "Tirada diaria");
-    state.history.unshift({ type:"spin", date:today, label:label, delta:tier });
-    var stepBonus = 0;
-    if (state.streak === 3 || state.streak === 6){ stepBonus = STREAK_STEP_BONUS; state.points += stepBonus; state.history.unshift({ type:"spin", date:today, label:"🔥 Bonus de racha (" + state.streak + " días seguidos)", delta:stepBonus }); }
+    var spinEntry=recordPointMovement({ type:"spin", date:today, label:label, delta:tier },prev,state.points);
+    var stepBonus = 0, bonusEntry=null;
+    if (state.streak === 3 || state.streak === 6){ stepBonus = STREAK_STEP_BONUS; state.points += stepBonus; bonusEntry=recordPointMovement({ type:"spin", date:today, label:"🔥 Bonus de racha (" + state.streak + " días seguidos)", delta:stepBonus },state.points-stepBonus,state.points); }
     var boxDay = (state.streak === 7);
     if (boxDay){ state.pendingBox = true; }
-    if(_serverSpin){ state.points=_serverSpin.points; state.streak=_serverSpin.streak; state.pendingBox=!!_serverSpin.pendingBox; }
+    if(_serverSpin){ state.points=_serverSpin.points; state.streak=_serverSpin.streak; state.pendingBox=!!_serverSpin.pendingBox; spinEntry.after=state.points-stepBonus; spinEntry.before=spinEntry.after-tier; if(bonusEntry){bonusEntry.before=spinEntry.after;bonusEntry.after=state.points;} }
     var _bsAward;
     if(_serverSpin && typeof _serverSpin.betSpins==="number"){ _bsAward=(typeof _serverSpin.betSpinsAward==="number")?_serverSpin.betSpinsAward:0; state.betSpins=_serverSpin.betSpins; _serverSpins=_serverSpin.betSpins; }
     else { _bsAward=1+Math.floor(Math.random()*3); state.betSpins=((state.betSpins||0)+_bsAward); }
-    if(_bsAward>0){ state.history.unshift({ type:"bet", date:today, label:"\uD83C\uDFA1 +"+_bsAward+" tirada"+(_bsAward>1?"s":"")+" de ruleta", delta:0 }); }
+    if(_bsAward>0){ state.history.unshift({ type:"bet", date:today, label:"\uD83C\uDFA1 +"+_bsAward+" tirada"+(_bsAward>1?"s":"")+" de ruleta", delta:0, before:state.points, after:state.points }); }
     saveState();
     renderStreak(); renderMilestones(); renderOnboarding(); renderSpinState(); renderCatalog(); renderHistory(); try{ renderBet(); }catch(e){}
     countUp(balance, prev, state.points, 900);
@@ -962,7 +964,7 @@
         '<div class="bet-marquee">'+rouletteIcon(bc)+(golden?' RULETA DORADA':' RULETA DE LA SUERTE')+'</div>'+
         '<button type="button" class="game-switch-btn" id="betBack"><span>\uD83C\uDFB0</span> Cambiar a Rodillos</button>'+
         (golden?'<div class="golden-round"><span class="gr-crown">♛</span><span><b>RONDA DORADA</b><small>Tu giro semanal exclusivo</small></span><span class="gr-stars">✦ ✦</span></div>':'')+
-        '<div class="bet-sub">Elige tu apuesta: se descuenta del saldo y después se suma el premio de apuesta × multiplicador. Tienes <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
+        '<div class="bet-sub">La apuesta se descuenta; ganas apuesta × multiplicador. <b>'+left+'</b> tirada'+(left===1?'':'s')+' disponible'+(left===1?'':'s')+'.</div>'+
         rouletteWheel(bc,'betWheel')+
         '<div class="bet-result" id="betResult">Elige los puntos que quieres apostar \uD83D\uDC47</div>'+
         '<div class="bet-controls">'+
@@ -999,7 +1001,7 @@
     var wheel=document.getElementById("betWheel");
     var segs=bc.segments, layout=wheelLayout(bc.segments), n=layout.length, step=360/n;
     var finish=function(mult, newPts, left, afterStake, gain){
-      var before=state.points;
+      var before=typeof afterStake==="number"?afterStake+stake:state.points;
       var payout=typeof gain==="number"?gain:Math.floor(stake*mult);
       state.points=typeof afterStake==="number"?afterStake:before-stake;
       saveState();
@@ -1018,7 +1020,7 @@
         var delta=state.points-before;
         var signedDelta=(delta>=0?"+":"")+delta;
         var lbl = "\uD83C\uDFA1 Ruleta x"+mult+" · apuesta "+stake+" · premio "+payout+" ("+signedDelta+")";
-        state.history.unshift({ type:"bet", date:todayStr(), label:lbl, delta:delta });
+        recordPointMovement({ type:"bet", date:todayStr(), label:lbl, delta:delta },before,state.points);
         saveState();
         renderCatalog(); renderHistory();
         countUp(balance, prev, state.points, 800);
@@ -1166,7 +1168,7 @@
       const prev = state.points;
       state.points = (typeof newPoints==="number") ? newPoints : (prev - item.cost);
       var _cid = recordRedemption(item, today, serverOk, serverId);
-      state.history.unshift({ type:"redeem", date:today, label:"Canje: " + item.name, delta:-item.cost, canjeId:_cid });
+      state.history.unshift({ type:"redeem", date:today, label:"Canje: " + item.name, delta:-item.cost, before:state.points+item.cost, after:state.points, canjeId:_cid });
       saveState();
       renderCatalog(); renderHistory(); renderMyCanjes();
       countUp(balance, prev, state.points, 800);
@@ -1217,7 +1219,7 @@
       state.points=(typeof newPoints==="number") ? newPoints : (prev + (+row.puntos||0));
       row.cancelled=true; row.cancelled_at=new Date().toISOString();
       upsertLocalRedemption(row);
-      state.history.unshift({ type:"cancel", date:todayStr(), label:"Canje cancelado: "+row.premio, delta:(+row.puntos||0) });
+      state.history.unshift({ type:"cancel", date:todayStr(), label:"Canje cancelado: "+row.premio, delta:(+row.puntos||0), before:state.points-(+row.puntos||0), after:state.points });
       saveState();
       if(!serverOk){ try{ sbCancelRemote(row.id); }catch(e){} }
       renderCatalog(); renderHistory(); renderMyCanjes();
@@ -1234,15 +1236,23 @@
         else { toast("⚠️ No se pudo cancelar el canje. Inténtalo de nuevo."); }
       }).catch(function(){ toast("⚠️ No se pudo cancelar el canje. Inténtalo de nuevo."); });
   }
+  function recordPointMovement(entry, before, after){
+    if(Number.isFinite(before) && Number.isFinite(after)){entry.before=before;entry.after=after;}
+    entry.recordedAt=new Date().toISOString();
+    state.history.unshift(entry);
+    return entry;
+  }
   function renderHistory(){
     const wrap = document.getElementById("history");
     if (!state.history.length){ wrap.innerHTML = '<div class="h-empty">Aún no hay actividad. ¡Haz tu primera tirada! 🎰</div>'; return; }
     let html = "";
     state.history.slice(0, 10).forEach(function(h){
       const pos = h.delta >= 0;
+      var ledger=h.meta||h;
+      var balances=typeof ledger.before==="number" && typeof ledger.after==="number" ? '<div class="h-balances"><span>Antes <b>'+fmt(ledger.before)+' pts</b></span><span aria-hidden="true">→</span><span>Después <b>'+fmt(ledger.after)+' pts</b></span></div>' : '<div class="h-balances unavailable">Saldo no registrado</div>';
       html += '<div class="h-item">' +
                 '<div class="h-ic ' + h.type + '">' + (h.type==="spin" ? "🎰" : (h.type==="revenue" ? "💰" : (h.type==="cancel" ? "↩️" : "🎁"))) + '</div>' +
-                '<div class="h-body"><div class="h-label">' + h.label + '</div><div class="h-date">' + fechaLarga(h.date) + '</div></div>' +
+                '<div class="h-body"><div class="h-label">' + esc(h.label) + '</div><div class="h-date">' + fechaLarga(h.date) + '</div>' + balances + '</div>' +
                 '<div class="h-delta ' + (pos?"pos":"neg") + '">' + (pos?"+":"") + fmt(h.delta) + '</div>' +
               '</div>';
     });
@@ -1431,8 +1441,8 @@
       state.points = typeof serverPts==="number" ? serverPts : prev + val;
       state.streak = 0; state.pendingBox = false; _boxNoticeUser='';
       state.goldenRound = true;
-      state.history.unshift({ type:"spin", date:todayStr(), label:"🎁 Caja sorpresa (7 días de racha)", delta:val });
-      state.history.unshift({ type:"bet", date:todayStr(), label:"⭐ Ronda dorada desbloqueada", delta:0 });
+      state.history.unshift({ type:"spin", date:todayStr(), label:"🎁 Caja sorpresa (7 días de racha)", delta:val, before:state.points-val, after:state.points });
+      state.history.unshift({ type:"bet", date:todayStr(), label:"⭐ Ronda dorada desbloqueada", delta:0, before:state.points, after:state.points });
       saveState();
       countUp(balance, prev, state.points, 900);
       renderStreak(); renderMilestones(); renderCatalog(); renderHistory();

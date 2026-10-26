@@ -320,6 +320,7 @@ try{
   assert.deepEqual(calendar,{scheduled:'halloween',hidden:true,manual:'halloween'},'Calendar enables decoration; fallback removes it; manual selection overrides');
   await page.screenshot({path:'test-results/festive-player.png'});
 
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
   const scrollGeometry=await page.evaluate(async()=>{
     window.scrollTo(0,0);await new Promise(requestAnimationFrame);
@@ -333,11 +334,13 @@ try{
   assert.ok(Math.abs(scrollGeometry.delta-scrollGeometry.scroll)<2,'Wallpaper follows scrolling');
   assert.ok(Math.abs(scrollGeometry.wallpaperHeight-scrollGeometry.appHeight)<2,'Wallpaper spans full app height');
   await page.locator('#clubGoalSelect').selectOption(publicConfig.rewards[0].name);
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#clubGoalArt')?.style.maskImage.includes('120deg'));
   assert.match(await page.locator('#clubGoalArt').evaluate(e=>e.style.maskImage),/120deg/);
   assert.match(await page.locator('#clubGoalArt>img').evaluate(e=>e.style.transform),/rotate\(15deg\)/);
   await page.screenshot({path:'test-results/player-home-appearance.png'});
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
   await page.locator('#clubGame.has-custom-theme').waitFor({state:'visible'});
   await page.locator('.reels .symbol-img').first().waitFor({state:'visible'});

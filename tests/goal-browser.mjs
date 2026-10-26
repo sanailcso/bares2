@@ -62,6 +62,7 @@ try{
   assert.equal(await page.locator('#clubGoalName').innerText(),next,'Objective survives reload');
   await page.locator('#clubGoal').focus();await page.keyboard.press('ArrowLeft');
   assert.equal(await page.locator('#clubGoalName').innerText(),first,'Keyboard navigation works');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
   await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'hidden'});
   await page.locator('#catalog .reward .r-img').first().waitFor({state:'visible'});
@@ -88,9 +89,11 @@ try{
   assert.deepEqual(errors,[]);
   await fs.mkdir('test-results',{recursive:true});
   await page.screenshot({path:'test-results/catalog-mobile.png',fullPage:true});
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.locator('#clubGoal').scrollIntoViewIfNeeded();
   await page.screenshot({path:'test-results/goal-mobile.png'});
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
   await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'visible'});
   for(const width of [390,320]){
@@ -118,13 +121,16 @@ try{
   }
   await assertGameEndClear('Rodillos');
   await page.screenshot({path:'test-results/points-docked-mobile.png'});
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Mi bar',exact:true}).click();
   await page.locator('#demoRuleta').click();
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
   await page.locator('#betGo').waitFor({state:'visible'});
   await assertGameEndClear('Ruleta');
   await page.screenshot({path:'test-results/roulette-end-visible.png'});
   // A single click in Home navigates and starts exactly one real offline demo spin.
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.evaluate(()=>{
     setGame('slot');state.lastSpin=null;state.streak=0;state.pendingBox=false;state.goldenRound=false;renderSpinState();
@@ -141,6 +147,8 @@ try{
   await page.waitForFunction(()=>!spinning);
   assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'One click starts only one spin');
   assert.equal(await page.evaluate(()=>state.lastSpin),await page.evaluate(()=>todayStr()));
+  assert.equal(await page.evaluate(()=>{const h=state.history.find(h=>h.type==='spin');return h.after-h.before===h.delta;}),true,'Real spin records before and after balances');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.evaluate(()=>{state.betSpins=3;_serverSpins=3;setGame('slot');renderRuletaCta();});
   await page.locator('#rcGo').click();
@@ -149,6 +157,7 @@ try{
   assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'Navigation does not replay the spin');
   // Confirmed point changes attract attention and overlapping counters settle correctly.
   await page.waitForTimeout(3800);
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.evaluate(()=>{state.points=1200;countUp(document.getElementById('balance'),0,1200,900);});
   await page.waitForFunction(()=>{const n=Number(document.getElementById('balance').textContent.replace(/\D/g,''));return n>0&&n<1200;});
@@ -165,6 +174,7 @@ try{
   assert.equal(await page.locator('#clubHomeBalance').innerText(),'750');
   assert.equal(await page.locator('#clubGameGain').innerText(),'');
   await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Premios',exact:true}).click();
   await page.evaluate(()=>{state.points=800;countUp(document.getElementById('balance'),750,800,900);});
   await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'visible'});
@@ -176,6 +186,7 @@ try{
   await page.evaluate(()=>countUp(document.getElementById('balance'),800,800,900));
   assert.equal(await page.locator('#clubGameGain').innerText(),'','Unchanged balances do not trigger a reward');
   await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Mi bar',exact:true}).click();
   await page.locator('#demoReset').click();
   for(let day=1;day<=7;day++){
@@ -193,6 +204,7 @@ try{
   }
   await page.screenshot({path:'test-results/surprise-box-premium.png'});
   await page.locator('#boxLater').click();
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
   await page.locator('#clubOpenBox').waitFor({state:'visible'});
   await page.locator('#clubOpenBox').click();
@@ -211,6 +223,52 @@ try{
   await page.reload();await login();
   await page.waitForTimeout(900);
   assert.equal(await page.locator('#boxPop').isVisible(),false,'Claimed box does not reopen');
+  // History must display stored snapshots, not reconstruct them from today's balance.
+  await page.evaluate(()=>{
+    state.history=[{type:'bet',date:todayStr(),label:'Ruleta de prueba',delta:150,before:1000,after:1150},
+      {type:'spin',date:todayStr(),label:'Registro antiguo',delta:100}];
+    state.points=9999;renderHistory();
+  });
+  assert.match(await page.locator('#history').textContent(),/Antes.*1000 pts.*Después.*1150 pts/s);
+  assert.match(await page.locator('#history').textContent(),/Saldo no registrado/);
+  await page.evaluate(()=>{state.points=10000;renderHistory();});
+  assert.match(await page.locator('#history').textContent(),/Antes.*1000 pts.*Después.*1150 pts/s);
+  await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
+  await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
+  await page.evaluate(()=>{document.activeElement.blur();});
+  await page.waitForFunction(()=>document.body.classList.contains('club-nav-idle'));
+  assert.equal(await page.locator('#userNavBottom').evaluate(e=>e.inert),true);
+  assert.equal(await page.locator('#clubBottomDock>.balance-wrap').isVisible(),true,'Only navigation hides');
+  await page.evaluate(()=>document.dispatchEvent(new PointerEvent('pointerdown',{pointerType:'touch'})));
+  await page.waitForTimeout(2500);
+  assert.equal(await page.locator('#userNavBottom').evaluate(e=>e.inert),false,'Navigation stays visible while touching');
+  await page.evaluate(()=>document.dispatchEvent(new PointerEvent('pointerup',{pointerType:'touch'})));
+  await page.waitForTimeout(250);
+  assert.ok(await page.locator('#clubBottomDock>.balance-wrap').evaluate(e=>e.getBoundingClientRect().height<=42),'Wallet is 30% shorter');
+  await page.evaluate(()=>window.scrollTo({top:300,behavior:'instant'}));
+  await page.waitForTimeout(100);
+  assert.ok(await page.locator('.app-head').evaluate(e=>Math.abs(e.getBoundingClientRect().top)<2),'Brand stays visible on scroll');
+  await page.evaluate(()=>{countUp(document.getElementById('balance'),100,250,2000);});
+  await page.locator('.club-neon-ring').waitFor({state:'visible'});
+  assert.equal(await page.locator('.club-neon-ring').evaluate(e=>getComputedStyle(e,':before').animationName),'club-neon-orbit');
+  await page.waitForTimeout(2100);
+  assert.equal(await page.locator('.club-neon-ring').isVisible(),false,'Neon stops when counter finishes');
+  for(const golden of [false,true]){
+    for(const [width,height] of [[390,844],[320,640],[390,568],[900,900]]){
+      await page.setViewportSize({width,height});
+      await page.evaluate(golden=>{state.goldenRound=golden;state.betSpins=3;_serverSpins=3;setGame('bet');window.dispatchEvent(new Event('pointermove'));},golden);
+      await page.waitForTimeout(350);
+      const fit=await page.evaluate(()=>{
+        const button=document.getElementById('betGo').getBoundingClientRect();
+        const wheel=document.querySelector('#clubGame .bet-wheel-wrap').getBoundingClientRect();
+        return {bottom:button.bottom,top:button.top,dock:document.getElementById('clubBottomDock').getBoundingClientRect().top,
+          wheelTop:wheel.top,header:document.querySelector('.app-head').getBoundingClientRect().bottom,viewport:innerHeight,scroll:scrollY};
+      });
+      assert.ok(fit.bottom<=Math.min(fit.dock,fit.viewport)-2&&fit.top>=fit.header,'Roulette action fits without scrolling '+width+'x'+height+' golden='+golden+': '+JSON.stringify(fit));
+      assert.ok(fit.wheelTop>=fit.header&&fit.scroll===0,'Whole roulette starts below the brand');
+      if(width===390&&height===568)await page.screenshot({path:'test-results/compact-roulette-'+(golden?'golden':'normal')+'.png'});
+    }
+  }
   assert.deepEqual(errors,[]);
   console.log('Touch goals, mobile catalog and transparent balance joined to navigation passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
