@@ -6,7 +6,9 @@ Este proyecto reutiliza la interfaz web y el mismo servidor de cuentas y puntos.
 
 El flujo **iPhone · compilación de prueba** instala las herramientas, empaqueta únicamente los recursos públicos, genera un proyecto Xcode con Capacitor 8.5.3, compila una app de simulador y la abre para capturar la pantalla de acceso. Los recursos se incluyen dentro de la aplicación: no se abre una web remota como pantalla inicial.
 
-Los artefactos incluyen la captura, el proyecto Xcode y una app de simulador. **La app de simulador no se puede instalar en un iPhone físico ni enviar a TestFlight.** No se necesitan certificados para esta primera validación.
+Los artefactos de prueba incluyen la captura, el proyecto Xcode y una app de simulador. **La app de simulador no se puede instalar en un iPhone físico ni enviar a TestFlight.**
+
+El mismo flujo compila además una app Release para iPhone real y entrega el artefacto **tikitaka-iphone-para-firmar**, con **TikiTaka-iPhone-para-firmar.zip**. Este ZIP contiene un archivo Xcode (.xcarchive), instrucciones LEEME-IT.txt y metadatos de versión y código fuente. El ejecutable se comprueba como iPhoneOS arm64 para evitar confundirlo con el de simulador. **Se entrega sin firma: IT debe firmarlo y exportarlo o distribuirlo con su cuenta empresarial.** No necesita reconstruir la interfaz para realizar esa firma.
 
 ## Firma y distribución, siguiente fase
 

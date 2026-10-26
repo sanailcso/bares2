@@ -21,3 +21,8 @@ native/iphone/build/
 native/iphone/artifacts/
 native/iphone/icon-flat.jpg
 native/iphone/xcodebuild.log
+
+# Archivo iPhone para firma empresarial
+native/iphone/build-device/
+native/iphone/device-delivery/
+native/iphone/device-archive.log
