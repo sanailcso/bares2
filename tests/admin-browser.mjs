@@ -354,6 +354,7 @@ try{
   }
   await page.setViewportSize({width:1100,height:900});
   assert.equal(await page.locator('#clubThemeBackground').evaluate(e=>Math.round(e.getBoundingClientRect().width)),1100,'Wallpaper covers desktop margins');
+  await page.waitForTimeout(400); // Let the tab fade finish before visual review.
   await page.screenshot({path:'test-results/whole-app-wallpaper.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
   assert.ok((await page.locator('.reels .symbol-img').first().getAttribute('src')).startsWith('data:image/webp'));
