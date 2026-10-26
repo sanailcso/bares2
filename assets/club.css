@@ -313,3 +313,45 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-box-cta img{object-fit:contain}
 .club-box-cta>span{margin-left:auto}
 @media(prefers-reduced-motion:reduce){.club-ui .box-item,.club-ui .box-item img{transition:none}.club-ui .box-item:hover:not(:disabled),.club-ui .box-item.opened img{transform:none}}
+
+/* Persistent identity, compact wallet and an activity-aware menu. */
+.club-ui .app-head{position:sticky!important;top:0;z-index:65;min-height:60px!important;height:60px;box-sizing:border-box;padding:8px 0!important;background:rgba(246,244,238,.96)!important;backdrop-filter:blur(14px);box-shadow:0 4px 16px #40302008!important}
+.club-ui .club-brand{width:48px;min-width:48px;height:34px;padding:4px;border-radius:8px}
+.club-brand-copy{font-size:10px}
+.club-ui #clubBottomDock>.balance-wrap{min-height:41px!important;height:41px!important;padding:4px 16px!important;gap:8px!important}
+.club-ui #clubBottomDock .balance-label{font-size:10px!important;line-height:12px}
+.club-ui #clubBottomDock .club-game-gain{min-height:12px;font-size:10px;line-height:12px;margin-top:1px}
+.club-ui #clubBottomDock .balance{font-size:25px!important;line-height:29px!important}
+.club-ui #clubBottomDock .club-nav{overflow:hidden;max-height:130px;transition:max-height .22s ease,opacity .18s,padding .22s,min-height .22s}
+.club-ui.club-nav-idle #clubBottomDock .club-nav{max-height:0;min-height:0!important;padding-top:0!important;padding-bottom:0!important;border-top:0!important;opacity:0;visibility:hidden;pointer-events:none}
+.club-ui.club-nav-idle #clubBottomDock>.balance-wrap{padding-bottom:max(4px,env(safe-area-inset-bottom))!important;height:auto!important;min-height:41px!important}
+.club-balance-number{position:relative;isolation:isolate;padding:0 9px;min-width:76px}
+.club-neon-ring{display:none;position:absolute;inset:-3px -5px;border-radius:13px;overflow:hidden;pointer-events:none;z-index:-1}
+.club-points-neon .club-neon-ring{display:block;box-shadow:0 0 10px #e957b766,0 0 14px #4cc9df44}
+.club-neon-ring:before{content:"";position:absolute;width:240%;aspect-ratio:1;left:50%;top:50%;background:conic-gradient(#fa559b,#995eff,#45d8ff,#6fffc4,#ffe96b,#fa559b);animation:club-neon-orbit 1.4s linear infinite}
+.club-neon-ring:after{content:"";position:absolute;inset:2px;border-radius:11px;background:#fffaf5}
+@keyframes club-neon-orbit{to{transform:translate(-50%,-50%) rotate(360deg)}from{transform:translate(-50%,-50%) rotate(0deg)}}
+.h-balances{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:7px;font-size:10px;line-height:1.5;color:#8b7c69}
+.h-balances b{display:block;font-size:12px;font-weight:750;color:#36312a;font-variant-numeric:tabular-nums}
+.h-balances.unavailable{font-size:10px;color:#998e7e}
+.club-ui .h-body{min-width:0}
+@media(prefers-reduced-motion:reduce){.club-neon-ring:before{animation:none;transform:translate(-50%,-50%)}.club-ui #clubBottomDock .club-nav{transition:none}}
+/* Keep the whole roulette and its action in the visible play area. */
+.club-roulette #tab-jugar>.club-page-heading{display:none}
+.club-ui.club-roulette #clubGame{margin:8px 0 0;padding:10px 12px}
+.club-roulette .club-game-heading{margin:0 0 5px}
+.club-roulette .club-game-heading h2{font-size:16px}
+.club-ui.club-roulette #clubGame .bet-marquee{display:none!important}
+.club-ui.club-roulette #clubGame .game-switch-btn{min-height:30px!important;padding:5px 10px!important;margin:0 auto 4px!important;font-size:10px!important}
+.club-ui.club-roulette #clubGame .bet-sub{font-size:10px!important;line-height:1.35!important;margin:3px 0!important}
+.club-ui.club-roulette #clubGame .bet-result{font-size:11px!important;line-height:1.3!important;min-height:15px!important;margin:3px 0!important}
+.club-ui.club-roulette #clubGame .bet-controls{margin:4px 0!important;gap:8px!important}
+.club-ui.club-roulette #clubGame .bet-go{min-height:44px!important;font-size:13px!important;line-height:18px!important;padding:10px!important;margin:5px 0!important}
+.club-ui.club-roulette #clubGame .bet-foot{font-size:9px!important;line-height:1.3!important;margin:3px 0!important}
+.club-ui.club-roulette #clubGame .golden-cabinet{padding:6px!important}
+.club-ui.club-roulette #clubGame .golden-round{display:none!important}
+.club-ui.club-roulette #clubGame .roulette-premium.bet-wheel-wrap{width:var(--club-wheel-size,180px)!important;height:var(--club-wheel-size,180px)!important;margin:5px auto!important}
+.club-ui.club-roulette #clubGame .roulette-premium .bet-hub{width:30px;height:30px}
+.club-ui.club-roulette #clubGame .roulette-gem{width:17px;height:17px}
+.club-ui.club-roulette #clubGame .roulette-premium .bet-pointer{width:16px;height:25px;top:5px}
+.club-ui.club-roulette #clubGame .roulette-premium .bet-seg-label span{font-size:clamp(9px,calc(var(--club-wheel-size,180px) * .055),14px)!important;top:5px}

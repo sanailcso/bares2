@@ -127,15 +127,18 @@
     byId('clubCanjesEmpty').hidden = mine.length > 0;
     document.body.classList.toggle('club-home', route === 'inicio');
     document.body.classList.toggle('club-playing', route === 'inicio' || route === 'jugar');
+    document.body.classList.toggle('club-roulette', _game === 'bet');
+    fitRoulette();
   }
   function queueSync() { if (ready && !scheduled) { scheduled = true; requestAnimationFrame(sync); } }
   // Emphasize confirmed balance changes without changing the points awarded.
-  var originalCountUp = window.countUp, gainTimer;
+  var originalCountUp = window.countUp, gainTimer, neonTimer;
   window.countUp = function (element, from, to, duration) {
     if (element !== byId('balance') || to === from) return originalCountUp.apply(this, arguments);
     var increase = to > from, delta = (increase ? '+' : '−') + fmt(Math.abs(to - from)) + ' puntos';
     var wallets = [element.closest('.balance-wrap'), document.querySelector('.club-wallet')];
-    clearTimeout(gainTimer);
+    clearTimeout(gainTimer); clearTimeout(neonTimer);
+    document.body.classList.remove('club-points-neon');
     put('clubGameGain', delta); put('clubHomeGain', delta);
     document.body.classList.add('club-points-changing');
     wallets.forEach(function (wallet) {
@@ -145,6 +148,7 @@
       wallet.classList.add(increase ? 'is-gaining' : 'is-spending');
     });
     duration = Math.max(duration || 0, increase ? 1100 : 700);
+    if(increase){document.body.classList.add('club-points-neon');neonTimer=setTimeout(function(){document.body.classList.remove('club-points-neon');},duration);}
     gainTimer = setTimeout(function () {
       put('clubGameGain', ''); put('clubHomeGain', '');
       wallets.forEach(function (wallet) { if (wallet) wallet.classList.remove('is-gaining', 'is-spending'); });
@@ -184,9 +188,51 @@
     document.querySelectorAll('.club-account-tabs button').forEach(function (b) { var selected = b.dataset.clubAccount === name; b.classList.toggle('selected', selected); b.setAttribute('aria-pressed', String(selected)); });
     if (name === 'ranking' && state) loadRanking();
   }
+  var navIdleTimer, pointerHeld=false, expandedNavHeight=0;
+  function revealNavigation(){
+    clearTimeout(navIdleTimer);
+    document.body.classList.remove('club-nav-idle');
+    var nav=byId('userNavBottom'); if(!nav)return;
+    nav.inert=false; nav.removeAttribute('aria-hidden');
+    navIdleTimer=setTimeout(function(){
+      if(pointerHeld || nav.querySelector(':focus-visible')){revealNavigation();return;}
+      document.body.classList.add('club-nav-idle');
+      nav.inert=true;nav.setAttribute('aria-hidden','true');
+    },2200);
+  }
+  function fitRoulette(){
+    if(!ready || _game!=='bet')return;
+    // Reserve the expanded menu even while hidden so controls never jump or become covered.
+    var height=window.visualViewport?window.visualViewport.height:window.innerHeight;
+    var nav=byId('userNavBottom'), game=byId('clubGame'), wheel=game.querySelector('.bet-wheel-wrap');
+    if(!wheel || game.getBoundingClientRect().height===0)return;
+    expandedNavHeight=Math.max(expandedNavHeight,nav.scrollHeight);
+    var reserve=expandedNavHeight+41;
+    var overhead=game.getBoundingClientRect().height-wheel.getBoundingClientRect().height;
+    var top=game.getBoundingClientRect().top+window.scrollY;
+    var size=Math.max(80,Math.min(264,height-top-reserve-overhead-12,window.innerWidth-72));
+    document.documentElement.style.setProperty('--club-wheel-size',size+'px');
+  }
+  var originalSetGame=window.setGame;
+  window.setGame=function(name){
+    var result=originalSetGame.apply(this,arguments);
+    if(ready && name==='bet' && (route==='inicio'||route==='jugar')){
+      if(route==='inicio')go('jugar');
+      window.scrollTo({top:0,behavior:'instant'});
+    }
+    queueSync();return result;
+  };
   function init() {
     ready = true;
     initGoalSwipe();
+    ['scroll','wheel','pointermove'].forEach(function(name){window.addEventListener(name,revealNavigation,{passive:true});});
+    document.addEventListener('pointerdown',function(){pointerHeld=true;revealNavigation();},{passive:true});
+    ['pointerup','pointercancel'].forEach(function(name){document.addEventListener(name,function(){pointerHeld=false;revealNavigation();},{passive:true});});
+    document.addEventListener('keydown',revealNavigation,true);
+    byId('userNavBottom').addEventListener('focusin',revealNavigation);
+    window.addEventListener('resize',fitRoulette);
+    if(window.visualViewport)window.visualViewport.addEventListener('resize',fitRoulette);
+    revealNavigation();
     byId('clubOpenBox').onclick = openBoxPicker;
     // The real animated balance shares the fixed dock with the bottom navigation.
     byId('clubBottomDock').insertBefore(document.querySelector('.balance-wrap'), byId('userNavBottom'));
@@ -204,14 +250,16 @@
 
     var nav = byId('userNavBottom'), dock = byId('clubBottomDock');
     function measureDock() {
-      var height = dock.getBoundingClientRect().height;
+      expandedNavHeight=Math.max(expandedNavHeight,nav.scrollHeight);
+      var height = expandedNavHeight + (document.body.classList.contains('club-playing') ? 41 : 0);
       if (height > 0) {
         document.documentElement.style.setProperty('--club-dock-height', height + 'px');
-        document.documentElement.style.setProperty('--club-nav-height', nav.getBoundingClientRect().height + 'px');
+        document.documentElement.style.setProperty('--club-nav-height', expandedNavHeight + 'px');
       }
     }
     new ResizeObserver(measureDock).observe(dock);
     measureDock();
+    new ResizeObserver(fitRoulette).observe(byId('clubGame'));
     window.__tkNav.apply('inicio');
     document.addEventListener('click', function (event) {
       var nav = event.target.closest('[data-club-nav]'); if (nav) { go(nav.dataset.clubNav); if (nav.dataset.clubNav === 'premios') { rewardsTab('catalog'); if (state) { state.onboardingCatalog = true; saveState(); renderOnboarding(); } } }
