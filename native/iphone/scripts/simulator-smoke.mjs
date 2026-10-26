@@ -1,0 +1,16 @@
+import {execFileSync} from 'node:child_process';
+import {mkdir,writeFile} from 'node:fs/promises';
+const run=(...args)=>execFileSync('xcrun',args,{encoding:'utf8',stdio:['ignore','pipe','inherit']}).trim();
+const devices=JSON.parse(run('simctl','list','devices','available','--json')).devices;
+const iphone=Object.values(devices).flat().find(d=>d.name.startsWith('iPhone'));
+if(!iphone)throw new Error('No hay simulador iPhone disponible');
+if(iphone.state!=='Booted')run('simctl','boot',iphone.udid);
+run('simctl','bootstatus',iphone.udid,'-b');
+run('simctl','status_bar',iphone.udid,'override','--time','9:41','--dataNetwork','wifi','--wifiMode','active','--wifiBars','3','--batteryState','charged','--batteryLevel','100');
+run('simctl','install',iphone.udid,'build/Build/Products/Debug-iphonesimulator/App.app');
+const launch=run('simctl','launch',iphone.udid,'com.tikitaka.club');
+await new Promise(resolve=>setTimeout(resolve,6000));
+await mkdir('artifacts',{recursive:true});
+run('simctl','io',iphone.udid,'screenshot','artifacts/iphone-login.png');
+await writeFile('artifacts/simulator.txt',iphone.name+'\n'+launch+'\nCompilación de simulador, no instalable en un iPhone físico.\n');
+console.log('La app arranca en '+iphone.name);

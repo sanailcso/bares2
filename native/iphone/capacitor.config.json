@@ -1,0 +1,22 @@
+{
+  "appId": "com.tikitaka.club",
+  "appName": "Tiki Taka",
+  "webDir": "www",
+  "backgroundColor": "#f6f4ee",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "capacitor"
+  },
+  "ios": {
+    "contentInset": "never",
+    "preferredContentMode": "mobile",
+    "backgroundColor": "#f6f4ee",
+    "allowsLinkPreview": false,
+    "handleApplicationNotifications": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "disable"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+/* UIKit keeps the web view inside the iPhone safe area. */
+html.native-ios,html.native-ios body{min-height:100%;overscroll-behavior-y:none}
+html.native-ios body{background:#f6f4ee}
+.native-ios input,.native-ios select,.native-ios textarea{font-size:16px}
+.native-ios #pwaInstallBtn,.native-ios #clubNotifications{display:none!important}
+#nativeConnection{position:fixed;top:0;left:0;right:0;z-index:100001;padding:10px 16px;background:#842c43;color:#fff9f1;font:600 12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;text-align:center}
