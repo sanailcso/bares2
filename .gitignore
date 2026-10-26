@@ -13,3 +13,11 @@ build/
 build-twa/
 node_modules/
 
+
+# Proyecto iPhone generado y salidas de compilación
+native/iphone/www/
+native/iphone/ios/
+native/iphone/build/
+native/iphone/artifacts/
+native/iphone/icon-flat.jpg
+native/iphone/xcodebuild.log

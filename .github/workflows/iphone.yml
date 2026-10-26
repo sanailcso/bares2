@@ -1,0 +1,62 @@
+name: iPhone · compilación de prueba
+
+on:
+  pull_request:
+    paths:
+      - 'native/iphone/**'
+      - '.github/workflows/iphone.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'native/iphone/**'
+      - '.github/workflows/iphone.yml'
+      - 'assets/**'
+      - 'img/**'
+      - 'icons/**'
+      - 'index.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iphone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iphone-simulator:
+    runs-on: macos-15
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: native/iphone
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar herramientas de iPhone
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validar empaquetado sin datos privados
+        run: npm test
+      - name: Generar proyecto iPhone con la interfaz local
+        run: npm run prepare:ios
+      - name: Compilar para simulador sin certificados
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
+      - name: Arrancar en iPhone y capturar pantalla
+        run: node scripts/simulator-smoke.mjs
+      - name: Preparar proyecto descargable
+        run: |
+          ditto -c -k --keepParent build/Build/Products/Debug-iphonesimulator/App.app artifacts/TikiTaka-Simulador.app.zip
+          zip -qr artifacts/TikiTaka-Proyecto-iPhone.zip ios scripts runtime package.json package-lock.json capacitor.config.json README.md -x 'ios/App/App/public/*'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tikitaka-iphone-prueba
+          path: |
+            native/iphone/artifacts/
+            native/iphone/xcodebuild.log
