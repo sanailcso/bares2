@@ -564,7 +564,7 @@
     else if(_sess.p){ userInput.value=_sess.u; passInput.value=_sess.p||""; tryLogin(); } /* migración desde formato antiguo: un solo uso para obtener token */
   }
 
-  function logout(){ var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
+  function logout(){ var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
   function forceLogout(){ /* [SEGURIDAD] token caducado o invalido: cerrar sesion */ try{ toast("Tu sesión ha caducado. Vuelve a iniciar sesión."); }catch(e){} logout(); }
 
   /* ===== RANKING de bares (anonimo, por periodo) ===== */
@@ -696,6 +696,7 @@
     if(!codes||!codes.length) return null;
     var out=[]; for(var i=0;i<5;i++){ out.push(symFromCode(codes[i])); } return out;
   }
+  var _reelDisplayOwner=null, _reelPreviewSignature="";
   function setReelsStatic(symbols){
     for (let i=0;i<5;i++){
       const strip = reels[i].querySelector(".strip");
@@ -754,15 +755,23 @@
   }
 
   function renderSpinState(){
+    if(spinning) return;
     refreshSymbols();
     if(SB_ON && !_playerStateReady){ spinBtn.disabled=true; spinBtn.textContent="CONECTANDO…"; spinNote.textContent="Comprobando tu tirada diaria."; return; }
+    // Background refreshes update availability, never the already visible symbols.
+    var preview=typeof PREVIEW_CFG!=="undefined" && PREVIEW_CFG;
+    var previewSignature=preview?JSON.stringify(CUR_SYM):"";
+    if(_reelDisplayOwner!==currentUser || (preview && previewSignature!==_reelPreviewSignature)){
+      setReelsStatic(state.lastSymbols || [CUR_SYM.jackpot, CUR_SYM.fillers[0], CUR_SYM.prize, CUR_SYM.fillers[1]||CUR_SYM.jackpot, CUR_SYM.jackpot]);
+      _reelDisplayOwner=currentUser;
+      _reelPreviewSignature=previewSignature;
+    }
     if (spunToday()){
       spinBtn.disabled = true;
       spinBtn.textContent = "✓ YA JUGADO";
       spinNote.textContent = "Vuelve mañana para tu próxima tirada 🔥";
       bloquearRodillos(true);
       arrancarCuenta();
-      setReelsStatic(state.lastSymbols || [CUR_SYM.fillers[0], CUR_SYM.prize, CUR_SYM.jackpot, CUR_SYM.prize, CUR_SYM.fillers[1]||CUR_SYM.fillers[0]]);
       if (state.lastWin){ showBanner(state.lastWin, true); }
     } else {
       pararCuenta();
@@ -770,7 +779,6 @@
       spinBtn.disabled = false;
       spinBtn.textContent = "GIRAR";
       spinNote.textContent = "Tienes 1 tirada gratis hoy · ¡mucha suerte!";
-      setReelsStatic([CUR_SYM.jackpot, CUR_SYM.fillers[0], CUR_SYM.prize, CUR_SYM.fillers[1]||CUR_SYM.jackpot, CUR_SYM.jackpot]);
       winBanner.classList.remove("show");
     }
   }
