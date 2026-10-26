@@ -147,8 +147,8 @@
       void wallet.offsetWidth; // Restart the pulse for consecutive awards.
       wallet.classList.add(increase ? 'is-gaining' : 'is-spending');
     });
-    duration = Math.max(duration || 0, increase ? 1100 : 700);
-    if(increase){document.body.classList.add('club-points-neon');neonTimer=setTimeout(function(){document.body.classList.remove('club-points-neon');},duration);}
+    duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : Math.max(duration || 0, increase ? 4200 : 700);
+    if(increase && duration > 0){document.body.classList.add('club-points-neon');neonTimer=setTimeout(function(){document.body.classList.remove('club-points-neon');},duration);}
     gainTimer = setTimeout(function () {
       put('clubGameGain', ''); put('clubHomeGain', '');
       wallets.forEach(function (wallet) { if (wallet) wallet.classList.remove('is-gaining', 'is-spending'); });
