@@ -175,6 +175,42 @@ try{
   await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'hidden'});
   await page.evaluate(()=>countUp(document.getElementById('balance'),800,800,900));
   assert.equal(await page.locator('#clubGameGain').innerText(),'','Unchanged balances do not trigger a reward');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.locator('#userNavBottom').getByRole('button',{name:'Mi bar',exact:true}).click();
+  await page.locator('#demoReset').click();
+  for(let day=1;day<=7;day++){
+    await page.locator('#demoStreak').click();
+    await page.waitForFunction(day=>state.streak===day&&!_demoBusy,day);
+  }
+  await page.locator('#boxPop').waitFor({state:'visible'});
+  assert.equal(await page.locator('#boxPop').evaluate(e=>e.matches(':modal')),true,'Pending box opens above navigation automatically');
+  assert.equal(await page.locator('#boxRow button').count(),3);
+  assert.equal(await page.locator('#boxPop').getAttribute('aria-hidden'),'false');
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('#boxRow img')).every(i=>i.complete&&i.naturalWidth>0));
+  for(const width of [320,390,900]){
+    await page.setViewportSize({width,height:700});
+    assert.equal(await page.locator('#boxPop').evaluate(e=>e.scrollWidth>e.clientWidth),false,'Boxes fit the viewport');
+  }
+  await page.screenshot({path:'test-results/surprise-box-premium.png'});
+  await page.locator('#boxLater').click();
+  await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
+  await page.locator('#clubOpenBox').waitFor({state:'visible'});
+  await page.locator('#clubOpenBox').click();
+  await page.locator('#boxPop').waitFor({state:'visible'});
+  // Reload with a pending box: it must present itself without using demo controls.
+  await page.reload();await login();
+  await page.locator('#boxPop').waitFor({state:'visible'});
+  const beforeBox=await page.evaluate(()=>state.points);
+  await page.locator('#boxRow button').first().click();
+  await page.evaluate(()=>claimBox(0));
+  const afterBox=await page.evaluate(()=>({points:state.points,pending:state.pendingBox,streak:state.streak,awards:state.history.filter(e=>e.label.includes('Caja sorpresa')).length}));
+  assert.ok([70,90,110].includes(afterBox.points-beforeBox));
+  assert.equal(afterBox.pending,false);assert.equal(afterBox.streak,0);assert.equal(afterBox.awards,1,'A double claim awards only once');
+  await page.locator('#boxPop').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#clubOpenBox').isVisible(),false);
+  await page.reload();await login();
+  await page.waitForTimeout(900);
+  assert.equal(await page.locator('#boxPop').isVisible(),false,'Claimed box does not reopen');
   assert.deepEqual(errors,[]);
   console.log('Touch goals, mobile catalog and transparent balance joined to navigation passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
