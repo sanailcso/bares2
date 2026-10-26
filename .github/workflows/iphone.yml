@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: iphone-${{ github.ref }}
+  group: iphone-native-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -60,6 +60,7 @@ jobs:
           set -o pipefail
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
       - name: Arrancar en iPhone y capturar pantalla
+        timeout-minutes: 5
         run: node scripts/simulator-smoke.mjs
       - name: Preparar proyecto descargable
         run: |
