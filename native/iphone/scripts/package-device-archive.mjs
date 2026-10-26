@@ -4,7 +4,10 @@ import {createHash} from 'node:crypto';
 import path from 'node:path';
 const run=(command,args)=>execFileSync(command,args,{encoding:'utf8'}).trim();
 const archive=path.resolve('build-device/TikiTaka.xcarchive');
-function plist(file){return JSON.parse(run('plutil',['-convert','json','-o','-',file]));}
+function plist(file){
+  // Archive plists contain dates; plutil cannot convert those directly to JSON.
+  return JSON.parse(run('python3',['-c','import json,plistlib,sys; print(json.dumps(plistlib.load(open(sys.argv[1],"rb")),default=str))',file]));
+}
 const details=plist(path.join(archive,'Info.plist'));
 const appPath=details.ApplicationProperties?.ApplicationPath;
 if(appPath!=='Applications/App.app')throw new Error('El archivo no contiene una única app de iPhone');
