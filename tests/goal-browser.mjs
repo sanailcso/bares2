@@ -25,6 +25,23 @@ try{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const login=async()=>{await page.getByPlaceholder('Tu usuario',{exact:true}).fill('demo');await page.getByPlaceholder('Tu contraseña',{exact:true}).fill('demo');await page.getByRole('button',{name:'Entrar al club'}).click();await page.locator('#clubGoalName').waitFor({state:'visible'});await page.waitForFunction(()=>document.querySelector('#clubGoalSelect')?.value===document.querySelector('#clubGoalName')?.textContent);};
   await page.goto('http://127.0.0.1:'+server.address().port+'/');await login();
+  async function reelSnapshot(){return page.locator('.reels .strip').evaluateAll(strips=>strips.map(s=>({html:s.innerHTML,transform:s.style.transform}))); }
+  const idleReels=await reelSnapshot();
+  // Exercise the real periodic sync and return-to-app paths without waiting in real time.
+  await page.clock.install();
+  await page.clock.fastForward(76000);
+  await page.evaluate(()=>{
+    const token=_CRED.t;SB_SECURE=true;_CRED.t='idle-fixture';
+    const rpc=window.sbRpc;
+    window.sbRpc=async name=>name==='app_state'?{ok:true,points:state.points,streak:state.streak,lastSpin:state.lastSpin,betSpins:state.betSpins}:null;
+    refreshPlayer();
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.__idleRestore=()=>{window.sbRpc=rpc;_CRED.t=token;SB_SECURE=false;};
+  });
+  await page.waitForTimeout(50);
+  await page.evaluate(()=>{window.__idleRestore();delete window.__idleRestore;renderSpinState();});
+  assert.deepEqual(await reelSnapshot(),idleReels,'Idle timers and returning to the app preserve every visible symbol');
+  await page.clock.resume();
   async function assertDock(){
     const geometry=await page.evaluate(()=>{
       const wallet=document.querySelector('.balance-wrap'),nav=document.querySelector('#userNavBottom');
@@ -146,6 +163,9 @@ try{
   assert.equal(await page.locator('#tab-jugar').evaluate(e=>getComputedStyle(e).animationName),'none','No tab fade during game entry');
   await page.waitForFunction(()=>!spinning);
   assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'One click starts only one spin');
+  const settledReels=await reelSnapshot();
+  await page.evaluate(()=>{renderSpinState();renderSpinState();});
+  assert.deepEqual(await reelSnapshot(),settledReels,'Refreshing after a real spin preserves the entire settled combination');
   assert.equal(await page.evaluate(()=>state.lastSpin),await page.evaluate(()=>todayStr()));
   assert.equal(await page.evaluate(()=>{const h=state.history.find(h=>h.type==='spin');return h.after-h.before===h.delta;}),true,'Real spin records before and after balances');
   await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
