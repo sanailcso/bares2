@@ -110,11 +110,14 @@
     try { session = JSON.parse(localStorage.getItem('tikitaka_session') || '{}') || {}; } catch (e) {}
     var name = session.nombre || info.nombre || currentUser, bar = session.bar || info.bar || name;
     put('clubHeaderBar', bar); put('clubBarName', bar); put('clubAccountBar', bar);
+    byId('clubHeaderBar').title = bar;
+    byId('clubBrandHome').setAttribute('aria-label', 'Tiki Taka, inicio. ' + bar);
     var first = name.replace(/^Bar\s+/i, '').split(' ')[0];
     var greeting = byId('clubGreeting');
     if (greeting.dataset.name !== name) { greeting.dataset.name = name; greeting.replaceChildren(document.createTextNode('Hola, ' + first + '.'), document.createElement('br'), document.createTextNode('Hoy también suma.')); }
     var initials = name.split(/\s+/).slice(0, 2).map(function (part) { return part.charAt(0); }).join('').toUpperCase();
-    put('clubProfile', initials); put('clubAccountAvatar', initials); put('clubAccountName', name); put('clubAccountUsername', currentUser);
+    var barInitials = bar.trim().split(/\s+/).slice(0, 2).map(function (part) { return part.charAt(0); }).join('').toUpperCase();
+    put('clubProfile', barInitials); put('clubAccountAvatar', initials); put('clubAccountName', name); put('clubAccountUsername', currentUser);
     put('clubHomeBalance', byId('balance').textContent || fmt(state.points));
     put('clubGameTitle', _game === 'bet' ? state.goldenRound ? 'Tu ronda dorada' : 'Tu ruleta de la suerte' : 'Tu giro de hoy');
     var left = betSpinsLeft();
