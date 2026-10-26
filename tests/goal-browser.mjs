@@ -66,6 +66,7 @@ try{
   assert.equal(await page.locator('#userNavBottom [data-nav="mibar"]').getAttribute('aria-current'),'page','Profile keeps opening the account');
   await page.locator('#clubBrandHome').click();
   assert.equal(await page.locator('#userNavBottom [data-nav="inicio"]').getAttribute('aria-current'),'page','Brand signature keeps returning Home');
+  await page.locator('#clubBottomDock>.balance-wrap').waitFor({state:'visible'});
   async function assertDock(){
     const geometry=await page.evaluate(()=>{
       const wallet=document.querySelector('.balance-wrap'),nav=document.querySelector('#userNavBottom');
