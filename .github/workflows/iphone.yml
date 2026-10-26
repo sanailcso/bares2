@@ -49,6 +49,12 @@ jobs:
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
       - name: Arrancar en iPhone y capturar pantalla
         run: node scripts/simulator-smoke.mjs
+      - name: Archivar la app para iPhone real sin firma
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build-device -archivePath build-device/TikiTaka.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=${{ github.run_number }} archive | tee device-archive.log
+      - name: Validar y empaquetar la entrega para IT
+        run: node scripts/package-device-archive.mjs
       - name: Preparar proyecto descargable
         run: |
           ditto -c -k --keepParent build/Build/Products/Debug-iphonesimulator/App.app artifacts/TikiTaka-Simulador.app.zip
@@ -60,3 +66,10 @@ jobs:
           path: |
             native/iphone/artifacts/
             native/iphone/xcodebuild.log
+            native/iphone/device-archive.log
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tikitaka-iphone-para-firmar
+          path: native/iphone/device-delivery/TikiTaka-iPhone-para-firmar.zip
+          if-no-files-found: error
