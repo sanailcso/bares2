@@ -27,6 +27,10 @@
 
 
 /* The selected theme image is the single wallpaper source for every customer tab. */
-.club-theme-background{position:absolute;inset:0;z-index:-2;border-radius:inherit;pointer-events:none;background-size:100% auto;background-position:center top;background-repeat:repeat-y;background-attachment:scroll}
+.club-theme-background{position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background-size:100% auto;background-position:center top;background-repeat:repeat-y;background-attachment:scroll}
 .club-theme-background[hidden],body.login-mode .club-theme-background,body:has(#adminScreen:not([hidden])) .club-theme-background{display:none}
 .theme-preview-layer{position:absolute;inset:0;pointer-events:none;background-size:100% auto;background-position:center top;background-repeat:repeat-y}
+
+/* Put the theme behind the entire document, including the margins on desktop. */
+body.club-ui{position:relative;isolation:isolate;display:flow-root!important}
+body.club-ui.has-theme-wallpaper:not(.login-mode) #appCard.club-app{background:transparent!important}

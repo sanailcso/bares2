@@ -276,7 +276,6 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-ui #appCard.club-app{padding-bottom:calc(var(--club-dock-height, calc(136px + env(safe-area-inset-bottom))) + 24px)!important}
 
 /* Uploaded themes are visible inside the game while preserving readable controls. */
-.club-ui #clubGame.has-custom-theme{background-image:linear-gradient(#252328b8,#252328e6),var(--club-theme-bg)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important}
 
 /* Stable frame: intrinsic image dimensions must not stretch the catalog card. */
 .club-ui #catalog .r-emoji{position:relative;width:100%;min-width:0;flex:0 0 auto}

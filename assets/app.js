@@ -1656,12 +1656,13 @@
   function themeMap(cfg){ var m={}; (cfg.themes||[]).forEach(function(t){ m[t.id]=t; }); return m; }
   function inRange(from,to){ var n=new Date(); var md=(n.getMonth()+1)*100+n.getDate(); var a=from.m*100+from.d, b=to.m*100+to.d; return a<=b ? (md>=a&&md<=b) : (md>=a||md<=b); }
   function resolveTheme(cfg){ var map=themeMap(cfg); if(cfg.override && map[cfg.override]) return cfg.override; var s=cfg.schedule||[]; for(var i=0;i<s.length;i++){ if(map[s[i].themeId] && inRange(s[i].from,s[i].to)) return s[i].themeId; } if(cfg.fallback && map[cfg.fallback]) return cfg.fallback; return cfg.themes[0] ? cfg.themes[0].id : null; }
-  function paintTheme(cfg,id){ var map=themeMap(cfg); var t=map[id]; if(!t){ t=map[resolveTheme(cfg)]; } if(!t) return; var game=document.querySelector(".slot"); if(game && t.img){ game.style.setProperty("--game-bg", "url(\""+String(t.img).replace(/\"/g,"%22")+"\")"); } else if(game){ game.style.removeProperty("--game-bg"); } var cabinet=document.getElementById("clubGame"),builtin=themeMap(BUILTIN)[t.id];
-    if(cabinet){
-      var custom=!!(t.img && (!builtin || t.img!==builtin.img));
-      cabinet.classList.toggle("has-custom-theme",custom);
-      cabinet.style.setProperty("--club-theme-bg",custom?'url("'+String(t.img).replace(/"/g,"%22")+'")':"none");
-    }
+  function paintTheme(cfg,id){
+    var map=themeMap(cfg),t=map[id]||map[resolveTheme(cfg)];if(!t)return;
+    // Theme artwork belongs to the page, never to the game cabinet.
+    var game=document.querySelector(".slot"),cabinet=document.getElementById("clubGame");
+    if(game)game.style.removeProperty("--game-bg");
+    if(cabinet){cabinet.classList.remove("has-custom-theme");cabinet.style.removeProperty("--club-theme-bg");}
+    TkFestive.apply(t.decoration,t);
   }
   var PREVIEW_CFG=null;
   function activeSymConfig(){ var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:ACTIVE_CFG; if(!cfg) return null; var map=themeMap(cfg); var t=map[resolveTheme(cfg)]; return (t&&t.sym&&t.sym.jackpot)?t.sym:null; }
