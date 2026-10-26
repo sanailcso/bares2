@@ -42,6 +42,30 @@ try{
   await page.evaluate(()=>{window.__idleRestore();delete window.__idleRestore;renderSpinState();});
   assert.deepEqual(await reelSnapshot(),idleReels,'Idle timers and returning to the app preserve every visible symbol');
   await page.clock.resume();
+  assert.equal(await page.locator('.club-header-kicker').innerText(),'TIKI TAKA · TU CLUB');
+  assert.equal(await page.locator('#clubBrandHome img').count(),0,'Editorial header uses type instead of the square logo');
+  assert.equal(await page.locator('#clubHeaderBar').getAttribute('title'),await page.locator('#clubHeaderBar').innerText());
+  await page.waitForTimeout(350);
+  await page.screenshot({path:'test-results/editorial-header-home.png'});
+  const savedSession=await page.evaluate(()=>localStorage.getItem('tikitaka_session'));
+  const longBar='Bar Tiki Taka Elche · Avenida de la Libertad';
+  await page.setViewportSize({width:320,height:640});
+  await page.evaluate(bar=>{const session=JSON.parse(localStorage.getItem('tikitaka_session')||'{}');session.bar=bar;localStorage.setItem('tikitaka_session',JSON.stringify(session));render();},longBar);
+  await page.waitForFunction(bar=>document.getElementById('clubHeaderBar').textContent===bar,longBar);
+  const headerGeometry=await page.evaluate(()=>{
+    const name=document.getElementById('clubHeaderBar').getBoundingClientRect(),avatar=document.getElementById('clubProfile').getBoundingClientRect();
+    return {right:name.right,avatar:avatar.left,overflow:document.documentElement.scrollWidth>innerWidth,height:document.querySelector('.app-head').getBoundingClientRect().height};
+  });
+  assert.ok(headerGeometry.right<headerGeometry.avatar,'Long names leave space for profile');
+  assert.equal(headerGeometry.overflow,false);assert.equal(headerGeometry.height,60);
+  assert.equal(await page.locator('#clubHeaderBar').getAttribute('title'),longBar,'Full bar name remains available');
+  await page.screenshot({path:'test-results/editorial-header-long-name.png'});
+  await page.evaluate(saved=>{if(saved===null)localStorage.removeItem('tikitaka_session');else localStorage.setItem('tikitaka_session',saved);render();},savedSession);
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#clubProfile').click();
+  assert.equal(await page.locator('#userNavBottom [data-nav="mibar"]').getAttribute('aria-current'),'page','Profile keeps opening the account');
+  await page.locator('#clubBrandHome').click();
+  assert.equal(await page.locator('#userNavBottom [data-nav="inicio"]').getAttribute('aria-current'),'page','Brand signature keeps returning Home');
   async function assertDock(){
     const geometry=await page.evaluate(()=>{
       const wallet=document.querySelector('.balance-wrap'),nav=document.querySelector('#userNavBottom');
