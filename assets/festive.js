@@ -32,8 +32,10 @@
   function apply(value,theme) {
     var host=document.getElementById('appCard');if(!host)return;
     var backdrop=document.getElementById('clubThemeBackground');
-    if(!backdrop){backdrop=document.createElement('div');backdrop.id='clubThemeBackground';backdrop.className='club-theme-background';backdrop.setAttribute('aria-hidden','true');host.prepend(backdrop);}
+    if(!backdrop){backdrop=document.createElement('div');backdrop.id='clubThemeBackground';backdrop.className='club-theme-background';backdrop.setAttribute('aria-hidden','true');document.body.prepend(backdrop);}
+    if(backdrop.parentElement!==document.body)document.body.prepend(backdrop);
     paintBackground(backdrop,theme);
+    document.body.classList.toggle('has-theme-wallpaper',!backdrop.hidden);
     var layer=document.getElementById('clubFestive');
     if(!layer){layer=document.createElement('div');layer.id='clubFestive';layer.className='club-festive-layer';layer.setAttribute('aria-hidden','true');}
     if(layer.parentElement!==host)host.prepend(layer);

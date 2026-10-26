@@ -332,7 +332,7 @@ try{
   });
   assert.ok(scrollGeometry.scroll>100,'Catalog scroll fixture');
   assert.ok(Math.abs(scrollGeometry.delta-scrollGeometry.scroll)<2,'Wallpaper follows scrolling');
-  assert.ok(Math.abs(scrollGeometry.wallpaperHeight-scrollGeometry.appHeight)<2,'Wallpaper spans full app height');
+  assert.ok(scrollGeometry.wallpaperHeight>=scrollGeometry.appHeight-2,'Wallpaper spans the entire document');
   await page.locator('#clubGoalSelect').selectOption(publicConfig.rewards[0].name);
   await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Inicio',exact:true}).click();
@@ -342,9 +342,21 @@ try{
   await page.screenshot({path:'test-results/player-home-appearance.png'});
   await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
-  await page.locator('#clubGame.has-custom-theme').waitFor({state:'visible'});
+  await page.locator('#clubGame').waitFor({state:'visible'});
   await page.locator('.reels .symbol-img').first().waitFor({state:'visible'});
-  assert.ok((await page.locator('#clubGame').evaluate(e=>getComputedStyle(e).backgroundImage)).includes('data:image/webp'));
+  assert.equal(await page.locator('#clubGame').evaluate(e=>getComputedStyle(e).backgroundImage),'none','Theme never paints the reels cabinet');
+  assert.equal(await page.locator('#clubThemeBackground').evaluate(e=>e.parentElement===document.body),true,'Wallpaper belongs to the entire document');
+  assert.equal(await page.locator('#appCard').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)','Cream surface does not cover the selected wallpaper');
+  for(const tab of ['Inicio','Premios','Mi bar','Jugar']){
+    await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
+    await page.locator('#userNavBottom').getByRole('button',{name:tab,exact:true}).click();
+    assert.equal(await page.locator('#clubThemeBackground').isVisible(),true,'Wallpaper visible in '+tab);
+  }
+  await page.setViewportSize({width:1100,height:900});
+  assert.equal(await page.locator('#clubThemeBackground').evaluate(e=>Math.round(e.getBoundingClientRect().width)),1100,'Wallpaper covers desktop margins');
+  await page.waitForTimeout(400); // Let the tab fade finish before visual review.
+  await page.screenshot({path:'test-results/whole-app-wallpaper.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
   assert.ok((await page.locator('.reels .symbol-img').first().getAttribute('src')).startsWith('data:image/webp'));
   // Exercise the real player entry with available spins, normal and golden.
   for(const width of [320,390]){
