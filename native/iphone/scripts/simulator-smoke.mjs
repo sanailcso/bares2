@@ -1,5 +1,5 @@
 import {execFileSync} from 'node:child_process';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 const run=(...args)=>execFileSync('xcrun',args,{encoding:'utf8',stdio:['ignore','pipe','inherit']}).trim();
 const devices=JSON.parse(run('simctl','list','devices','available','--json')).devices;
 const iphone=Object.values(devices).flat().find(d=>d.name.startsWith('iPhone'));
@@ -8,7 +8,8 @@ if(iphone.state!=='Booted')run('simctl','boot',iphone.udid);
 run('simctl','bootstatus',iphone.udid,'-b');
 run('simctl','status_bar',iphone.udid,'override','--time','9:41','--dataNetwork','wifi','--wifiMode','active','--wifiBars','3','--batteryState','charged','--batteryLevel','100');
 run('simctl','install',iphone.udid,'build/Build/Products/Debug-iphonesimulator/App.app');
-const launch=run('simctl','launch',iphone.udid,'com.tikitaka.club');
+const {appId}=JSON.parse(await readFile(new URL('../capacitor.config.json',import.meta.url),'utf8'));
+const launch=run('simctl','launch',iphone.udid,appId);
 await new Promise(resolve=>setTimeout(resolve,6000));
 await mkdir('artifacts',{recursive:true});
 run('simctl','io',iphone.udid,'screenshot','artifacts/iphone-login.png');

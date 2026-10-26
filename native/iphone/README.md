@@ -1,6 +1,6 @@
 # Tiki Taka para iPhone
 
-Este proyecto reutiliza la interfaz web y el mismo servidor de cuentas y puntos. No crea otra base de datos ni concede puntos sin conexión. El identificador provisional de la app es `com.tikitaka.club`; debe confirmarse en la cuenta de Apple antes de publicar.
+Este proyecto reutiliza la interfaz web y el mismo servidor de cuentas y puntos. No crea otra base de datos ni concede puntos sin conexión. El dominio de la empresa es **tikitaka.es**. El identificador provisional de la app es `es.tikitaka.club`; debe confirmarse en la cuenta de Apple antes de publicar.
 
 ## Qué prepara automáticamente GitHub
 
