@@ -17,3 +17,14 @@ scope.sbRpc=async()=>{throw new TypeError('Failed to fetch');};
 const offline=await scope.secureBet(100);assert.equal(offline.error,'request');
 assert.doesNotMatch(scope.rouletteErrorText(offline),/HTTP|SQL|undefined/);
 console.log('Roulette errors: preserve HTTP diagnostics, distinguish business failures, redact internals');
+
+let resolveState;
+const sync={SB_SECURE:true,_CRED:{t:'token'},state:{points:1000,betSpins:1},_betBusy:false,spinning:false,_demoBusy:false,
+ _demoRevision:0,_betRevision:0,currentUser:'test2',sbRpc:()=>new Promise(r=>{resolveState=r;})};
+vm.createContext(sync);
+vm.runInContext(source.slice(source.indexOf('  function refreshPlayer('),source.indexOf('  var _playerPoll',source.indexOf('  function refreshPlayer('))),sync);
+sync.refreshPlayer();sync._betRevision++;
+resolveState({ok:true,points:2000,betSpins:3});await new Promise(r=>setImmediate(r));
+assert.equal(sync.state.points,1000,'A state response started before the bet cannot overwrite its balance');
+assert.equal(sync.state.betSpins,1,'A stale state response cannot restore spent credits');
+console.log('Roulette synchronization ignores state responses overtaken by a play');

@@ -17,7 +17,7 @@ try{
   const headers={'access-control-allow-origin':'*','access-control-allow-headers':'apikey,authorization,content-type','access-control-allow-methods':'POST,GET,OPTIONS'};
   if(req.method()==='OPTIONS'){await route.fulfill({status:204,headers});return;}
   const fn=url.pathname.split('/').pop();let status=200,data={ok:true};
-  if(fn==='app_public_config')data={rev:1,bet:{enabled:true,min:100,max:1000,segments:[{mult:1,w:1},{mult:2,w:1}]}};
+  if(fn==='app_public_config')data={rev:1,themes:[{id:'default',name:'Clásico'}],fallback:'default',rewards:[],bet:{enabled:true,min:100,max:1000,segments:[{mult:1,w:1},{mult:2,w:1}]}};
   else if(fn==='app_login')data={ok:true,token:'00000000-0000-4000-8000-000000000001',nombre:'Fixture',bar:'Fixture',state:{points:1000,lastSpin:null,streak:0,betSpins:credits,history:[]}};
   else if(fn==='app_state'){data={ok:true,points:1000,betSpins:credits,streak:0,lastSpin:null};if(failState){status=503;data={code:'57014',message:'fixture state unavailable'};}}
   else if(fn==='app_pending_surveys')data={ok:true,surveys:[]};
@@ -32,6 +32,7 @@ try{
  });
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.locator('#userInput').fill('test2');await page.locator('#passInput').fill('fixture');await page.locator('#loginBtn').click();await page.locator('#appCard').waitFor({state:'visible'});
+ await page.waitForFunction(()=>_configReady);
  await page.evaluate(()=>{window.__tkNav.go('jugar');setGame('bet');});await page.locator('#betGo').waitFor();
  failState=true;await page.locator('#betGo').click();
  await page.locator('#betResult').filter({hasText:'HTTP 500 · 57014'}).waitFor();
@@ -50,4 +51,4 @@ try{
  assert.equal(await page.locator('#betLeft').textContent(),'0');assert.equal(await page.locator('#betGo').isDisabled(),true);
  assert.equal(await page.evaluate(()=>state.history.length),0);assert.deepEqual(errors,[]);
  console.log('Roulette HTTP errors, uncertain request reconciliation, configuration errors and confirmed credits passed');
-}finally{await browser.close();await new Promise(r=>server.close(r));}
+}catch(error){if(page)console.error(JSON.stringify({errors,ui:await page.evaluate(()=>({ready:typeof _configReady!=='undefined'&&_configReady,game:typeof _game==='undefined'?null:_game,credits:typeof state==='undefined'?null:state&&state.betSpins,message:document.getElementById('betResult')?.textContent}))}));throw error;}finally{await browser.close();await new Promise(r=>server.close(r));}

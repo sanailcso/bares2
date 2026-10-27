@@ -6,7 +6,7 @@ const start=source.indexOf('  function placeBet('),end=source.indexOf('  functio
 async function run(reply,mult=2,points=1000){
   const timers=[],changes=[],elements={};
   const element=()=>({style:{},classList:{add(){},remove(){}},disabled:false,textContent:'',innerHTML:''});
-  const scope={currentUser:'test2',_CRED:{t:'fixture-token'},_betNotice:"",_betSyncing:false,_serverSpins:2,_betBusy:false,_demoBusy:false,_configReady:true,_betRot:0,state:{points,betSpins:2,history:[]},
+  const scope={currentUser:'test2',_CRED:{t:'fixture-token'},_betRevision:0,_betNotice:"",_betSyncing:false,_serverSpins:2,_betBusy:false,_demoBusy:false,_configReady:true,_betRot:0,state:{points,betSpins:2,history:[]},
     activeBetCfg:()=>({min:100,max:1000,segments:[{mult,w:1}]}),betConfigError:()=>'',betSpinsLeft:()=>scope.state.betSpins,
     document:{getElementById:id=>elements[id]||(elements[id]=element())},saveState(){},renderOnboarding(){},playRouletteAudio(){},
     wheelLayout:()=>[mult],secureBet:async()=>reply,localBetPick:()=>mult,countUp:(_,from,to)=>changes.push([from,to]),balance:{},
