@@ -11,3 +11,4 @@ create schema extensions;
 \ir ../migrations/20261021110000_deactivate_clients_safely.sql
 \ir ../migrations/20261021130000_restore_demo_controls.sql
 \ir ../migrations/20261022150000_roulette_spend_and_payout.sql
+\ir ../migrations/20261027120000_customer_surveys.sql
