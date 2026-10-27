@@ -16,7 +16,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch(process.env.SURVEY_CHROMIUM_PATH?{executablePath:process.env.SURVEY_CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage','--single-process']}:{});
 const surveys=[],answers=new Map(),saves=[],errors=[];
 const users=[{username:'ana',nombre:'Ana',bar:'Bar Uno'},{username:'bea',nombre:'Bea',bar:'Bar Dos'}];
-let failAnswer=false,failSave=false;
+let failAnswer=false,failSave=false,malformedList=false;
 const tokenFor=u=>u==='ana'?'00000000-0000-4000-8000-000000000001':'00000000-0000-4000-8000-000000000002';
 async function setup(viewport={width:390,height:844}){
  const context=await browser.newContext({viewport,isMobile:viewport.width<600,hasTouch:true});
@@ -32,7 +32,7 @@ async function setup(viewport={width:390,height:844}){
  else if(fn==='app_public_config')data={rev:1};
  else if(fn==='app_admin_users')data=users;
  else if(fn==='app_admin_players'||fn==='app_admin_redemptions'||fn==='app_admin_events')data=[];
- else if(fn==='app_admin_surveys')data={ok:true,surveys};
+ else if(fn==='app_admin_surveys')data={ok:true,surveys:malformedList?null:surveys};
  else if(fn==='app_admin_save_survey'){
   if(failSave)data={ok:false,error:'server'};
   else{const old=surveys.find(s=>s.id===args.p_survey.id);const survey={...args.p_survey,version:(old?.version||0)+1,response_count:old?.response_count||0};if(old)surveys.splice(surveys.indexOf(old),1);surveys.unshift(survey);saves.push(structuredClone(args));data={ok:true,survey};}
@@ -62,6 +62,10 @@ let page;
 try{
  ({page}=await setup());await adminLogin(page);
  assert.equal(await page.locator('.adm-menu-i[data-t="sec-encuestas"]').count(),1);
+ malformedList=true;await page.locator('.survey-refresh').click();await page.locator('.survey-admin-notice.survey-error').waitFor();
+ await page.locator('.adm-menu-i[data-t="sec-clientes"]').click();
+ assert.equal(await page.locator('.adm-menu-i[data-t="sec-clientes"]').getAttribute('aria-current'),'location','Survey load failure does not break admin navigation');
+ malformedList=false;await page.locator('.survey-refresh').click();await page.locator('.survey-admin-notice').filter({hasText:'Encuestas actualizadas'}).waitFor();
  await page.locator('.survey-new').click();
  await page.locator('[data-field="question"]').fill('¿Qué regalo te gustaría?');
  await page.locator('[data-option="0"]').fill('Gorra premium');await page.locator('[data-option="1"]').fill('Gafas de sol');
@@ -115,6 +119,20 @@ try{
  await other.page.locator('.survey-dismiss').click();assert.equal(await other.page.locator('#clubSurveys').isHidden(),true);
  // Dismissal is only for this session; it does not create a response.
  assert.equal(answers.size,2);
+ await client.page.evaluate(()=>TkSurveys.refreshPlayer());await client.page.locator('#clubSurveys textarea').waitFor();
+ await client.page.locator('#clubSurveys textarea').fill('Me gusta <b>tal cual</b>');
+ await client.page.locator('#clubSurveys button[type=submit]').click();await client.page.locator('#clubSurveys').waitFor({state:'hidden'});
+ const textSurvey=surveys.find(s=>s.kind==='text');await page.locator('[data-results="'+textSurvey.id+'"]').click();await page.locator('.survey-response-list p').waitFor();
+ assert.equal(await page.locator('.survey-response-list p').textContent(),'Me gusta <b>tal cual</b>','Customer text is rendered literally');
+ assert.equal(await page.locator('.survey-response-list p b').count(),0,'Customer text cannot inject HTML');
+ await page.locator('.survey-cancel').click();await page.locator('.survey-new').click();
+ await page.locator('[data-field="question"]').fill('Elige varias mejoras');await page.locator('[data-field="kind"]').selectOption('multiple');
+ await page.locator('[data-option="0"]').fill('Más regalos');await page.locator('[data-option="1"]').fill('Más preguntas');
+ await page.locator('[data-field="status"]').selectOption('active');await page.locator('.survey-save').click();await page.locator('.survey-admin-notice').filter({hasText:'guardada y activada'}).waitFor();
+ await client.page.evaluate(()=>TkSurveys.refreshPlayer());await client.page.locator('#clubSurveys input[type=checkbox]').first().waitFor();
+ await client.page.locator('#clubSurveys input[value="option-1"]').check();await client.page.locator('#clubSurveys input[value="option-2"]').check();
+ await client.page.locator('#clubSurveys button[type=submit]').click();await client.page.locator('#clubSurveys').waitFor({state:'hidden'});
+ assert.equal(answers.size,4);
  await page.locator('.survey-cancel').click();
  assert.deepEqual(errors,[]);console.log('Survey admin, audience controls, uploads, preview, results, retry, mobile and empty state passed');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
