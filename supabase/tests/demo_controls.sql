@@ -32,10 +32,11 @@ begin
   update private.players set bet_spins=3 where username='demo_guard_fixture';
   r:=public.app_bet(other_token,100);
   if not (r->>'ok')::boolean then raise exception 'Customer first roulette spin failed'; end if;
-  if public.app_bet(other_token,100)->>'error'<>'limit' then raise exception 'Customer daily roulette limit changed'; end if;
+  r:=public.app_bet(other_token,100);
+  if not (r->>'ok')::boolean then raise exception 'Earned customer roulette credit blocked'; end if;
   r:=public.app_demo_action(t,'box');
   if not (r#>>'{state,pendingBox}')::boolean then raise exception 'Box failed'; end if;
-  if not exists(select 1 from private.players where username='demo_guard_fixture' and streak=0 and last_spin is null and bet_spins=2) then raise exception 'Demo controls changed customer state'; end if;
+  if not exists(select 1 from private.players where username='demo_guard_fixture' and streak=0 and last_spin is null and bet_spins=1) then raise exception 'Demo controls changed customer state'; end if;
   if not has_function_privilege('anon','public.app_demo_action(uuid,text)','EXECUTE') then raise exception 'Browser cannot use demo RPC'; end if;
   if has_function_privilege('authenticated','public.app_demo_action(uuid,text)','EXECUTE') then raise exception 'Unexpected grant'; end if;
 end $$;

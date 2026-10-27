@@ -6,11 +6,11 @@ const start=source.indexOf('  function placeBet('),end=source.indexOf('  functio
 async function run(reply,mult=2,points=1000){
   const timers=[],changes=[],elements={};
   const element=()=>({style:{},classList:{add(){},remove(){}},disabled:false,textContent:'',innerHTML:''});
-  const scope={_betBusy:false,_demoBusy:false,_configReady:true,_betRot:0,state:{points,betSpins:2,history:[]},
+  const scope={currentUser:'test2',_CRED:{t:'fixture-token'},_betNotice:"",_betSyncing:false,_serverSpins:2,_betBusy:false,_demoBusy:false,_configReady:true,_betRot:0,state:{points,betSpins:2,history:[]},
     activeBetCfg:()=>({min:100,max:1000,segments:[{mult,w:1}]}),betConfigError:()=>'',betSpinsLeft:()=>scope.state.betSpins,
     document:{getElementById:id=>elements[id]||(elements[id]=element())},saveState(){},renderOnboarding(){},playRouletteAudio(){},
     wheelLayout:()=>[mult],secureBet:async()=>reply,localBetPick:()=>mult,countUp:(_,from,to)=>changes.push([from,to]),balance:{},
-    setTimeout:fn=>timers.push(fn),todayStr:()=> '2026-10-22',renderCatalog(){},renderHistory(){},launchConfetti(){},chime(){},setGame(){},forceLogout(){}};
+    setTimeout:fn=>timers.push(fn),todayStr:()=> '2026-10-22',renderCatalog(){},renderHistory(){},launchConfetti(){},chime(){},setGame(){},forceLogout(){},renderBet(){},refreshPlayer(){},refreshPublicConfig(){},rouletteErrorText:()=>"fixture error"};
   vm.createContext(scope);
   vm.runInContext(source.slice(source.indexOf('  function recordPointMovement('),source.indexOf('  function renderHistory(')),scope);
   vm.runInContext(source.slice(start,end),scope);
@@ -32,4 +32,6 @@ for(const mult of [1,1.5,2,3]){
 const poor=await run(null,2,299);assert.equal(poor.scope.state.points,299);assert.equal(poor.timers.length,0);
 const offline=await run({ok:false,error:'offline'});assert.equal(offline.scope.state.points,1000);assert.equal(offline.scope.state.betSpins,2);
 const rejected=await run({ok:false,error:'funds',points:200});assert.equal(rejected.scope.state.points,200);assert.equal(rejected.scope.state.betSpins,2);
+const blocked=await run({ok:false,error:'limit',betSpins:0,points:1000});assert.equal(blocked.scope.state.betSpins,0);assert.equal(blocked.scope.state.points,1000);
+assert.equal(offline.scope._betSyncing,true,'Uncertain result blocks another play until authoritative state is received');
 console.log('Roulette accounting: debit, payout, net history and rejection scenarios passed');

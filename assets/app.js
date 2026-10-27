@@ -520,6 +520,7 @@
   }
 
   function finishLogin(u, info, serverState, token){
+      _betNotice="";_betSyncing=false;_betBusy=false;
       currentUser = u; passInput.value = ""; try{ if(token){ localStorage.setItem("tikitaka_session", JSON.stringify({v:2,u:u,t:token,nombre:info.nombre,bar:info.bar})); } else { localStorage.removeItem("tikitaka_session"); } }catch(e){}
       loginCard.style.display = "none"; appCard.style.display = "block"; document.body.classList.remove("login-mode");
       var hello=document.getElementById("hello");
@@ -565,7 +566,7 @@
     else if(_sess.p){ userInput.value=_sess.u; passInput.value=_sess.p||""; tryLogin(); } /* migración desde formato antiguo: un solo uso para obtener token */
   }
 
-  function logout(){ TkSurveys.resetPlayer(); var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
+  function logout(){ _betNotice="";_betSyncing=false;_betBusy=false; TkSurveys.resetPlayer(); var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
   function forceLogout(){ /* [SEGURIDAD] token caducado o invalido: cerrar sesion */ try{ toast("Tu sesión ha caducado. Vuelve a iniciar sesión."); }catch(e){} logout(); }
 
   /* ===== RANKING de bares (anonimo, por periodo) ===== */
@@ -870,6 +871,7 @@
     if (boxDay){ state.pendingBox = true; }
     if(_serverSpin){ state.points=_serverSpin.points; state.streak=_serverSpin.streak; state.pendingBox=!!_serverSpin.pendingBox; spinEntry.after=state.points-stepBonus; spinEntry.before=spinEntry.after-tier; if(bonusEntry){bonusEntry.before=spinEntry.after;bonusEntry.after=state.points;} }
     var _bsAward;
+    _betNotice="";
     if(_serverSpin && typeof _serverSpin.betSpins==="number"){ _bsAward=(typeof _serverSpin.betSpinsAward==="number")?_serverSpin.betSpinsAward:0; state.betSpins=_serverSpin.betSpins; _serverSpins=_serverSpin.betSpins; }
     else { _bsAward=1+Math.floor(Math.random()*3); state.betSpins=((state.betSpins||0)+_bsAward); }
     if(_bsAward>0){ state.history.unshift({ type:"bet", date:today, label:"\uD83C\uDFA1 +"+_bsAward+" tirada"+(_bsAward>1?"s":"")+" de ruleta", delta:0, before:state.points, after:state.points }); }
@@ -926,6 +928,7 @@
   function segRowHtml(seg, color){ var m=(seg&&seg.mult!=null)?seg.mult:1; var w=(seg&&seg.w!=null)?seg.w:1; var col=(color&&/^#[0-9a-fA-F]{3,8}$/.test(color))?color:(BET_MULT_COLORS[String(m)]||"#2b6cb0"); return '<div class="adm-seg-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;background:rgba(255,255,255,.05);padding:10px;border-radius:10px">'+'<span style="display:flex;align-items:center;gap:4px;font-weight:700">x<input type="number" class="adm-seg-mult adm-num" step="0.1" min="1" max="20" value="'+esc(String(m))+'" style="width:72px"></span>'+'<span style="display:flex;align-items:center;gap:4px;font-size:14px">peso <input type="number" class="adm-seg-w adm-num" step="1" min="0" value="'+esc(String(w))+'" style="width:72px"></span>'+'<span class="adm-seg-pct" style="min-width:56px;opacity:.85;font-size:13px;font-weight:700">–</span>'+'<input type="color" class="adm-seg-color" value="'+esc(col)+'" title="Color en la ruleta" style="width:44px;height:30px;border:none;background:none;cursor:pointer;padding:0">'+'<button type="button" class="adm-seg-del" title="Eliminar" style="margin-left:auto;background:rgba(155,44,44,.35);border:none;color:#ffc0c0;border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:700">✕</button>'+'</div>'; }
   function recalcSegPct(){ var rows=document.querySelectorAll(".adm-seg-row"); var tot=0, er=0, arr=[]; Array.prototype.forEach.call(rows,function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); var m=parseFloat(mi&&mi.value); var w=parseFloat(wi&&wi.value); if(isNaN(w)||w<0) w=0; if(isNaN(m)) m=0; tot+=w; er+=w*m; arr.push([row,w]); }); arr.forEach(function(d){ var sp=d[0].querySelector(".adm-seg-pct"); if(sp){ var pc=tot>0?(d[1]/tot*100):0; sp.textContent=(Math.round(pc*10)/10)+"%"; } }); var ret=document.getElementById("admSegRet"); if(ret){ var avg=tot>0?(er/tot):0; ret.textContent="Retorno medio: x"+(Math.round(avg*100)/100); ret.style.color="#7fe0a8"; } }
   function wheelLayout(segs){ var mults=(segs||[]).filter(function(s){ return Number(s.w)>0; }).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,1,2,1,3,1,5]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
+  var _betNotice = "", _betSyncing = false;
   var _betBusy = false, _betRot = 0, _serverBets = null, _serverSpins = null;
   function activeBetCfg(){
     var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null);
@@ -958,7 +961,27 @@
   function betsBumpLocal(){ var t=todayStr(); if(!state.bets||state.bets.date!==t){ state.bets={date:t,count:0}; } state.bets.count=(state.bets.count||0)+1; }
   function betSpinsLeft(){ if(SB_SECURE && _serverSpins!=null) return _serverSpins; return (state&&typeof state.betSpins==="number")?state.betSpins:0; }
   function localBetPick(segs){ var total=0; segs.forEach(function(x){ total+=x.w; }); if(total<=0) return segs[0]?segs[0].mult:0; var r=Math.random()*total, acc=0, m=0; for(var i=0;i<segs.length;i++){ acc+=segs[i].w; if(r<acc){ m=segs[i].mult; break; } } return m; }
-  function secureBet(stake){ if(!SB_ON && currentUser==="demo") return Promise.resolve(null); if(SB_SECURE && _CRED.t){ return sbRpc("app_bet",{ p_token:_CRED.t, p_stake:stake }).catch(function(){ return { ok:false, error:"offline" }; }); } return Promise.resolve({ ok:false, error:"offline" }); }
+  function rouletteErrorText(reply){
+    reply=reply||{};
+    if(reply.error==="funds") return "No tienes puntos suficientes para esta apuesta.";
+    if(reply.error==="limit") return reply.betSpins===0 ? "No tienes tiradas de ruleta. Gira los rodillos para ganar más." : "El servidor no ha permitido usar la tirada disponible. Consulta con tu bar si el problema continúa.";
+    if(reply.error==="odds") return "La ruleta tiene un problema de configuración. Avisa a tu bar para revisarlo.";
+    if(reply.error==="stake") return "La apuesta no coincide con los límites actuales. Revisa los puntos e inténtalo de nuevo.";
+    if(reply.error==="disabled") return "La ruleta está desactivada en este momento.";
+    var details=[];
+    if(Number.isInteger(reply.status) && reply.status>=100 && reply.status<=599) details.push("HTTP "+reply.status);
+    if(typeof reply.code==="string" && /^[A-Za-z0-9_]{2,40}$/.test(reply.code)) details.push(reply.code);
+    return "No se ha podido confirmar el giro. Comprueba el saldo antes de volver a intentarlo."+(details.length?" ("+details.join(" · ")+")":"");
+  }
+  function secureBet(stake){
+    if(!SB_ON && currentUser==="demo") return Promise.resolve(null);
+    if(SB_SECURE && _CRED.t){
+      return sbRpc("app_bet",{p_token:_CRED.t,p_stake:stake}).catch(function(error){
+        return {ok:false,error:"request",status:error.status||null,code:error.code||null};
+      });
+    }
+    return Promise.resolve({ok:false,error:"auth"});
+  }
   function renderBet(){
     var host=document.getElementById("betPanel"); if(!host) return;
     var bc=activeBetCfg();
@@ -982,6 +1005,7 @@
           '<button type="button" class="bet-step" id="betPlus">\uFF0B</button>'+
         '</div>'+
         '<button type="button" class="bet-go" id="betGo">APOSTAR Y GIRAR</button>'+
+        (_betSyncing?'<button type="button" class="game-switch-btn" id="betRetrySync">Actualizar saldo</button>':'')+
         '<div class="bet-foot">Apuesta '+bc.min+'\u2013'+bc.max+' \u00b7 tiradas de ruleta: <b id="betLeft">'+left+'</b> \u00b7 saldo <b>'+fmt(pts)+'</b> pts</div>'+
         '<div class="bet-big" id="betBig"></div>'+
       '</div>';
@@ -992,16 +1016,21 @@
     stakeInp.onchange=clamp;
     document.getElementById("betGo").onclick=function(){ placeBet(clamp()); };
     (function(){ var _bb=document.getElementById("betBack"); if(_bb) _bb.onclick=function(){ setGame("slot"); }; })();
+    if(_betNotice) document.getElementById("betResult").textContent=_betNotice;
+    if(_betSyncing){ document.getElementById("betGo").disabled=true; document.getElementById("betRetrySync").onclick=refreshPlayer; }
     if(left<=0){ document.getElementById("betGo").disabled=true; document.getElementById("betResult").textContent="No tienes tiradas de ruleta. \u00a1Gana m\u00e1s girando los rodillos! \uD83C\uDFB0"; }
   }
   function placeBet(stake){
-    if(_betBusy || _demoBusy || !_configReady) return;
+    if(_betBusy || _betSyncing || _demoBusy || !_configReady) return;
     var bc=activeBetCfg(); if(betConfigError(bc)) return;
     var resEl=document.getElementById("betResult"), goEl=document.getElementById("betGo");
     if(!state){ return; }
     if(betSpinsLeft()<=0){ if(resEl) resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; return; }
     if(!Number.isSafeInteger(stake) || stake<bc.min || stake>bc.max) return;
     if(stake>state.points){ if(resEl) resEl.textContent="No tienes puntos suficientes para esta apuesta."; return; }
+    var betUser=currentUser,betToken=_CRED.t,betState=state;
+    function sameBetSession(){return currentUser===betUser && _CRED.t===betToken && state===betState;}
+    _betNotice="";
     var goldenPlay=!!(state&&state.goldenRound);
     state.onboardingRoulette=true; saveState(); renderOnboarding();
     /* En iPhone/Android hay que esperar a que el contexto de audio se reanude desde este toque. */
@@ -1010,6 +1039,7 @@
     var wheel=document.getElementById("betWheel");
     var segs=bc.segments, layout=wheelLayout(bc.segments), n=layout.length, step=360/n;
     var finish=function(mult, newPts, left, afterStake, gain){
+      if(!sameBetSession()) return;
       var before=typeof afterStake==="number"?afterStake+stake:state.points;
       var payout=typeof gain==="number"?gain:Math.floor(stake*mult);
       state.points=typeof afterStake==="number"?afterStake:before-stake;
@@ -1023,6 +1053,7 @@
       wheel.style.transition="transform 3.4s cubic-bezier(.15,.85,.2,1)";
       wheel.style.transform="rotate("+_betRot+"deg)";
       setTimeout(function(){
+        if(!sameBetSession()) return;
         var prev=state.points;
         if(typeof newPts==="number"){ state.points=newPts; } else { state.points = prev + payout; }
         if(typeof left!=="number"){ state.betSpins=Math.max(0,((state.betSpins||0)-1)); }
@@ -1045,26 +1076,43 @@
         if(usedLeft<=0) setGame("slot");
       }, 3500);
     };
+    function rejectBet(reply){
+      if(!sameBetSession()) return;
+      _betBusy=false;
+      if(reply && reply.error==="auth"){ forceLogout(); return; }
+      if(reply && typeof reply.points==="number"){
+        var oldPoints=state.points;state.points=reply.points;saveState();countUp(balance,oldPoints,state.points,300);
+      }
+      if(reply && typeof reply.betSpins==="number"){_serverSpins=Math.max(0,reply.betSpins);state.betSpins=_serverSpins;}
+      _betNotice=rouletteErrorText(reply);
+      _betSyncing=!(reply && ["funds","limit","odds","stake","disabled"].indexOf(reply.error)>=0);
+      renderBet();
+      // A lost reply may hide a committed result. Reconcile before another play;
+      // never replay an uncertain request or invent a local roulette result.
+      if(_betSyncing || (reply && reply.error==="limit")) refreshPlayer();
+      if(reply && (reply.error==="stake" || reply.error==="disabled")) refreshPublicConfig();
+    }
     secureBet(stake).then(function(sr){
-      if(sr && sr.ok){ finish(parseFloat(sr.mult)||0, sr.points, (typeof sr.betSpins==="number"?sr.betSpins:undefined), sr.afterStake, sr.gain); }
-      else if(sr===null){ finish(localBetPick(segs)); } /* demo: tirada local */
-      else if(sr && sr.error==="funds"){ _betBusy=false; if(typeof sr.points==="number"){var oldPoints=state.points;state.points=sr.points;saveState();countUp(balance,oldPoints,state.points,300);} goEl.disabled=false; resEl.textContent="No tienes puntos suficientes para esta apuesta."; }
-      else if(sr && sr.error==="limit"){ _betBusy=false; goEl.disabled=true; resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; }
-      else if(sr && sr.error==="disabled"){ _betBusy=false; renderBet(); }
-      else if(sr && sr.error==="auth"){ _betBusy=false; forceLogout(); }
-      else { _betBusy=false; goEl.disabled=false; resEl.textContent="⚠️ Sin conexión con el servidor. Inténtalo de nuevo."; }
-    }).catch(function(){ _betBusy=false; goEl.disabled=false; resEl.textContent="⚠️ Sin conexión con el servidor. Inténtalo de nuevo."; });
+      if(sr && sr.ok && Number.isSafeInteger(sr.points) && Number.isSafeInteger(sr.betSpins) && sr.betSpins>=0 && Number(sr.mult)>=1){
+        finish(parseFloat(sr.mult),sr.points,sr.betSpins,sr.afterStake,sr.gain);
+      }
+      else if(sr===null){ finish(localBetPick(segs)); } /* solo demo sin servidor */
+      else { rejectBet(sr); }
+    }).catch(function(){ rejectBet({error:"request"}); });
   }
+
   function refreshPlayer(){
     if(!SB_SECURE || !_CRED.t || !state || _betBusy || spinning || _demoBusy) return;
     var syncToken=_CRED.t, syncUser=currentUser, demoRevision=_demoRevision;
     sbRpc("app_state",{ p_token:syncToken }).then(function(r){
       if(!r || r.ok!==true || !state || spinning || _betBusy || _demoBusy || demoRevision!==_demoRevision || syncToken!==_CRED.t || syncUser!==currentUser) return;
+      if(_betSyncing && (!Number.isSafeInteger(r.points) || !Number.isSafeInteger(r.betSpins))) return;
+      _betSyncing=false;
       _playerStateReady=true;
       var prev=state.points, changed=false;
       if(typeof r.points==="number" && r.points!==state.points){ state.points=r.points; changed=true; }
       if(typeof r.betsToday==="number"){ _serverBets={date:todayStr(), count:r.betsToday}; }
-      if(typeof r.betSpins==="number"){ _serverSpins=r.betSpins; state.betSpins=r.betSpins; }
+      if(typeof r.betSpins==="number"){ if(r.betSpins>(state.betSpins||0)) _betNotice=""; _serverSpins=r.betSpins; state.betSpins=r.betSpins; }
       if(typeof r.streak==="number") state.streak=r.streak;
       if(r.lastSpin!==undefined) state.lastSpin=r.lastSpin;
       try{ renderCatalog(); }catch(e){}

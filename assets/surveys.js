@@ -16,6 +16,9 @@
   function root() { return document.getElementById('clubSurveys'); }
   function checkedResult(result) { if (!result || !result.ok) throw new Error(result && result.error || 'server'); return result; }
   function errorText(error) {
+    if (error && (error.code === 'PGRST202' || error.code === '42883')) {
+      return 'Las encuestas aún no están activadas en el servidor (HTTP ' + (error.status || 404) + ' · ' + error.code + '). El equipo técnico debe aplicar la actualización de encuestas. Si has escrito una pregunta, mantenla abierta hasta que se active y vuelve a guardarla.';
+    }
     return ({conflict:'Otra persona ha cambiado esta encuesta. Actualiza la lista antes de editarla.',
       answered:'Esta encuesta ya tiene respuestas. Puedes cambiar sus fechas o cerrarla; crea otra para cambiar la pregunta o los destinatarios.',
       targets:'Selecciona destinatarios válidos y activos.', invalid:'Revisa la pregunta, las opciones, las imágenes y las fechas.',
@@ -253,7 +256,7 @@
       if (admin !== a) return;
       if (!Array.isArray(results[1]) || !Array.isArray(results[0].surveys)) throw new Error('server');
       a.surveys = results[0].surveys; a.users = results[1]; a.loaded = true; renderList(); if (a.draft) renderTargets(); notice('Encuestas actualizadas. Se guardan con su propio botón, por separado de los fondos y premios.');
-    }).catch(function (error) { if (admin === a) notice(errorText(error) + ' Si es la primera instalación, comprueba que se ha aplicado la migración de encuestas.',true); }).finally(function () { a.loading = false; });
+    }).catch(function (error) { if (admin === a) { notice(errorText(error),true); if (!a.loaded) a.root.querySelector('.survey-list').textContent = 'No se ha podido cargar la lista de encuestas. Pulsa Actualizar después de resolver el aviso.'; } }).finally(function () { a.loading = false; });
   }
   function mountAdmin(el,context) {
     if (!el) return;
