@@ -520,7 +520,7 @@
   }
 
   function finishLogin(u, info, serverState, token){
-      _betNotice="";_betSyncing=false;_betBusy=false;
+      _betNotice="";_betSyncing=false;_betBusy=false;_betRevision++;
       currentUser = u; passInput.value = ""; try{ if(token){ localStorage.setItem("tikitaka_session", JSON.stringify({v:2,u:u,t:token,nombre:info.nombre,bar:info.bar})); } else { localStorage.removeItem("tikitaka_session"); } }catch(e){}
       loginCard.style.display = "none"; appCard.style.display = "block"; document.body.classList.remove("login-mode");
       var hello=document.getElementById("hello");
@@ -566,7 +566,7 @@
     else if(_sess.p){ userInput.value=_sess.u; passInput.value=_sess.p||""; tryLogin(); } /* migración desde formato antiguo: un solo uso para obtener token */
   }
 
-  function logout(){ _betNotice="";_betSyncing=false;_betBusy=false; TkSurveys.resetPlayer(); var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
+  function logout(){ _betNotice="";_betSyncing=false;_betBusy=false;_betRevision++; TkSurveys.resetPlayer(); var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
   function forceLogout(){ /* [SEGURIDAD] token caducado o invalido: cerrar sesion */ try{ toast("Tu sesión ha caducado. Vuelve a iniciar sesión."); }catch(e){} logout(); }
 
   /* ===== RANKING de bares (anonimo, por periodo) ===== */
@@ -928,7 +928,7 @@
   function segRowHtml(seg, color){ var m=(seg&&seg.mult!=null)?seg.mult:1; var w=(seg&&seg.w!=null)?seg.w:1; var col=(color&&/^#[0-9a-fA-F]{3,8}$/.test(color))?color:(BET_MULT_COLORS[String(m)]||"#2b6cb0"); return '<div class="adm-seg-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;background:rgba(255,255,255,.05);padding:10px;border-radius:10px">'+'<span style="display:flex;align-items:center;gap:4px;font-weight:700">x<input type="number" class="adm-seg-mult adm-num" step="0.1" min="1" max="20" value="'+esc(String(m))+'" style="width:72px"></span>'+'<span style="display:flex;align-items:center;gap:4px;font-size:14px">peso <input type="number" class="adm-seg-w adm-num" step="1" min="0" value="'+esc(String(w))+'" style="width:72px"></span>'+'<span class="adm-seg-pct" style="min-width:56px;opacity:.85;font-size:13px;font-weight:700">–</span>'+'<input type="color" class="adm-seg-color" value="'+esc(col)+'" title="Color en la ruleta" style="width:44px;height:30px;border:none;background:none;cursor:pointer;padding:0">'+'<button type="button" class="adm-seg-del" title="Eliminar" style="margin-left:auto;background:rgba(155,44,44,.35);border:none;color:#ffc0c0;border-radius:8px;padding:6px 11px;cursor:pointer;font-weight:700">✕</button>'+'</div>'; }
   function recalcSegPct(){ var rows=document.querySelectorAll(".adm-seg-row"); var tot=0, er=0, arr=[]; Array.prototype.forEach.call(rows,function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); var m=parseFloat(mi&&mi.value); var w=parseFloat(wi&&wi.value); if(isNaN(w)||w<0) w=0; if(isNaN(m)) m=0; tot+=w; er+=w*m; arr.push([row,w]); }); arr.forEach(function(d){ var sp=d[0].querySelector(".adm-seg-pct"); if(sp){ var pc=tot>0?(d[1]/tot*100):0; sp.textContent=(Math.round(pc*10)/10)+"%"; } }); var ret=document.getElementById("admSegRet"); if(ret){ var avg=tot>0?(er/tot):0; ret.textContent="Retorno medio: x"+(Math.round(avg*100)/100); ret.style.color="#7fe0a8"; } }
   function wheelLayout(segs){ var mults=(segs||[]).filter(function(s){ return Number(s.w)>0; }).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,1,2,1,3,1,5]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
-  var _betNotice = "", _betSyncing = false;
+  var _betNotice = "", _betSyncing = false, _betRevision = 0;
   var _betBusy = false, _betRot = 0, _serverBets = null, _serverSpins = null;
   function activeBetCfg(){
     var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null);
@@ -1028,6 +1028,7 @@
     if(betSpinsLeft()<=0){ if(resEl) resEl.textContent="No tienes tiradas de ruleta. Gira los rodillos para ganar m\u00e1s \uD83C\uDFB0"; return; }
     if(!Number.isSafeInteger(stake) || stake<bc.min || stake>bc.max) return;
     if(stake>state.points){ if(resEl) resEl.textContent="No tienes puntos suficientes para esta apuesta."; return; }
+    _betRevision++;
     var betUser=currentUser,betToken=_CRED.t,betState=state;
     function sameBetSession(){return currentUser===betUser && _CRED.t===betToken && state===betState;}
     _betNotice="";
@@ -1103,9 +1104,9 @@
 
   function refreshPlayer(){
     if(!SB_SECURE || !_CRED.t || !state || _betBusy || spinning || _demoBusy) return;
-    var syncToken=_CRED.t, syncUser=currentUser, demoRevision=_demoRevision;
+    var syncToken=_CRED.t, syncUser=currentUser, demoRevision=_demoRevision, betRevision=_betRevision;
     sbRpc("app_state",{ p_token:syncToken }).then(function(r){
-      if(!r || r.ok!==true || !state || spinning || _betBusy || _demoBusy || demoRevision!==_demoRevision || syncToken!==_CRED.t || syncUser!==currentUser) return;
+      if(!r || r.ok!==true || !state || spinning || _betBusy || _demoBusy || demoRevision!==_demoRevision || betRevision!==_betRevision || syncToken!==_CRED.t || syncUser!==currentUser) return;
       if(_betSyncing && (!Number.isSafeInteger(r.points) || !Number.isSafeInteger(r.betSpins))) return;
       _betSyncing=false;
       _playerStateReady=true;
