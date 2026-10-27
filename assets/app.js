@@ -539,6 +539,7 @@
         if(localState && localState.onboardingRoulette) state.onboardingRoulette=true;
         _sbLoggedLen[u] = (state.history || []).length;
         render(true);
+        TkSurveys.connectPlayer({token:_CRED.t,rpc:sbRpc,toast:toast});
         try{ var _db=document.getElementById("demoBar"); if(_db){ _db.style.display = currentUser==="demo" ? "" : "none"; } }catch(e){}
         claimRevenueCredits().then(function(_rev){
           if(_rev > 0){ renderHistory(); celebrateRevenue(_rev); }
@@ -564,7 +565,7 @@
     else if(_sess.p){ userInput.value=_sess.u; passInput.value=_sess.p||""; tryLogin(); } /* migración desde formato antiguo: un solo uso para obtener token */
   }
 
-  function logout(){ var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
+  function logout(){ TkSurveys.resetPlayer(); var _oldToken=_CRED&&_CRED.t; if(_oldToken){ try{ sbRpc("app_logout",{p_token:_oldToken}).catch(function(){}); }catch(e){} } try{ localStorage.removeItem("tikitaka_session"); }catch(e){} try{ _CRED.u=null; _CRED.t=null; }catch(e){} currentUser = ""; state = null; _reelDisplayOwner=null; _reelPreviewSignature=""; appCard.style.display = "none"; loginCard.style.display = "block"; document.body.classList.add("login-mode"); userInput.value = ""; passInput.value = ""; }
   function forceLogout(){ /* [SEGURIDAD] token caducado o invalido: cerrar sesion */ try{ toast("Tu sesión ha caducado. Vuelve a iniciar sesión."); }catch(e){} logout(); }
 
   /* ===== RANKING de bares (anonimo, por periodo) ===== */
@@ -1073,7 +1074,7 @@
     }).catch(function(){});
   }
   var _playerPoll=null;
-  function startPlayerSync(){ try{ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ refreshPlayer(); refreshPublicConfig(); try{ if(_cdTimer) ticCuenta(); }catch(e){} } else { try{ maybeStreakReminder(); }catch(e){} } }); }catch(e){} if(_playerPoll) clearInterval(_playerPoll); _playerPoll=setInterval(function(){ if(!document.hidden){ refreshPlayer(); refreshPublicConfig(); } }, 25000); }
+  function startPlayerSync(){ try{ document.addEventListener("visibilitychange", function(){ if(!document.hidden){ refreshPlayer(); refreshPublicConfig(); TkSurveys.refreshPlayer(); try{ if(_cdTimer) ticCuenta(); }catch(e){} } else { try{ maybeStreakReminder(); }catch(e){} } }); }catch(e){} if(_playerPoll) clearInterval(_playerPoll); _playerPoll=setInterval(function(){ if(!document.hidden){ refreshPlayer(); refreshPublicConfig(); TkSurveys.refreshPlayer(); } }, 25000); }
   try{ startPlayerSync(); }catch(e){}
   function renderCatalog(){
     const wrap = document.getElementById("catalog");
@@ -2148,6 +2149,7 @@
     h+='<button type="button" class="adm-menu-i" data-t="sec-historial">📜 Historial</button>'; h+='<button type="button" class="adm-menu-i" data-t="sec-clientes">👥 Clientes</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-jugadas">🎲 Jugadas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-recaudacion">💰 Recaudación</button>';
+    h+='<button type="button" class="adm-menu-i" data-t="sec-encuestas">💬 Encuestas</button>';
     h+='<button type="button" class="adm-menu-i" data-t="sec-avisos">📨 Avisos push</button>';
     h+='</div><div id="admSaveState" class="adm-save-status" role="status" aria-live="polite"></div></nav>';
     h+='<div class="adm-card" id="sec-update"><div class="adm-sec">🔄 Publicar actualización</div>';
@@ -2163,6 +2165,7 @@
     h+='<div class="adm-hint">Aquí ves los premios que reclaman tus clientes. Márcalos como <b>entregados</b> cuando se los des, para llevar el control.</div>';
     h+='<div class="adm-canje-tabs"><button type="button" class="adm-ct active" data-f="pending">Pendientes</button><button type="button" class="adm-ct" data-f="delivered">Entregados</button><button type="button" class="adm-ct" data-f="all">Todos</button><button type="button" class="adm-canje-refresh" id="canjeRefresh">↻ Actualizar</button></div>';
     h+='<div class="adm-canje-list" id="canjeList"><div class="adm-canje-empty">Cargando canjes…</div></div></div>';
+    h+='<div class="adm-card survey-admin" id="sec-encuestas"></div>';
     h+='<div class="adm-card" id="sec-avisos"><div class="adm-sec">📨 Enviar aviso push</div>';
     h+='<div class="adm-hint">Envía una notificación a los clientes que hayan activado los avisos. Elige a quién, escribe el mensaje y pulsa enviar.</div>';
     h+='<label style="display:block;margin:6px 0;font-weight:700"><input type="checkbox" id="pushAll" checked> Todos los clientes</label>';
@@ -2274,6 +2277,7 @@
     h+='</div>';
     h+='</div>';
     scr.innerHTML=h;
+    TkSurveys.mountAdmin(document.getElementById("sec-encuestas"),{rpc:sbRpc,pin:_admPin});
     wireAdmin();
     setAdminSaveState(_adminSaveMessage,_adminSaveBad);
   }

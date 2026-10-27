@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="./assets/club.css?v=17">
   <link rel="stylesheet" href="./assets/festive.css?v=5">
   <link rel="stylesheet" href="./assets/admin.css?v=5">
+  <link rel="stylesheet" href="./assets/surveys.css?v=1">
   <link rel="stylesheet" href="./assets/roulette.css?v=2">
 </head>
 <body class="club-ui login-mode">
@@ -50,6 +51,7 @@
       <div class="club-intro"><div class="club-eyebrow" id="clubBarName">TU BAR</div><h1 id="clubGreeting">Hola.<br>Hoy también suma.</h1></div>
       <section class="club-wallet" aria-label="Tu saldo"><div><div class="club-eyebrow">TUS PUNTOS</div><div class="club-wallet-number"><strong id="clubHomeBalance">0</strong><span>pts</span></div><span id="clubHomeGain" class="club-home-gain" aria-hidden="true"></span></div><button class="club-text-action" type="button" data-club-nav="premios">Ver premios <span aria-hidden="true">↗</span></button></section>
       <section class="club-goal" id="clubGoal" aria-label="Tu próximo premio" aria-roledescription="carrusel" tabindex="0"><div class="club-goal-content"><div class="club-eyebrow">TU PRÓXIMO PREMIO</div><h2 id="clubGoalName">Tu próxima alegría</h2><p id="clubGoalDistance">Cada punto te acerca.</p></div><div class="club-goal-art" id="clubGoalArt" aria-hidden="true"></div><div class="club-goal-browse" id="clubGoalBrowse"><button type="button" id="clubGoalPrevious" aria-label="Premio anterior">‹</button><span><small>Desliza para cambiar tu objetivo</small><b id="clubGoalPosition"></b></span><button type="button" id="clubGoalNext" aria-label="Premio siguiente">›</button></div><span class="club-sr-only" id="clubGoalAnnouncement" role="status" aria-live="polite" aria-atomic="true"></span><div class="club-goal-progress"><div class="club-track" id="clubGoalTrack" role="progressbar" aria-label="Progreso hacia tu premio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="clubGoalFill"></span></div><div class="club-progress-labels"><span id="clubGoalNumbers">0 puntos</span><b id="clubGoalPercent">0 %</b></div></div><button type="button" class="club-text-action" data-club-nav="premios" id="clubGoalAction">Explorar el catálogo <span aria-hidden="true">→</span></button></section>
+      <section id="clubSurveys" aria-label="Preguntas para ti" hidden></section>
       <div id="clubHomeGame"></div>
       <section class="club-week" aria-label="Tu racha de siete días"><div class="club-week-heading"><div><h2 id="clubWeekTitle">Tu racha empieza hoy</h2><p id="clubWeekHint">Un giro cada día. Un premio más cerca.</p></div><button type="button" class="club-small-action" data-club-nav="jugar" aria-label="Ver detalle de mi racha">→</button></div><div id="clubWeekDays" class="club-week-days"></div><button type="button" class="club-box-cta" id="clubOpenBox" hidden><img src="./img/surprise-box-premium.webp" width="48" height="48" alt="">Abrir mi caja sorpresa <span aria-hidden="true">↗</span></button></section>
     </section>
@@ -112,7 +114,8 @@
   <script src="./assets/reward-framing.js?v=1"></script>
   <script src="./assets/goal-appearance.js?v=1"></script>
   <script src="./assets/festive.js?v=5"></script>
-  <script src="./assets/app.js?v=26"></script>
+  <script src="./assets/surveys.js?v=1"></script>
+  <script src="./assets/app.js?v=27"></script>
   <script src="./assets/club.js?v=15"></script>
 </body>
 </html>

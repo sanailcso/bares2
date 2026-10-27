@@ -65,7 +65,7 @@ try{
   await page.getByRole('heading',{name:'Panel del club',exact:true}).waitFor();
   await page.locator('.adm-uedit[data-u="fixture_bar"]').waitFor({state:'attached'});
   assert.equal(await page.locator('#adminScreen').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(246, 244, 238)');
-  assert.equal(await page.locator('.adm-menu-i').count(),14,'All admin functions remain reachable');
+  assert.equal(await page.locator('.adm-menu-i').count(),15,'All admin functions remain reachable');
   const visit=async id=>{
     const button=page.locator('.adm-menu-i[data-t="'+id+'"]');
     await button.click();
