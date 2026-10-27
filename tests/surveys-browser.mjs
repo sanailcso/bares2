@@ -101,7 +101,7 @@ try{
  // Explicitly reconnect a second device with the same account: answer stays absent.
  const second=await setup();await login(second.page,'ana');assert.equal(await second.page.locator('#clubSurveys').isHidden(),true);
  await page.locator('[data-results]').click();await page.locator('.survey-results .survey-response').waitFor();
- assert.match(await page.locator('.survey-results').textContent(),/1 participantes/);assert.match(await page.locator('.survey-results').textContent(),/Gorra premium/);
+ assert.match(await page.locator('.survey-results').textContent(),/1 participante/);assert.match(await page.locator('.survey-results').textContent(),/Gorra premium/);
  await page.locator('.survey-new').click();await page.locator('[data-field="question"]').fill('¿Te gusta la app?');
  await page.locator('[data-field="kind"]').selectOption('rating');
  await page.locator('[data-field="audience"]').selectOption('bars');await page.locator('.survey-target input[value="Bar Dos"]').check();

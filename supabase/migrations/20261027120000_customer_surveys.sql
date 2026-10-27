@@ -98,7 +98,7 @@ create function private.app_admin_save_survey(p_pin text,p_survey jsonb,p_expect
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_s private.surveys; v_old private.surveys; v_exists boolean; v_targets text[];
 begin
-  if not private.is_admin(p_pin) then return jsonb_build_object('ok',false,'error','pin'); end if;
+  if private.is_admin(p_pin) is distinct from true then return jsonb_build_object('ok',false,'error','pin'); end if;
   if jsonb_typeof(p_survey) is distinct from 'object' or octet_length(p_survey::text)>2100000 then
     return jsonb_build_object('ok',false,'error','invalid'); end if;
   begin
@@ -166,7 +166,7 @@ end $$;
 create function private.app_admin_surveys(p_pin text)
 returns jsonb language plpgsql security definer set search_path='' as $$
 begin
-  if not private.is_admin(p_pin) then return jsonb_build_object('ok',false,'error','pin'); end if;
+  if private.is_admin(p_pin) is distinct from true then return jsonb_build_object('ok',false,'error','pin'); end if;
   return jsonb_build_object('ok',true,'surveys',coalesce((select jsonb_agg(to_jsonb(s)||
     jsonb_build_object('response_count',(select count(*) from private.survey_responses r where r.survey_id=s.id))
     order by s.created_at desc,s.id) from private.surveys s),'[]'::jsonb));
@@ -176,7 +176,7 @@ create function private.app_admin_survey_results(p_pin text,p_id uuid,p_offset i
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_s private.surveys; v_total integer; v_counts jsonb; v_rows jsonb;
 begin
-  if not private.is_admin(p_pin) then return jsonb_build_object('ok',false,'error','pin'); end if;
+  if private.is_admin(p_pin) is distinct from true then return jsonb_build_object('ok',false,'error','pin'); end if;
   if p_offset is null or p_offset<0 then return jsonb_build_object('ok',false,'error','invalid'); end if;
   select * into v_s from private.surveys where id=p_id;
   if not found then return jsonb_build_object('ok',false,'error','unavailable'); end if;

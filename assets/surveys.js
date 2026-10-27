@@ -233,7 +233,7 @@
     if (!offset) el.textContent = 'Cargando resultados…';
     a.rpc('app_admin_survey_results',{p_pin:a.pin,p_id:id,p_offset:offset}).then(checkedResult).then(function (r) {
       if (admin !== a || request !== a.resultRequest) return;
-      if (!offset) el.innerHTML = '<h3>Resultados · ' + esc(s.question) + '</h3><p>' + r.total + ' participantes</p>' +
+      if (!offset) el.innerHTML = '<h3>Resultados · ' + esc(s.question) + '</h3><p>' + r.total + (r.total === 1 ? ' participante' : ' participantes') + '</p>' +
         (s.kind === 'multiple' ? '<p class="survey-note">Los porcentajes son sobre participantes y pueden sumar más del 100 %.</p>' : '') + r.counts.map(function (c) {
           var pct = r.total ? Math.round(c.count/r.total*100) : 0;
           return '<div class="survey-result"><div><span>' + esc(c.label) + '</span><b>' + c.count + ' · ' + pct + ' %</b></div><progress max="100" value="' + pct + '">' + pct + ' %</progress></div>';
@@ -251,7 +251,7 @@
     a.loading = true; notice('Cargando encuestas y destinatarios…');
     Promise.all([a.rpc('app_admin_surveys',{p_pin:a.pin}).then(checkedResult),a.rpc('app_admin_users',{p_pin:a.pin})]).then(function (results) {
       if (admin !== a) return;
-      if (!Array.isArray(results[1])) throw new Error('server');
+      if (!Array.isArray(results[1]) || !Array.isArray(results[0].surveys)) throw new Error('server');
       a.surveys = results[0].surveys; a.users = results[1]; a.loaded = true; renderList(); if (a.draft) renderTargets(); notice('Encuestas actualizadas. Se guardan con su propio botón, por separado de los fondos y premios.');
     }).catch(function (error) { if (admin === a) notice(errorText(error) + ' Si es la primera instalación, comprueba que se ha aplicado la migración de encuestas.',true); }).finally(function () { a.loading = false; });
   }

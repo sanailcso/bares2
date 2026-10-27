@@ -2277,8 +2277,8 @@
     h+='</div>';
     h+='</div>';
     scr.innerHTML=h;
-    TkSurveys.mountAdmin(document.getElementById("sec-encuestas"),{rpc:sbRpc,pin:_admPin});
     wireAdmin();
+    TkSurveys.mountAdmin(document.getElementById("sec-encuestas"),{rpc:sbRpc,pin:_admPin});
     setAdminSaveState(_adminSaveMessage,_adminSaveBad);
   }
 
