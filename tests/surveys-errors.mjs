@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../assets/surveys.js',import.meta.url),'utf8');
+const scope={};vm.createContext(scope);
+vm.runInContext(source.slice(source.indexOf('  function errorText('),source.indexOf('  function answerFields(')),scope);
+const message=scope.errorText({status:404,code:'PGRST202',message:'Could not find function'});
+assert.match(message,/no están activadas/);assert.match(message,/PGRST202/);assert.doesNotMatch(message,/revisa la conexión/);
+assert.match(scope.errorText({message:'conflict'}),/Otra persona/);
+assert.match(scope.errorText(new TypeError('fetch')),/Conservamos/);
+console.log('Survey activation errors are distinguished from connectivity and editing conflicts');

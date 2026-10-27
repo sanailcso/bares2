@@ -31,6 +31,10 @@ jobs:
         run: node tests/reward-images.mjs
       - name: Validar tiradas diarias y configuración de ruleta
         run: node tests/game-sync.mjs
+      - name: Validar diagnóstico de encuestas sin activar
+        run: node tests/surveys-errors.mjs
+      - name: Validar diagnósticos de errores de ruleta
+        run: node tests/roulette-errors.mjs
       - name: Validar débito y premio de ruleta
         run: node tests/roulette-accounting.mjs
       - name: Validar lista de clientes del admin
@@ -77,6 +81,10 @@ jobs:
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/surveys.sql
       - name: Probar respuesta simultánea desde dos dispositivos
         run: node tests/surveys-concurrency.mjs
+      - name: Probar tiradas ganadas de ruleta sin límite diario antiguo
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/roulette_credits.sql
+      - name: Probar dos dispositivos con una sola tirada de ruleta
+        run: node tests/roulette-concurrency.mjs
       - name: Probar controles demo y aislamiento de clientes
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/demo_controls.sql
 
@@ -90,6 +98,8 @@ jobs:
           node-version: '20'
       - run: npm install --no-save --package-lock=false playwright
       - run: npx playwright install --with-deps chromium
+      - name: Probar fallos y sincronización de ruleta en móvil
+        run: node tests/roulette-errors-browser.mjs
       - name: Probar encuestas en admin e Inicio
         run: node tests/surveys-browser.mjs
       - name: Probar carrusel táctil y catálogo móvil

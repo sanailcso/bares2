@@ -23,7 +23,7 @@ const reloaded=client();assert.equal((await reloaded.secureSpin()).error,'alread
 assert.equal(stored.points,20,'Reload must not award points again');
 assert.equal((await reloaded.secureBet(100)).mult,2,'Connected demo uses server roulette too');
 assert.deepEqual(rpcCalls,['app_spin','app_spin','app_bet']);
-reloaded.SB_SECURE=false;assert.equal((await reloaded.secureBet(100)).error,'offline','No local outcome on production auth failure');
+reloaded.SB_SECURE=false;assert.equal((await reloaded.secureBet(100)).error,'auth','No local outcome on production auth failure');
 reloaded.SB_ON=false;assert.equal(await reloaded.secureSpin(),null,'Only the isolated preview permits a local result');
 
 const math={Number,Promise,Date,Intl,_fmtMadridYmd:new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}),ymd:()=>{throw Error('unexpected date fallback');}};
