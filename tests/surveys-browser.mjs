@@ -83,7 +83,8 @@ try{
  failSave=false;await page.locator('.survey-save').click();await page.locator('.survey-admin-notice').filter({hasText:'guardada y activada'}).waitFor();
  assert.deepEqual(saves.at(-1).p_survey.targets,['ana']);assert.match(saves.at(-1).p_survey.image,/^data:image\/webp/);
  await fs.mkdir(new URL('../test-results/',import.meta.url),{recursive:true});
- await page.locator('#sec-encuestas').screenshot({path:path.join(root,'test-results/surveys-admin-mobile.png')});
+ await page.locator('.survey-editor-heading').evaluate(e=>e.scrollIntoView({behavior:'instant',block:'center'}));
+ await page.screenshot({path:path.join(root,'test-results/surveys-admin-mobile.png')});
  await page.locator('.survey-cancel').click();
  await page.setViewportSize({width:1280,height:900});
  assert.equal(await page.locator('#adminScreen').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
