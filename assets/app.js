@@ -1003,6 +1003,7 @@
           '<button type="button" class="bet-step" id="betMinus">\u2212</button>'+
           '<input type="number" id="betStake" class="bet-stake" min="'+bc.min+'" max="'+bc.max+'" step="'+bc.min+'" value="'+bc.min+'">'+
           '<button type="button" class="bet-step" id="betPlus">\uFF0B</button>'+
+          '<button type="button" class="bet-step bet-max" id="betMax" aria-label="Seleccionar apuesta máxima">MAX</button>'+
         '</div>'+
         '<button type="button" class="bet-go" id="betGo">APOSTAR Y GIRAR</button>'+
         (_betSyncing?'<button type="button" class="game-switch-btn" id="betRetrySync">Actualizar saldo</button>':'')+
@@ -1013,6 +1014,13 @@
     var clamp=function(){ var v=parseInt(stakeInp.value,10)||bc.min; v=Math.max(bc.min,Math.min(bc.max,v)); stakeInp.value=v; return v; };
     document.getElementById("betMinus").onclick=function(){ stakeInp.value=(parseInt(stakeInp.value,10)||bc.min)-bc.min; clamp(); };
     document.getElementById("betPlus").onclick=function(){ stakeInp.value=(parseInt(stakeInp.value,10)||bc.min)+bc.min; clamp(); };
+    var maxBtn=document.getElementById("betMax");
+    maxBtn.disabled=left<=0 || pts<bc.min || _betBusy || _betSyncing;
+    maxBtn.onclick=function(){
+      if(_betBusy || _betSyncing || !state) return;
+      var maximum=Math.min(bc.max,Math.floor(state.points));
+      if(maximum>=bc.min) stakeInp.value=String(maximum);
+    };
     stakeInp.onchange=clamp;
     document.getElementById("betGo").onclick=function(){ placeBet(clamp()); };
     (function(){ var _bb=document.getElementById("betBack"); if(_bb) _bb.onclick=function(){ setGame("slot"); }; })();
@@ -1035,7 +1043,7 @@
     state.onboardingRoulette=true; saveState(); renderOnboarding();
     /* En iPhone/Android hay que esperar a que el contexto de audio se reanude desde este toque. */
     playRouletteAudio();
-    _betBusy=true; goEl.disabled=true; resEl.textContent=goldenPlay?"Ronda dorada en juego… ⭐":"Girando\u2026 \uD83C\uDF40";
+    _betBusy=true; goEl.disabled=true; var maxEl=document.getElementById("betMax"); if(maxEl) maxEl.disabled=true; resEl.textContent=goldenPlay?"Ronda dorada en juego… ⭐":"Girando\u2026 \uD83C\uDF40";
     var wheel=document.getElementById("betWheel");
     var segs=bc.segments, layout=wheelLayout(bc.segments), n=layout.length, step=360/n;
     var finish=function(mult, newPts, left, afterStake, gain){
@@ -1073,6 +1081,7 @@
         var lEl=document.getElementById("betLeft"); if(lEl) lEl.textContent=usedLeft;
         if(typeof left==="number"){ _serverSpins=left; state.betSpins=left; }
         _betBusy=false; goEl.disabled=(usedLeft<=0);
+        if(maxEl) maxEl.disabled=usedLeft<=0 || state.points<bc.min;
         if(usedLeft<=0) setGame("slot");
       }, 3500);
     };

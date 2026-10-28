@@ -169,7 +169,24 @@ try{
   await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
   await page.locator('#betGo').waitFor({state:'visible'});
+  const maxSnapshot=await page.evaluate(()=>({points:state.points,bet:JSON.parse(JSON.stringify(ACTIVE_CFG.bet)),history:state.history.length}));
+  for(const [points,expected] of [[60,60],[500,300],[65,65],[300,300],[10,10]]){
+    await page.evaluate(points=>{ACTIVE_CFG.bet=Object.assign({},ACTIVE_CFG.bet,{min:10,max:300});state.points=points;renderBet();},points);
+    await page.getByRole('button',{name:'Seleccionar apuesta máxima',exact:true}).click();
+    assert.equal(await page.locator('#betStake').inputValue(),String(expected),'MAX respects both balance and configured limit');
+    assert.equal(await page.evaluate(()=>state.points),points,'MAX only selects the amount');
+    assert.equal(await page.evaluate(()=>state.history.length),maxSnapshot.history,'MAX does not start a play');
+  }
+  await page.evaluate(()=>{state.points=5;renderBet();});
+  assert.equal(await page.locator('#betMax').isDisabled(),true,'MAX cannot select a stake below the configured minimum');
+  await page.evaluate(()=>{ACTIVE_CFG.bet.max=120;state.points=500;renderBet();});
+  await page.locator('#betMax').click();assert.equal(await page.locator('#betStake').inputValue(),'120','MAX follows admin limits rather than hardcoding 300');
+  await page.evaluate(snapshot=>{state.points=snapshot.points;ACTIVE_CFG.bet=snapshot.bet;renderBet();},maxSnapshot);
   await assertGameEndClear('Ruleta');
+  assert.equal(await page.locator('.bet-controls').evaluate(el=>{
+    const box=el.getBoundingClientRect();
+    return Array.from(el.children).every(c=>{const r=c.getBoundingClientRect();return r.left>=box.left-1&&r.right<=box.right+1;});
+  }),true,'MAX and amount stay within the mobile controls');
   await page.screenshot({path:'test-results/roulette-end-visible.png'});
   // A single click in Home navigates and starts exactly one real offline demo spin.
   await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));

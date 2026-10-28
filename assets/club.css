@@ -357,3 +357,8 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 @media(max-width:360px){.club-ui .app-head{gap:12px;width:calc(100% + 30px);margin:0 -15px!important;padding-left:15px!important;padding-right:15px!important}.club-header-kicker{font-size:8px;letter-spacing:1.7px}.club-header-bar{font-size:27px;line-height:31px}}
 
 @media(min-width:700px){.club-ui .app-head{width:calc(100% + 54px);margin:0 -27px!important;padding-left:27px!important;padding-right:27px!important}}
+
+/* Keep MAX beside the amount without adding another control row on mobile. */
+.club-ui #clubGame .bet-controls .bet-stake{min-width:0;flex:0 1 110px}
+.club-ui #clubGame .bet-max{width:54px!important;flex:0 0 54px;font-size:11px!important;letter-spacing:.04em}
+.club-ui #clubGame .bet-max:disabled{opacity:.45;cursor:default}
