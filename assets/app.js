@@ -698,11 +698,29 @@
     if(!codes||!codes.length) return null;
     var out=[]; for(var i=0;i<5;i++){ out.push(symFromCode(codes[i])); } return out;
   }
+  function initialReelSymbols(saved){
+    var fallback=[CUR_SYM.jackpot,CUR_SYM.fillers[0],CUR_SYM.prize,CUR_SYM.fillers[1]||CUR_SYM.jackpot,CUR_SYM.jackpot];
+    if(!Array.isArray(saved) || saved.length!==5) return fallback;
+    return saved.map(function(symbol,index){
+      var code=symbol==="J" || symbol==="P" || symbol==="j" || symbol==="p" ||
+        (typeof symbol==="number" && Number.isInteger(symbol)) ||
+        (typeof symbol==="string" && /^[0-9]+$/.test(symbol));
+      if(code) return symFromCode(symbol);
+      return ALL_SYMBOLS.indexOf(symbol)>=0 ? symbol : fallback[index];
+    });
+  }
+  function reelSymbolCodes(symbols){
+    return symbols.map(function(symbol){
+      if(symbol===CUR_SYM.jackpot) return "J";
+      if(symbol===CUR_SYM.prize) return "P";
+      return Math.max(0,CUR_SYM.fillers.indexOf(symbol));
+    });
+  }
   var _reelDisplayOwner=null, _reelPreviewSignature="";
   function setReelsStatic(symbols){
     for (let i=0;i<5;i++){
       const strip = reels[i].querySelector(".strip");
-      const mid = (symbols && symbols[i]) ? symbols[i] : "⚽";
+      const mid = (symbols && symbols[i]) ? symbols[i] : (CUR_SYM.fillers[0]||CUR_SYM.jackpot);
       const top = rand(ALL_SYMBOLS), bot = rand(ALL_SYMBOLS);
       strip.style.transition = "none";
       strip.innerHTML = '<div class="cell">' + symbolMarkup(top) + '</div><div class="cell">' + symbolMarkup(mid) + '</div><div class="cell">' + symbolMarkup(bot) + '</div>';
@@ -759,12 +777,12 @@
   function renderSpinState(){
     if(spinning) return;
     refreshSymbols();
-    if(SB_ON && !_playerStateReady){ spinBtn.disabled=true; spinBtn.textContent="CONECTANDO…"; spinNote.textContent="Comprobando tu tirada diaria."; return; }
+    if(SB_ON && (!_playerStateReady || !_configReady)){ spinBtn.disabled=true; spinBtn.textContent="CONECTANDO…"; spinNote.textContent="Comprobando tu tirada diaria."; return; }
     // Background refreshes update availability, never the already visible symbols.
     var preview=typeof PREVIEW_CFG!=="undefined" && PREVIEW_CFG;
     var previewSignature=preview?JSON.stringify(CUR_SYM):"";
     if(_reelDisplayOwner!==currentUser || (preview && previewSignature!==_reelPreviewSignature)){
-      setReelsStatic(state.lastSymbols || [CUR_SYM.jackpot, CUR_SYM.fillers[0], CUR_SYM.prize, CUR_SYM.fillers[1]||CUR_SYM.jackpot, CUR_SYM.jackpot]);
+      setReelsStatic(initialReelSymbols(state.lastSymbols));
       _reelDisplayOwner=currentUser;
       _reelPreviewSignature=previewSignature;
     }
@@ -861,7 +879,7 @@
     var prevStreak = state.streak || 0;
     var previousDate=Object.prototype.hasOwnProperty.call(state,"_spinPreviousDate") ? state._spinPreviousDate : state.lastSpin; delete state._spinPreviousDate;
     state.streak = (previousDate === yest && prevStreak > 0 && prevStreak < 7) ? (prevStreak + 1) : 1;
-    state.lastSpin = today; state.lastSymbols = target; state.lastWin = tier;
+    state.lastSpin = today; state.lastSymbols = (_serverSpin && Array.isArray(_serverSpin.symbols) && _serverSpin.symbols.length===5) ? _serverSpin.symbols.slice() : reelSymbolCodes(target); state.lastWin = tier;
     const prev = state.points; state.points += tier;
     const label = tier===TIER_TOP ? "¡JACKPOT! Tirada diaria" : (tier===TIER_MID ? "¡Triple! Tirada diaria" : "Tirada diaria");
     var spinEntry=recordPointMovement({ type:"spin", date:today, label:label, delta:tier },prev,state.points);
@@ -929,6 +947,7 @@
   function recalcSegPct(){ var rows=document.querySelectorAll(".adm-seg-row"); var tot=0, er=0, arr=[]; Array.prototype.forEach.call(rows,function(row){ var mi=row.querySelector(".adm-seg-mult"), wi=row.querySelector(".adm-seg-w"); var m=parseFloat(mi&&mi.value); var w=parseFloat(wi&&wi.value); if(isNaN(w)||w<0) w=0; if(isNaN(m)) m=0; tot+=w; er+=w*m; arr.push([row,w]); }); arr.forEach(function(d){ var sp=d[0].querySelector(".adm-seg-pct"); if(sp){ var pc=tot>0?(d[1]/tot*100):0; sp.textContent=(Math.round(pc*10)/10)+"%"; } }); var ret=document.getElementById("admSegRet"); if(ret){ var avg=tot>0?(er/tot):0; ret.textContent="Retorno medio: x"+(Math.round(avg*100)/100); ret.style.color="#7fe0a8"; } }
   function wheelLayout(segs){ var mults=(segs||[]).filter(function(s){ return Number(s.w)>0; }).map(function(s){ return s.mult; }); var has=function(m){ return mults.indexOf(m)>=0; }; var pref=[1,1.5,1,2,1,3,1,5]; var ok=mults.length && pref.every(function(m){ return has(m); }) && mults.every(function(m){ return pref.indexOf(m)>=0; }); return ok?pref.slice():mults.slice(); }
   var _betNotice = "", _betSyncing = false;
+  var _betStakeChoice={user:null,mode:"manual",amount:null};
   var _betBusy = false, _betRot = 0, _serverBets = null, _serverSpins = null;
   function activeBetCfg(){
     var cfg=(typeof PREVIEW_CFG!=="undefined"&&PREVIEW_CFG)?PREVIEW_CFG:((typeof ACTIVE_CFG!=="undefined"&&ACTIVE_CFG)?ACTIVE_CFG:null);
@@ -982,6 +1001,29 @@
     }
     return Promise.resolve({ok:false,error:"auth"});
   }
+  function loadBetStakeChoice(){
+    if(_betStakeChoice.user===currentUser) return _betStakeChoice;
+    _betStakeChoice={user:currentUser,mode:"manual",amount:null};
+    if(!currentUser) return _betStakeChoice;
+    try{
+      var saved=JSON.parse(localStorage.getItem("tikitaka_roulette_stake_"+currentUser)||"null");
+      if(saved && (saved.mode==="max" || saved.mode==="manual")){
+        _betStakeChoice.mode=saved.mode;
+        if(Number.isSafeInteger(saved.amount) && saved.amount>0) _betStakeChoice.amount=saved.amount;
+      }
+    }catch(e){}
+    return _betStakeChoice;
+  }
+  function rememberBetStake(mode,amount){
+    var choice=loadBetStakeChoice();
+    choice.mode=mode;choice.amount=Number.isSafeInteger(amount)?amount:null;
+    if(currentUser) try{localStorage.setItem("tikitaka_roulette_stake_"+currentUser,JSON.stringify({mode:choice.mode,amount:choice.amount}));}catch(e){}
+  }
+  function preferredBetStake(config,points){
+    var choice=loadBetStakeChoice();
+    if(choice.mode==="max") return Math.max(config.min,Math.min(config.max,Math.floor(points)));
+    return Math.max(config.min,Math.min(config.max,choice.amount||config.min));
+  }
   function renderBet(){
     var host=document.getElementById("betPanel"); if(!host) return;
     var bc=activeBetCfg();
@@ -990,6 +1032,7 @@
     try{ applyGameVisibility(); }catch(e){}
     var left=betSpinsLeft();
     var pts=state?state.points:0;
+    var selectedStake=preferredBetStake(bc,pts), maxSelected=loadBetStakeChoice().mode==="max";
     var golden=!!(state&&state.goldenRound);
     host.innerHTML =
       '<div class="bet-card game-cabinet '+(golden?'golden-cabinet':'')+'">'+
@@ -1001,9 +1044,9 @@
         '<div class="bet-result" id="betResult">Elige los puntos que quieres apostar \uD83D\uDC47</div>'+
         '<div class="bet-controls">'+
           '<button type="button" class="bet-step" id="betMinus">\u2212</button>'+
-          '<input type="number" id="betStake" class="bet-stake" min="'+bc.min+'" max="'+bc.max+'" step="'+bc.min+'" value="'+bc.min+'">'+
+          '<input type="number" id="betStake" class="bet-stake" min="'+bc.min+'" max="'+bc.max+'" step="'+bc.min+'" value="'+selectedStake+'">'+
           '<button type="button" class="bet-step" id="betPlus">\uFF0B</button>'+
-          '<button type="button" class="bet-step bet-max" id="betMax" aria-label="Seleccionar apuesta máxima">MAX</button>'+
+          '<button type="button" class="bet-step bet-max" id="betMax" aria-label="Seleccionar apuesta máxima" aria-pressed="'+maxSelected+'">MAX</button>'+
         '</div>'+
         '<button type="button" class="bet-go" id="betGo">APOSTAR Y GIRAR</button>'+
         (_betSyncing?'<button type="button" class="game-switch-btn" id="betRetrySync">Actualizar saldo</button>':'')+
@@ -1012,17 +1055,25 @@
       '</div>';
     var stakeInp=document.getElementById("betStake");
     var clamp=function(){ var v=parseInt(stakeInp.value,10)||bc.min; v=Math.max(bc.min,Math.min(bc.max,v)); stakeInp.value=v; return v; };
-    document.getElementById("betMinus").onclick=function(){ stakeInp.value=(parseInt(stakeInp.value,10)||bc.min)-bc.min; clamp(); };
-    document.getElementById("betPlus").onclick=function(){ stakeInp.value=(parseInt(stakeInp.value,10)||bc.min)+bc.min; clamp(); };
     var maxBtn=document.getElementById("betMax");
+    function selectManualStake(){
+      var amount=clamp();rememberBetStake("manual",amount);maxBtn.setAttribute("aria-pressed","false");
+      return amount;
+    }
+    document.getElementById("betMinus").onclick=function(){ stakeInp.value=(parseInt(stakeInp.value,10)||bc.min)-bc.min; selectManualStake(); };
+    document.getElementById("betPlus").onclick=function(){ stakeInp.value=(parseInt(stakeInp.value,10)||bc.min)+bc.min; selectManualStake(); };
     maxBtn.disabled=left<=0 || pts<bc.min || _betBusy || _betSyncing;
     maxBtn.onclick=function(){
       if(_betBusy || _betSyncing || !state) return;
       var maximum=Math.min(bc.max,Math.floor(state.points));
-      if(maximum>=bc.min) stakeInp.value=String(maximum);
+      if(maximum>=bc.min){rememberBetStake("max",null);stakeInp.value=String(maximum);maxBtn.setAttribute("aria-pressed","true");}
     };
-    stakeInp.onchange=clamp;
-    document.getElementById("betGo").onclick=function(){ placeBet(clamp()); };
+    stakeInp.oninput=function(){rememberBetStake("manual",parseInt(stakeInp.value,10));maxBtn.setAttribute("aria-pressed","false");};
+    stakeInp.onchange=selectManualStake;
+    document.getElementById("betGo").onclick=function(){
+      var amount=loadBetStakeChoice().mode==="max" ? preferredBetStake(bc,state.points) : clamp();
+      stakeInp.value=String(amount);placeBet(amount);
+    };
     (function(){ var _bb=document.getElementById("betBack"); if(_bb) _bb.onclick=function(){ setGame("slot"); }; })();
     if(_betNotice) document.getElementById("betResult").textContent=_betNotice;
     if(_betSyncing){ document.getElementById("betGo").disabled=true; document.getElementById("betRetrySync").onclick=refreshPlayer; }
@@ -1082,6 +1133,8 @@
         if(typeof left==="number"){ _serverSpins=left; state.betSpins=left; }
         _betBusy=false; goEl.disabled=(usedLeft<=0);
         if(maxEl) maxEl.disabled=usedLeft<=0 || state.points<bc.min;
+        var nextStake=document.getElementById("betStake");
+        if(nextStake) nextStake.value=String(preferredBetStake(activeBetCfg(),state.points));
         if(usedLeft<=0) setGame("slot");
       }, 3500);
     };

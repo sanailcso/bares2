@@ -362,3 +362,5 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-ui #clubGame .bet-controls .bet-stake{min-width:0;flex:0 1 110px}
 .club-ui #clubGame .bet-max{width:54px!important;flex:0 0 54px;font-size:11px!important;letter-spacing:.04em}
 .club-ui #clubGame .bet-max:disabled{opacity:.45;cursor:default}
+
+.club-ui #clubGame .bet-max[aria-pressed="true"]{background:#f3dfaa!important;border-color:#d4aa50!important;color:#3a2d14!important}

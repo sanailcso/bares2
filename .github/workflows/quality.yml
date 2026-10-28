@@ -35,6 +35,8 @@ jobs:
         run: node tests/surveys-errors.mjs
       - name: Validar diagnósticos de errores de ruleta
         run: node tests/roulette-errors.mjs
+      - name: Validar símbolos guardados y preferencias de apuesta
+        run: node tests/reel-symbols.mjs
       - name: Validar débito y premio de ruleta
         run: node tests/roulette-accounting.mjs
       - name: Validar lista de clientes del admin

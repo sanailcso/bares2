@@ -24,7 +24,11 @@ try{
   const page=await context.newPage();
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const login=async()=>{await page.getByPlaceholder('Tu usuario',{exact:true}).fill('demo');await page.getByPlaceholder('Tu contraseña',{exact:true}).fill('demo');await page.getByRole('button',{name:'Entrar al club'}).click();await page.locator('#clubGoalName').waitFor({state:'visible'});await page.waitForFunction(()=>document.querySelector('#clubGoalSelect')?.value===document.querySelector('#clubGoalName')?.textContent);};
-  await page.goto('http://127.0.0.1:'+server.address().port+'/');await login();
+  await page.goto('http://127.0.0.1:'+server.address().port+'/');
+  await page.evaluate(()=>localStorage.setItem(stateKey('demo'),JSON.stringify(Object.assign(defaultState(),{lastSymbols:['./img/retired-fixture.png','OLD_SYMBOL_FIXTURE','./img/retired-fixture.png','OLD_SYMBOL_FIXTURE','./img/retired-fixture.png']}))));
+  await login();
+  assert.equal(await page.locator('.reels .cell').evaluateAll(cells=>cells.some(c=>c.textContent.includes('OLD_SYMBOL_FIXTURE')||c.querySelector('img')?.getAttribute('src').includes('retired-fixture'))),false,'Retired saved artwork never appears before the first spin');
+  assert.equal(await page.evaluate(()=>Array.from(document.querySelectorAll('.reels .cell')).every(c=>ALL_SYMBOLS.includes(c.querySelector('img')?.getAttribute('src')||c.querySelector('.symbol-emoji')?.textContent))),true,'All three rows start with currently active artwork');
   async function reelSnapshot(){return page.locator('.reels .strip').evaluateAll(strips=>strips.map(s=>({html:s.innerHTML,transform:s.style.transform}))); }
   const idleReels=await reelSnapshot();
   // Exercise the real periodic sync and return-to-app paths without waiting in real time.
@@ -169,7 +173,7 @@ try{
   await page.evaluate(()=>window.dispatchEvent(new Event('pointermove')));
   await page.locator('#userNavBottom').getByRole('button',{name:'Jugar',exact:true}).click();
   await page.locator('#betGo').waitFor({state:'visible'});
-  const maxSnapshot=await page.evaluate(()=>({points:state.points,bet:JSON.parse(JSON.stringify(ACTIVE_CFG.bet)),history:state.history.length}));
+  const maxSnapshot=await page.evaluate(()=>({points:state.points,bet:JSON.parse(JSON.stringify(ACTIVE_CFG.bet)),history:state.history.length,fullState:JSON.parse(JSON.stringify(state)),serverSpins:_serverSpins}));
   for(const [points,expected] of [[60,60],[500,300],[65,65],[300,300],[10,10]]){
     await page.evaluate(points=>{ACTIVE_CFG.bet=Object.assign({},ACTIVE_CFG.bet,{min:10,max:300});state.points=points;renderBet();},points);
     await page.getByRole('button',{name:'Seleccionar apuesta máxima',exact:true}).click();
@@ -181,7 +185,34 @@ try{
   assert.equal(await page.locator('#betMax').isDisabled(),true,'MAX cannot select a stake below the configured minimum');
   await page.evaluate(()=>{ACTIVE_CFG.bet.max=120;state.points=500;renderBet();});
   await page.locator('#betMax').click();assert.equal(await page.locator('#betStake').inputValue(),'120','MAX follows admin limits rather than hardcoding 300');
-  await page.evaluate(snapshot=>{state.points=snapshot.points;ACTIVE_CFG.bet=snapshot.bet;renderBet();},maxSnapshot);
+  // MAX is a remembered decision, recalculated after each confirmed result.
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(()=>{
+    ACTIVE_CFG.bet=Object.assign({},ACTIVE_CFG.bet,{min:10,max:300});
+    state.points=60;state.betSpins=3;_serverSpins=3;renderBet();
+    window.__savedLocalBetPick=window.localBetPick;window.localBetPick=()=>1.5;
+  });
+  await page.locator('#betMax').click();await page.locator('#betGo').click();await page.waitForFunction(()=>!_betBusy);
+  assert.equal(await page.evaluate(()=>state.points),90);
+  assert.equal(await page.locator('#betStake').inputValue(),'90','Next giro recalculates MAX from the new balance');
+  assert.equal(await page.locator('#betMax').getAttribute('aria-pressed'),'true');
+  await page.locator('#betGo').click();await page.waitForFunction(()=>!_betBusy);
+  assert.equal(await page.evaluate(()=>state.points),135);
+  assert.equal(await page.locator('#betStake').inputValue(),'135','MAX remains selected for successive giros');
+  await page.evaluate(()=>{state.points=500;renderBet();});
+  assert.equal(await page.locator('#betStake').inputValue(),'300','A redraw keeps MAX capped by the admin limit');
+  await page.locator('#betStake').fill('40');await page.locator('#betStake').blur();
+  await page.evaluate(()=>renderBet());
+  assert.equal(await page.locator('#betStake').inputValue(),'40','A deliberate manual amount replaces MAX');
+  assert.equal(await page.locator('#betMax').getAttribute('aria-pressed'),'false');
+  await page.locator('#betMax').click();
+  await page.evaluate(()=>{_betStakeChoice={user:null,mode:'manual',amount:null};state.points=80;renderBet();});
+  assert.equal(await page.locator('#betStake').inputValue(),'80','Reloading the per-account preference retains MAX and recalculates it');
+  await page.evaluate(snapshot=>{
+    window.localBetPick=window.__savedLocalBetPick;delete window.__savedLocalBetPick;
+    Object.assign(state,snapshot.fullState);_serverSpins=snapshot.serverSpins;ACTIVE_CFG.bet=snapshot.bet;renderBet();
+  },maxSnapshot);
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await assertGameEndClear('Ruleta');
   assert.equal(await page.locator('.bet-controls').evaluate(el=>{
     const box=el.getBoundingClientRect();
@@ -205,6 +236,7 @@ try{
   assert.equal(await page.locator('#tab-jugar').evaluate(e=>getComputedStyle(e).animationName),'none','No tab fade during game entry');
   await page.waitForFunction(()=>!spinning);
   assert.equal(await page.evaluate(()=>window.__entrySpinCalls),1,'One click starts only one spin');
+  assert.equal(await page.evaluate(()=>state.lastSymbols.every(s=>s==='J'||s==='P'||Number.isInteger(s))),true,'New results persist symbol roles rather than obsolete artwork URLs');
   const settledReels=await reelSnapshot();
   await page.evaluate(()=>{renderSpinState();renderSpinState();});
   assert.deepEqual(await reelSnapshot(),settledReels,'Refreshing after a real spin preserves the entire settled combination');
