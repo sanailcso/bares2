@@ -25,8 +25,28 @@ try{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const login=async()=>{await page.getByPlaceholder('Tu usuario',{exact:true}).fill('demo');await page.getByPlaceholder('Tu contraseña',{exact:true}).fill('demo');await page.getByRole('button',{name:'Entrar al club'}).click();await page.locator('#clubGoalName').waitFor({state:'visible'});await page.waitForFunction(()=>document.querySelector('#clubGoalSelect')?.value===document.querySelector('#clubGoalName')?.textContent);};
   await page.goto('http://127.0.0.1:'+server.address().port+'/');
+  // Keep the designed palette and native controls when the device requests dark mode.
+  const palette=selectors=>page.evaluate(selectors=>selectors.map(selector=>{
+    const style=getComputedStyle(document.querySelector(selector));
+    return {selector,color:style.color,background:style.backgroundColor,scheme:style.colorScheme};
+  }),selectors);
+  const loginSelectors=['html','body','#loginCard','#userInput','#passInput','#loginBtn'];
+  const lightLogin=await palette(loginSelectors);
+  await page.emulateMedia({colorScheme:'dark'});
+  assert.equal(await page.evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches),true);
+  assert.deepEqual(await palette(loginSelectors),lightLogin,'Login colors and native controls stay light on a dark device');
+  assert.match(await page.locator('html').evaluate(e=>getComputedStyle(e).colorScheme),/^(?:only light|light only)$/);
+  assert.equal(await page.locator('html').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(246, 244, 238)','Overscroll canvas matches the cream app');
+  await fs.mkdir('test-results',{recursive:true});
+  await page.screenshot({path:'test-results/dark-device-login.png'});
   await page.evaluate(()=>localStorage.setItem(stateKey('demo'),JSON.stringify(Object.assign(defaultState(),{lastSymbols:['./img/retired-fixture.png','OLD_SYMBOL_FIXTURE','./img/retired-fixture.png','OLD_SYMBOL_FIXTURE','./img/retired-fixture.png']}))));
   await login();
+  const homeSelectors=['html','body','#appCard','.app-head','.club-wallet','#clubGoal','#clubGoalSelect'];
+  const darkHome=await palette(homeSelectors);
+  await page.emulateMedia({colorScheme:'light'});
+  assert.deepEqual(await palette(homeSelectors),darkHome,'Home retains its palette across a live device appearance change');
+  await page.emulateMedia({colorScheme:'dark'});
+  await page.screenshot({path:'test-results/dark-device-home.png'});
   assert.equal(await page.locator('.reels .cell').evaluateAll(cells=>cells.some(c=>c.textContent.includes('OLD_SYMBOL_FIXTURE')||c.querySelector('img')?.getAttribute('src').includes('retired-fixture'))),false,'Retired saved artwork never appears before the first spin');
   assert.equal(await page.evaluate(()=>Array.from(document.querySelectorAll('.reels .cell')).every(c=>ALL_SYMBOLS.includes(c.querySelector('img')?.getAttribute('src')||c.querySelector('.symbol-emoji')?.textContent))),true,'All three rows start with currently active artwork');
   async function reelSnapshot(){return page.locator('.reels .strip').evaluateAll(strips=>strips.map(s=>({html:s.innerHTML,transform:s.style.transform}))); }

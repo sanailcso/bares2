@@ -1,5 +1,6 @@
 /* Club diario. Scoped to the customer app; the existing backoffice keeps its own theme. */
-:root{--club-bg:#f6f4ee;--club-paper:#fff;--club-ink:#252328;--club-muted:#746f69;--club-line:#e5e1d9;--club-red:#d70c39;--club-soft:#eee8de;--club-green:#39745b}
+:root{color-scheme:light;color-scheme:only light;--club-bg:#f6f4ee;--club-paper:#fff;--club-ink:#252328;--club-muted:#746f69;--club-line:#e5e1d9;--club-red:#d70c39;--club-soft:#eee8de;--club-green:#39745b}
+html:has(body.club-ui){background:var(--club-bg)!important}
 html:has(body.club-ui),body.club-ui{overflow-x:clip!important;overflow-y:visible!important}
 body.club-ui{display:block!important;margin:0!important;padding:0!important;background:var(--club-bg)!important;color:var(--club-ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100dvh}
 body.club-ui:before,body.club-ui #bgLayer{display:none!important}
