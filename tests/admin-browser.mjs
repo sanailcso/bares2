@@ -20,7 +20,7 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch();
 let page;
 try{
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,colorScheme:'dark'});
   page=await context.newPage();
   const errors=[],saves=[];
   let failSave=false,rpcFailure=null;

@@ -5,6 +5,7 @@ class TikiTakaViewController: CAPBridgeViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        overrideUserInterfaceStyle = .light
         guard let content = webView else { return }
         let container = UIView(frame: view.bounds)
         container.backgroundColor = UIColor(red: 246/255, green: 244/255, blue: 238/255, alpha: 1)
