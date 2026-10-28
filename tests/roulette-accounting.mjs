@@ -10,7 +10,7 @@ async function run(reply,mult=2,points=1000){
     activeBetCfg:()=>({min:100,max:1000,segments:[{mult,w:1}]}),betConfigError:()=>'',betSpinsLeft:()=>scope.state.betSpins,
     document:{getElementById:id=>elements[id]||(elements[id]=element())},saveState(){},renderOnboarding(){},playRouletteAudio(){},
     wheelLayout:()=>[mult],secureBet:async()=>reply,localBetPick:()=>mult,countUp:(_,from,to)=>changes.push([from,to]),balance:{},
-    setTimeout:fn=>timers.push(fn),todayStr:()=> '2026-10-22',renderCatalog(){},renderHistory(){},launchConfetti(){},chime(){},setGame(){},forceLogout(){},renderBet(){},refreshPlayer(){},refreshPublicConfig(){},rouletteErrorText:()=>"fixture error"};
+    setTimeout:fn=>timers.push(fn),todayStr:()=> '2026-10-22',renderCatalog(){},renderHistory(){},launchConfetti(){},chime(){},setGame(){},forceLogout(){},preferredBetStake:()=>100,renderBet(){},refreshPlayer(){},refreshPublicConfig(){},rouletteErrorText:()=>"fixture error"};
   vm.createContext(scope);
   vm.runInContext(source.slice(source.indexOf('  function recordPointMovement('),source.indexOf('  function renderHistory(')),scope);
   vm.runInContext(source.slice(start,end),scope);
