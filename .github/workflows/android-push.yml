@@ -33,8 +33,6 @@ jobs:
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
           mkdir -p native/android-push/app/src/main/res/mipmap-xxxhdpi
           cp icons/icon-512.png native/android-push/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          rm native/android-push/app/src/main/res/drawable/ic_notification.xml
-          cp icons/badge-96.png native/android-push/app/src/main/res/drawable/ic_notification.png
       - name: Compilar APK con avisos
         working-directory: native/android-push
         run: gradle --no-daemon assembleDebug assembleDebugAndroidTest
