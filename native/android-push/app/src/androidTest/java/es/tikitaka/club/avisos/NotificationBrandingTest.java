@@ -21,7 +21,7 @@ public class NotificationBrandingTest {
         var context=instrumentation.getTargetContext();
         var manager=(NotificationManager)context.getSystemService(NotificationManager.class);
         manager.createNotificationChannel(new NotificationChannel("branding-test","Prueba de identidad",NotificationManager.IMPORTANCE_DEFAULT));
-        Notification original=new Notification.Builder(context,"branding-test")
+        Notification original=new Notification.Builder(context.createPackageContext("com.android.chrome",0),"branding-test")
             .setSmallIcon(Icon.createWithResource("com.android.chrome",android.R.drawable.ic_dialog_info))
             .setContentTitle("Tiki Taka · aviso de prueba")
             .setContentText("El aviso debe mostrar el icono de Tiki Taka.")
