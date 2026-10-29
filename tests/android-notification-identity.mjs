@@ -24,13 +24,7 @@ try {
   const session=await page.context().newCDPSession(page);
   await session.send('Browser.grantPermissions',{origin:'https://sanailcso.github.io',permissions:['notifications']});
   assert.equal(await page.evaluate(()=>Notification.requestPermission()),'granted');
-  // Only this emulator subscribes; no user login, no customer registration or server sends.
-  const subscription=await page.evaluate(async()=>{
-    const registration=await navigator.serviceWorker.ready;
-    const sub=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)});
-    return {endpointHost:new URL(sub.endpoint).hostname,hasKeys:!!sub.toJSON().keys?.p256dh};
-  });
-  assert.equal(subscription.hasKeys,true,'Browser obtains a real Web Push subscription');
+  const subscription={notRequested:true}; // Identity is tested separately from remote push registration.
   adb('shell','input','keyevent','KEYCODE_HOME');
   await page.evaluate(async()=>{
     const registration=await navigator.serviceWorker.ready;
@@ -38,9 +32,13 @@ try {
   });
   await new Promise(r=>setTimeout(r,1200));
   const notifications=adb('shell','dumpsys','notification','--noredact');
+  adb('shell','cmd','statusbar','expand-notifications');
+  await new Promise(r=>setTimeout(r,500));
+  await fs.writeFile('android-notification-panel.png',execFileSync('adb',['exec-out','screencap','-p']));
   assert.ok(notifications.includes('TikiTaka aviso de prueba'),'Android displays the worker notification while the app is in background');
   {
     const record=notifications.split(/(?=NotificationRecord\\()/).find(part=>part.includes('TikiTaka aviso de prueba'));
+    await fs.writeFile('android-notification-record.txt',record||'not found');
     console.log('Notification owner:',record?.match(/pkg=([a-zA-Z0-9_.]+)/)?.[1] || 'not found');
     await fs.writeFile('android-notification-owner.json',JSON.stringify({owner:record?.match(/pkg=([a-zA-Z0-9_.]+)/)?.[1]||null,expected:'es.tikitaka.club.avisos'},null,2));
     assert.ok(record && /pkg=es\\.tikitaka\\.club\\.avisos(?:[ ,}\\n]|$)/.test(record),'Android attributes the notification to Tiki Taka, not Chrome');

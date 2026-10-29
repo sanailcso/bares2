@@ -44,7 +44,7 @@ jobs:
             adb shell pm grant es.tikitaka.club.avisos android.permission.POST_NOTIFICATIONS
             adb forward tcp:9222 localabstract:chrome_devtools_remote
             adb shell am start -n es.tikitaka.club.avisos/.MainActivity
-            TIKITAKA_REQUIRE_APP_NOTIFICATION=1 node native/android-push/smoke.mjs
+            TIKITAKA_REQUIRE_APP_NOTIFICATION=1 node tests/android-notification-identity.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -53,3 +53,5 @@ jobs:
             android-push-light-login.png
             android-push-check.json
             android-notification-owner.json
+            android-notification-panel.png
+            android-notification-record.txt
