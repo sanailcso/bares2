@@ -81,6 +81,8 @@ jobs:
           target: google_apis
           disable-animations: true
           script: |
+            adb shell settings put global device_provisioned 1
+            adb shell settings put secure user_setup_complete 1
             adb shell cmd uimode night yes
             adb install delivery/TikiTaka-Android-Prueba.apk
             adb install tests/app-debug-androidTest.apk
