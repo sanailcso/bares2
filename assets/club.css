@@ -365,3 +365,12 @@ html:has(body.club-ui){scroll-padding-bottom:calc(var(--club-dock-height, calc(1
 .club-ui #clubGame .bet-max:disabled{opacity:.45;cursor:default}
 
 .club-ui #clubGame .bet-max[aria-pressed="true"]{background:#f3dfaa!important;border-color:#d4aa50!important;color:#3a2d14!important}
+
+
+/* Gentle, staggered levitation of the artwork while a surprise box is available. */
+@keyframes club-box-levitate{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media(prefers-reduced-motion:no-preference){
+  .club-ui .box-pop[open]:not(.locked) .box-item:not(:disabled) img{animation:club-box-levitate 4.4s ease-in-out infinite}
+  .club-ui .box-pop[open]:not(.locked) .box-item:nth-child(2):not(:disabled) img{animation-duration:4.8s;animation-delay:-1.6s}
+  .club-ui .box-pop[open]:not(.locked) .box-item:nth-child(3):not(:disabled) img{animation-duration:4.2s;animation-delay:-2.8s}
+}
