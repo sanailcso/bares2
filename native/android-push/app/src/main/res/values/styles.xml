@@ -1,0 +1,13 @@
+<resources>
+    <style name="TikiTakaLight" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#f6f4ee</item>
+        <item name="android:colorAccent">#d70c39</item>
+        <item name="android:statusBarColor">#f6f4ee</item>
+        <item name="android:navigationBarColor">#f6f4ee</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:isLightTheme">true</item>
+    </style>
+    <string name="asset_statements" translatable="false">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://sanailcso.github.io\"}}]</string>
+</resources>
