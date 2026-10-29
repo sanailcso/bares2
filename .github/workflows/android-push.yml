@@ -33,9 +33,11 @@ jobs:
           sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
           mkdir -p native/android-push/app/src/main/res/mipmap-xxxhdpi
           cp icons/icon-512.png native/android-push/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          rm native/android-push/app/src/main/res/drawable/ic_notification.xml
+          cp icons/badge-96.png native/android-push/app/src/main/res/drawable/ic_notification.png
       - name: Compilar APK con avisos
         working-directory: native/android-push
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Verificar firma y preparar entrega
         run: |
           mkdir -p delivery
@@ -56,6 +58,11 @@ jobs:
           name: tikitaka-android-avisos
           path: delivery/
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-branding-test
+          path: native/android-push/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
   push-device:
     needs: build
     runs-on: ubuntu-latest
@@ -72,6 +79,10 @@ jobs:
         with:
           name: tikitaka-android-avisos
           path: delivery
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-branding-test
+          path: tests
       - name: Habilitar virtualización
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -90,6 +101,10 @@ jobs:
             adb shell pm grant com.android.chrome android.permission.POST_NOTIFICATIONS
             adb install delivery/TikiTaka-Android-Avisos.apk
             adb shell pm grant es.tikitaka.club.avisos android.permission.POST_NOTIFICATIONS
+            adb install tests/app-debug-androidTest.apk
+            adb shell am instrument -w es.tikitaka.club.avisos.test/androidx.test.runner.AndroidJUnitRunner | tee android-branding-test.txt
+            grep -q 'OK (1 test)' android-branding-test.txt
+            adb pull /sdcard/Android/data/es.tikitaka.club.avisos/files/android-branding-panel.png android-branding-panel.png
             adb forward tcp:9222 localabstract:chrome_devtools_remote
             adb shell am start -n es.tikitaka.club.avisos/.MainActivity
             node native/android-push/smoke.mjs
@@ -100,3 +115,5 @@ jobs:
           path: |
             android-push-light-login.png
             android-push-check.json
+            android-branding-test.txt
+            android-branding-panel.png
