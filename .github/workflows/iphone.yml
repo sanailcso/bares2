@@ -1,4 +1,4 @@
-name: iPhone · compilación de prueba
+name: iPhone · app para firma y prueba
 
 on:
   pull_request:
@@ -20,20 +20,23 @@ permissions:
   contents: read
 
 concurrency:
-  group: iphone-${{ github.ref }}
+  group: iphone-native-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   iphone-simulator:
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: native/iphone
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      TIKITAKA_BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -43,16 +46,25 @@ jobs:
         run: npm test
       - name: Generar proyecto iPhone con la interfaz local
         run: npm run prepare:ios
+      - name: Archivar la app para iPhone real sin firma
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build-device -archivePath build-device/TikiTaka.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=${{ github.run_number }} archive | tee device-archive.log
+      - name: Validar y empaquetar la entrega para IT
+        run: node scripts/package-device-archive.mjs
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tikitaka-iphone-para-firmar
+          path: native/iphone/device-delivery/TikiTaka-iPhone-para-firmar.zip
+          if-no-files-found: error
       - name: Compilar para simulador sin certificados
         run: |
           set -o pipefail
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tee xcodebuild.log
       - name: Arrancar en iPhone y capturar pantalla
+        timeout-minutes: 5
         run: node scripts/simulator-smoke.mjs
-      - name: Preparar proyecto descargable
-        run: |
-          ditto -c -k --keepParent build/Build/Products/Debug-iphonesimulator/App.app artifacts/TikiTaka-Simulador.app.zip
-          zip -qr artifacts/TikiTaka-Proyecto-iPhone.zip ios scripts runtime package.json package-lock.json capacitor.config.json README.md -x 'ios/App/App/public/*'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -60,3 +72,4 @@ jobs:
           path: |
             native/iphone/artifacts/
             native/iphone/xcodebuild.log
+            native/iphone/device-archive.log
